@@ -13,4 +13,4 @@ The front end is done (`index.html`, plain HTML/CSS/JS, no build step). For now,
 
 Next: a Cloudflare Worker that takes GitHub webhooks and a Claude Code hook, and streams events to the page. Then set `FEED_URL` in `index.html`.
 
-Event format: `{ id, type: "commit" | "push" | "pr" | "claude", title, repo, sha?, at }`
+Event format: `{ id, type: "push" | "pull" | "pr" | "merge" | "claude" | "fail", title, repo, branch?, sha?, at }`
