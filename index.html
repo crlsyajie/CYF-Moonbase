@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Moonbase Yajie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one lunar canvas as the hero, a mission-control strip of counters, and a live cargo log beside it (stacks below on phones). Single dark look by choice: it's space. */
+:root {
+  color-scheme: dark;
+  --space: #07090f;
+  --panel: #10141f;
+  --line: #222a3a;
+  --regolith: #b9b3a6;
+  --dim: #7d8496;
+  --text: #e7e4dc;
+  --cargo: #f2b84b;
+  --claude: #d97757;
+  --github: #a8b4ff;
+  --ok: #6fd3a0;
+  --font-display: "Silkscreen", "Courier New", monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+html, body { height: 100%; }
+body { background: var(--space); color: var(--text); font-family: var(--font-mono); font-size: 13px; }
+.wrap { padding-inline: 16px; padding-block: 16px 24px; max-width: 1280px; margin: 0 auto; display: grid; gap: 12px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 3.4vw, 30px); letter-spacing: .04em; margin: 0; text-wrap: balance; }
+h1 span { color: var(--cargo); }
+.status { display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 12px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); box-shadow: 0 0 0 3px #ffffff10; }
+.dot.live { background: var(--ok); animation: pulse 2s infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px #6fd3a022; } }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.stage { position: relative; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--space); min-width: 0; }
+canvas { display: block; width: 100%; aspect-ratio: 16 / 10; max-width: 100%; cursor: crosshair; }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); padding: 8px 10px; border-radius: 4px; font-size: 12px; max-width: 240px; }
+.tip b { font-family: var(--font-display); font-weight: 400; color: var(--cargo); display: block; margin-bottom: 2px; }
+.counters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+@media (max-width: 520px) { .counters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.counter { background: var(--panel); padding: 10px 12px; display: grid; gap: 2px; }
+.counter .k { font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--dim); }
+.counter .v { font-family: var(--font-display); font-size: 22px; font-variant-numeric: tabular-nums; }
+aside { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; min-width: 0; max-height: 640px; }
+aside h2 { font-family: var(--font-display); font-weight: 400; font-size: 13px; letter-spacing: .08em; margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+.log { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+.log li { padding: 10px 14px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 4px 10px; }
+.log li.fresh { animation: flash 1.6s ease-out; }
+@keyframes flash { from { background: #f2b84b22; } }
+.log .pip { width: 10px; height: 10px; margin-top: 3px; clip-path: polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%); }
+.log .msg { overflow-wrap: anywhere; line-height: 1.45; }
+.log .meta { grid-column: 2; color: var(--dim); font-size: 11px; }
+.empty { padding: 18px 14px; color: var(--dim); line-height: 1.6; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); }
+button { font: inherit; font-size: 12px; color: var(--text); background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 7px 10px; cursor: pointer; }
+button:hover { border-color: var(--cargo); color: var(--cargo); }
+button:focus-visible { outline: 2px solid var(--cargo); outline-offset: 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--dim); font-size: 11px; }
+.legend i { display: inline-block; width: 9px; height: 9px; margin-right: 6px; vertical-align: -1px; clip-path: polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%); }
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: var(--dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>MOONBASE <span>YAJIE</span></h1>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">Connecting to mission control…</span></div>
+  </header>
+
+  <div class="counters">
+    <div class="counter"><span class="k">Shipments today</span><span class="v" id="cToday">0</span></div>
+    <div class="counter"><span class="k">Commits logged</span><span class="v" id="cCommits">0</span></div>
+    <div class="counter"><span class="k">Claude runs</span><span class="v" id="cClaude">0</span></div>
+    <div class="counter"><span class="k">Last push</span><span class="v" id="cLast">—</span></div>
+  </div>
+
+  <div class="grid">
+    <div class="stage">
+      <canvas id="moon" aria-label="Lunar base with your habitat, the factory, and the GitHub and Claude warehouses"></canvas>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <aside>
+      <h2>CARGO LOG <span id="logCount" style="color:var(--dim);font-family:var(--font-mono);font-size:11px"></span></h2>
+      <ul class="log" id="log"></ul>
+      <div class="controls">
+        <button id="testPush" type="button">Test push</button>
+        <button id="testClaude" type="button">Test Claude run</button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="legend">
+    <span><i style="background:var(--cargo)"></i>Commit / push: Habitat → Factory → GitHub</span>
+    <span><i style="background:var(--claude)"></i>Claude run: Claude → Factory → Habitat</span>
+    <span><i style="background:var(--github)"></i>Pull request merged at GitHub</span>
+    <span><i style="background:var(--dim)"></i>Empty pads are build sites for future stations</span>
+  </div>
+</div>
+
+<script>
+(() => {
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const C = { cargo: css('--cargo'), claude: css('--claude'), github: css('--github'), regolith: css('--regolith'), dim: css('--dim'), text: css('--text'), ok: css('--ok') };
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Stations in a normalised 0..1 ground space. Add a new one here (or flip a build site) to expand the base.
+  const STATIONS = {
+    you:     { x: .17, y: .62, kind: 'habitat',   label: 'HABITAT',  sub: 'You · Yajie',               color: C.text },
+    factory: { x: .47, y: .50, kind: 'factory',   label: 'FACTORY',  sub: 'Builds & checks every commit', color: C.cargo },
+    github:  { x: .80, y: .36, kind: 'hex',       label: 'GITHUB',   sub: 'Warehouse · crlsyajie',      color: C.github },
+    claude:  { x: .78, y: .76, kind: 'hex',       label: 'CLAUDE',   sub: 'Warehouse · Claude Code runs', color: C.claude },
+    site1:   { x: .44, y: .84, kind: 'site',      label: 'BUILD SITE', sub: 'Empty pad · add a station later', color: C.dim },
+    site2:   { x: .52, y: .20, kind: 'site',      label: 'BUILD SITE', sub: 'Empty pad · add a station later', color: C.dim },
+  };
+  const ROUTES = {
+    commit: ['you', 'factory', 'github'],
+    push:   ['you', 'factory', 'github'],
+    pr:     ['github', 'factory', 'github'],
+    claude: ['claude', 'factory', 'you'],
+  };
+  const ROADS = [['you','factory'],['factory','github'],['factory','claude'],['factory','site1'],['factory','site2']];
+  const COLOR = { commit: C.cargo, push: C.cargo, pr: C.github, claude: C.claude };
+
+  const cv = document.getElementById('moon'), ctx = cv.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+  const stars = Array.from({ length: 160 }, () => ({ x: Math.random(), y: Math.random() * .42, r: Math.random() * 1.2 + .2, t: Math.random() * 6 }));
+  const craters = Array.from({ length: 26 }, () => ({ x: Math.random(), y: .45 + Math.random() * .55, r: .01 + Math.random() * .035 }));
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    const r = cv.getBoundingClientRect(); W = r.width; H = r.height;
+    cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  new ResizeObserver(resize).observe(cv); resize();
+
+  // ground mapping: y in 0..1 → screen between horizon and bottom with a slight perspective
+  const HOR = .40;
+  function P(s) { const gy = HOR + s.y * (1 - HOR) * .92 + .03; const spread = .82 + s.y * .18; return { x: W * (.5 + (s.x - .5) * spread), y: H * gy, k: .75 + s.y * .45 }; }
+
+  function hexPath(cx, cy, r, squash) { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i; ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a) * squash); } ctx.closePath(); }
+
+  function drawSky(t) {
+    const g = ctx.createLinearGradient(0, 0, 0, H * HOR + 40); g.addColorStop(0, '#05060b'); g.addColorStop(1, '#0d1220');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    for (const s of stars) { ctx.globalAlpha = .4 + .6 * Math.abs(Math.sin(t / 1400 + s.t)); ctx.fillStyle = '#dfe6ff'; ctx.fillRect(s.x * W, s.y * H, s.r, s.r); }
+    ctx.globalAlpha = 1;
+    // Earth
+    const ex = W * .86, ey = H * .13, er = Math.min(W, H) * .055;
+    ctx.fillStyle = '#2b5fa8'; ctx.beginPath(); ctx.arc(ex, ey, er, 0, 7); ctx.fill();
+    ctx.fillStyle = '#4f9a6b'; ctx.beginPath(); ctx.ellipse(ex - er * .25, ey - er * .1, er * .38, er * .25, .6, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(ex + er * .35, ey + er * .35, er * .2, er * .14, -.3, 0, 7); ctx.fill();
+    ctx.fillStyle = '#07090fcc'; ctx.beginPath(); ctx.arc(ex + er * .45, ey + er * .1, er, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#7fb3ff33'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(ex, ey, er + 2, 0, 7); ctx.stroke();
+  }
+  function drawGround() {
+    const y0 = H * HOR;
+    const g = ctx.createLinearGradient(0, y0, 0, H); g.addColorStop(0, '#3a3832'); g.addColorStop(1, '#6d685e');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, y0 + 10);
+    for (let x = 0; x <= W; x += W / 24) ctx.lineTo(x, y0 + 6 * Math.sin(x * .02) + 4 * Math.sin(x * .053));
+    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
+    for (const c of craters) {
+      const p = P(c), rx = c.r * W * p.k, ry = rx * .35;
+      ctx.fillStyle = '#00000030'; ctx.beginPath(); ctx.ellipse(p.x, p.y, rx, ry, 0, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#ffffff14'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(p.x, p.y + 1, rx, ry, 0, .1, Math.PI - .1); ctx.stroke();
+    }
+  }
+  function drawRoads() {
+    ctx.setLineDash([6, 7]); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff22';
+    for (const [a, b] of ROADS) { const p = P(STATIONS[a]), q = P(STATIONS[b]); ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
+    ctx.setLineDash([]);
+  }
+  function label(p, s, size) {
+    ctx.textAlign = 'center'; ctx.font = `700 ${Math.max(9, 11 * p.k)}px Silkscreen, monospace`;
+    ctx.fillStyle = '#07090fb0'; const w = ctx.measureText(s.label).width + 10; ctx.fillRect(p.x - w / 2, p.y + size * .55 + 4, w, 15 * p.k);
+    ctx.fillStyle = s.color; ctx.fillText(s.label, p.x, p.y + size * .55 + 15 * p.k);
+  }
+  function drawStation(id, t) {
+    const s = STATIONS[id], p = P(s), u = Math.min(W, H) * .07 * p.k, glow = (pulses[id] || 0);
+    ctx.fillStyle = '#00000055'; ctx.beginPath(); ctx.ellipse(p.x, p.y + u * .25, u * 1.1, u * .35, 0, 0, 7); ctx.fill();
+    if (glow > 0) { ctx.fillStyle = s.color + Math.round(glow * 80).toString(16).padStart(2, '0'); ctx.beginPath(); ctx.ellipse(p.x, p.y, u * 1.6, u * .6, 0, 0, 7); ctx.fill(); }
+    if (s.kind === 'hex') {
+      const h = u * .8;
+      hexPath(p.x, p.y, u, .42); ctx.fillStyle = '#1b1f2b'; ctx.fill();
+      for (let i = 0; i < 3; i++) { // extruded walls on the front three faces
+        const a1 = Math.PI / 3 * i, a2 = Math.PI / 3 * (i + 1);
+        const x1 = p.x + u * Math.cos(a1), y1 = p.y + u * Math.sin(a1) * .42, x2 = p.x + u * Math.cos(a2), y2 = p.y + u * Math.sin(a2) * .42;
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x2, y2 - h); ctx.lineTo(x1, y1 - h); ctx.closePath();
+        ctx.fillStyle = i === 1 ? '#2a3040' : '#222838'; ctx.fill();
+      }
+      hexPath(p.x, p.y - h, u, .42); ctx.fillStyle = s.color; ctx.globalAlpha = .9; ctx.fill(); ctx.globalAlpha = 1;
+      hexPath(p.x, p.y - h, u * .55, .42); ctx.fillStyle = '#07090f55'; ctx.fill();
+      ctx.fillStyle = s.color; ctx.globalAlpha = .5 + .5 * Math.sin(t / 500); ctx.fillRect(p.x - u * .1, p.y - h * .55, u * .2, h * .35); ctx.globalAlpha = 1;
+      label(p, s, u);
+    } else if (s.kind === 'factory') {
+      const w = u * 1.6, h = u * .9;
+      ctx.fillStyle = '#2a2e38'; ctx.fillRect(p.x - w / 2, p.y - h, w, h);
+      ctx.fillStyle = '#353a47'; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(p.x - w / 2 + i * w / 3, p.y - h); ctx.lineTo(p.x - w / 2 + (i + 1) * w / 3, p.y - h - u * .35); ctx.lineTo(p.x - w / 2 + (i + 1) * w / 3, p.y - h); ctx.fill(); }
+      ctx.fillStyle = '#3a3f4c'; ctx.fillRect(p.x + w * .28, p.y - h - u * .8, u * .18, u * .8);
+      const busy = (pulses.factory || 0) > 0;
+      for (let i = 0; i < 4; i++) { ctx.fillStyle = busy ? C.cargo : '#f2b84b55'; ctx.fillRect(p.x - w / 2 + u * .15 + i * u * .36, p.y - h * .6, u * .2, u * .16); }
+      if (!reduced) for (let i = 0; i < 4; i++) { const ph = ((t / (busy ? 500 : 1400)) + i / 4) % 1; ctx.fillStyle = `rgba(200,200,210,${(1 - ph) * .35})`; ctx.beginPath(); ctx.arc(p.x + w * .28 + u * .09 + ph * u * .3, p.y - h - u * .85 - ph * u * .9, u * (.08 + ph * .18), 0, 7); ctx.fill(); }
+      ctx.fillStyle = '#16191f'; ctx.fillRect(p.x - u * .18, p.y - u * .38, u * .36, u * .38);
+      label(p, s, u);
+    } else if (s.kind === 'habitat') {
+      ctx.fillStyle = '#d9d6cc'; ctx.beginPath(); ctx.ellipse(p.x, p.y, u * .9, u * .8, 0, Math.PI, 0); ctx.fill();
+      ctx.strokeStyle = '#00000025'; ctx.lineWidth = 1; for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.ellipse(p.x, p.y, u * .9 * i / 4, u * .8, 0, Math.PI, 0); ctx.stroke(); }
+      ctx.fillStyle = '#7fb3ff'; ctx.beginPath(); ctx.arc(p.x + u * .38, p.y - u * .38, u * .1, 0, 7); ctx.fill();
+      // flag
+      ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(p.x - u * 1.05, p.y); ctx.lineTo(p.x - u * 1.05, p.y - u * 1.2); ctx.stroke();
+      ctx.fillStyle = C.cargo; ctx.fillRect(p.x - u * 1.05, p.y - u * 1.2, u * .45, u * .26);
+      // astronaut (you)
+      const bob = reduced ? 0 : Math.sin(t / 380) * u * .05, ax = p.x + u * 1.15, ay = p.y - u * .05 + bob;
+      ctx.fillStyle = '#f1efe8'; ctx.fillRect(ax - u * .14, ay - u * .42, u * .28, u * .36);
+      ctx.fillRect(ax - u * .13, ay - u * .06, u * .1, u * .14); ctx.fillRect(ax + u * .03, ay - u * .06, u * .1, u * .14);
+      ctx.beginPath(); ctx.arc(ax, ay - u * .55, u * .17, 0, 7); ctx.fill();
+      ctx.fillStyle = C.cargo; ctx.beginPath(); ctx.ellipse(ax + u * .04, ay - u * .55, u * .1, u * .08, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = '#c9c5b9'; ctx.fillRect(ax - u * .24, ay - u * .4, u * .1, u * .28);
+      label(p, s, u);
+    } else {
+      hexPath(p.x, p.y, u * .9, .42); ctx.setLineDash([4, 4]); ctx.strokeStyle = '#ffffff40'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#ffffff40'; ctx.font = `${Math.max(12, 18 * p.k)}px Silkscreen, monospace`; ctx.textAlign = 'center'; ctx.fillText('+', p.x, p.y + 6);
+      label(p, s, u * .6);
+    }
+  }
+
+  // shipments travelling along routes
+  const shipments = [], pulses = {};
+  function ship(ev) {
+    const route = ROUTES[ev.type] || ROUTES.commit;
+    shipments.push({ route, color: COLOR[ev.type] || C.cargo, t0: performance.now(), dur: reduced ? 1 : 2600 * (route.length - 1), ev });
+  }
+  function drawShipments(now) {
+    for (let i = shipments.length - 1; i >= 0; i--) {
+      const s = shipments[i], f = Math.min(1, (now - s.t0) / s.dur), legs = s.route.length - 1, seg = Math.min(legs - 1, Math.floor(f * legs)), lf = f * legs - seg;
+      const a = P(STATIONS[s.route[seg]]), b = P(STATIONS[s.route[seg + 1]]);
+      const ease = lf < .5 ? 2 * lf * lf : 1 - Math.pow(-2 * lf + 2, 2) / 2;
+      const x = a.x + (b.x - a.x) * ease, y = a.y + (b.y - a.y) * ease, k = a.k + (b.k - a.k) * ease, u = Math.min(W, H) * .028 * k;
+      if (lf > .97 || f >= 1) pulses[s.route[seg + 1]] = 1;
+      // trail
+      ctx.strokeStyle = s.color + '55'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(x, y); ctx.stroke();
+      // rover + crate
+      ctx.fillStyle = '#00000050'; ctx.beginPath(); ctx.ellipse(x, y + u * .3, u * 1.1, u * .3, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = '#c8c4b8'; ctx.fillRect(x - u, y - u * .5, u * 2, u * .6);
+      ctx.fillStyle = '#2a2e38'; ctx.beginPath(); ctx.arc(x - u * .6, y + u * .15, u * .28, 0, 7); ctx.arc(x + u * .6, y + u * .15, u * .28, 0, 7); ctx.fill();
+      ctx.fillStyle = s.color; ctx.fillRect(x - u * .6, y - u * 1.2, u * 1.2, u * .75);
+      ctx.strokeStyle = '#00000040'; ctx.strokeRect(x - u * .6, y - u * 1.2, u * 1.2, u * .75);
+      if (f >= 1) shipments.splice(i, 1);
+    }
+    for (const k in pulses) pulses[k] = Math.max(0, pulses[k] - .012);
+  }
+
+  function frame(now) {
+    if (W && H) {
+      drawSky(now); drawGround(); drawRoads();
+      Object.keys(STATIONS).sort((a, b) => STATIONS[a].y - STATIONS[b].y).forEach(id => drawStation(id, now));
+      drawShipments(now);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // hover tooltips
+  const tip = document.getElementById('tip');
+  cv.addEventListener('mousemove', e => {
+    const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+    let hit = null; for (const id in STATIONS) { const p = P(STATIONS[id]), u = Math.min(W, H) * .07 * p.k; if (Math.abs(mx - p.x) < u * 1.2 && my > p.y - u * 1.4 && my < p.y + u * .6) hit = STATIONS[id]; }
+    if (!hit) { tip.hidden = true; return; }
+    tip.innerHTML = ''; const b = document.createElement('b'); b.textContent = hit.label; tip.append(b, document.createTextNode(hit.sub));
+    tip.style.left = Math.min(mx + 14, r.width - 250) + 'px'; tip.style.top = (my + 14) + 'px'; tip.hidden = false;
+  });
+  cv.addEventListener('mouseleave', () => tip.hidden = true);
+
+  // cargo log
+  const logEl = document.getElementById('log');
+  let events = [];
+  const ago = iso => { const s = (Date.now() - new Date(iso)) / 1000; if (!isFinite(s)) return ''; if (s < 60) return 'just now'; if (s < 3600) return Math.floor(s / 60) + 'm ago'; if (s < 86400) return Math.floor(s / 3600) + 'h ago'; return Math.floor(s / 86400) + 'd ago'; };
+  const TYPE_LABEL = { commit: 'commit', push: 'push', pr: 'pull request', claude: 'Claude run' };
+  function render(freshIds = new Set()) {
+    logEl.innerHTML = '';
+    if (!events.length) {
+      const li = document.createElement('li'); li.className = 'empty'; li.style.display = 'block';
+      li.textContent = 'No shipments yet. When you push to GitHub or finish a Claude run, a crate rolls across the base and lands here. Try "Test push" to see one.';
+      logEl.append(li);
+    }
+    for (const ev of events) {
+      const li = document.createElement('li'); if (freshIds.has(ev.id)) li.className = 'fresh';
+      const pip = document.createElement('span'); pip.className = 'pip'; pip.style.background = COLOR[ev.type] || C.cargo;
+      const msg = document.createElement('span'); msg.className = 'msg'; msg.textContent = ev.title || '(no message)';
+      const meta = document.createElement('span'); meta.className = 'meta';
+      meta.textContent = [TYPE_LABEL[ev.type] || ev.type, ev.repo, ev.sha && ev.sha.slice(0, 7), ago(ev.at), ev.local && 'test only'].filter(Boolean).join(' · ');
+      li.append(pip, msg, meta); logEl.append(li);
+    }
+    const real = events.filter(e => !e.local), today = new Date().toDateString();
+    document.getElementById('cToday').textContent = real.filter(e => new Date(e.at).toDateString() === today).length;
+    document.getElementById('cCommits').textContent = real.filter(e => e.type === 'commit' || e.type === 'push').length;
+    document.getElementById('cClaude').textContent = real.filter(e => e.type === 'claude').length;
+    const lastPush = real.find(e => e.type === 'commit' || e.type === 'push');
+    document.getElementById('cLast').textContent = lastPush ? ago(lastPush.at) : '—';
+    document.getElementById('logCount').textContent = real.length ? real.length + ' logged' : '';
+  }
+  render();
+  setInterval(() => render(), 60000);
+
+  function local(type, title) {
+    const ev = { id: 'local-' + Date.now(), type, title, repo: type === 'claude' ? 'Claude Code' : 'Portfolio', at: new Date().toISOString(), local: true };
+    events.unshift(ev); render(new Set([ev.id])); ship(ev);
+  }
+  document.getElementById('testPush').onclick = () => local('push', 'Test shipment from the habitat');
+  document.getElementById('testClaude').onclick = () => local('claude', 'Test run from the Claude warehouse');
+
+  // Live feed. Set FEED_URL to the backend's event stream (Server-Sent Events) once it exists.
+  // Each message is JSON: { id, type: "commit"|"push"|"pr"|"claude", title, repo, sha?, at }
+  const FEED_URL = '';
+  const dot = document.getElementById('dot'), st = document.getElementById('statusText');
+  if (!FEED_URL || !window.EventSource) { st.textContent = 'Feed not connected yet · test shipments only'; }
+  else {
+    const es = new EventSource(FEED_URL);
+    es.addEventListener('history', e => {
+      const list = JSON.parse(e.data);
+      events = [...events.filter(x => x.local), ...list].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+      if (list[0]) ship(list[0]);
+      render();
+    });
+    es.onmessage = e => {
+      const ev = JSON.parse(e.data);
+      if (events.some(x => x.id === ev.id)) return;
+      events.unshift(ev); ship(ev); render(new Set([ev.id]));
+    };
+    es.onopen = () => { dot.classList.add('live'); st.textContent = 'Live · watching for new shipments'; };
+    es.onerror = () => { dot.classList.remove('live'); st.textContent = 'Reconnecting to mission control…'; };
+  }
+})();
+</script>
+</body>
+</html>
