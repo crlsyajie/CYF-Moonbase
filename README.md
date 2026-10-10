@@ -8,7 +8,7 @@ A live view of my dev work as a lunar base. Each push to GitHub, and each Claude
 - **Claude Code Workshop** and **Claude Chat Tower**: two hexagons side by side, one for Claude Code sessions, one for claude.ai chats
 - **Creative Media Factory**: where Claude's skills run; its rooftop billboard shows the skill in use
 - **Formula 1 Garage**: the F1 GP Predictor; runs of the `f1-gp-update` skill send a crate here and the car rolls out onto the apron
-- **Build site**: an empty pad for the next station
+- **Off-Duty Lounge**: after 10 minutes with no activity I walk here and watch a movie, read or paint; any activity sends me back to work
 
 ## Live Claude Code activity (local)
 

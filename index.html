@@ -312,6 +312,13 @@ body { color: var(--ink); }
 .viewers { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12px; border-radius: 999px; padding: 6px 11px; color: #f1eee6; white-space: nowrap;
   background: linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .04)); border: 1px solid rgba(255, 255, 255, .2); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .6); }
 .viewers svg { width: 15px; height: 15px; }
+.st-link { display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; font-size: 12.5px; color: var(--ink); text-decoration: none; border-radius: 999px; padding: 8px 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .05)); border: 1px solid rgba(255, 255, 255, .24); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .6), inset 0 -1px 1px rgba(255, 255, 255, .12); }
+.st-link:hover { background: linear-gradient(180deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, .09)); }
+.st-link:focus-visible { outline: 2px solid #d6ad55; outline-offset: 2px; }
+.st-link svg { width: 14px; height: 14px; }
+.station.min .st-link { display: none; }
+#meStatus { display: block !important; max-width: 220px; }
 </style>
 </head>
 <body>
@@ -323,12 +330,12 @@ body { color: var(--ink); }
         <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 28 9v14l-12 7L4 23V9z" fill="#3461f5"/><path d="M16 2 28 9l-12 7L4 9z" fill="#6f8dff"/><path d="M16 16v14l12-7V9z" fill="#2347c9"/><circle cx="20" cy="10.5" r="2.2" fill="#fff" opacity=".9"/></svg>
         Moonbase
       </div>
-      <div class="chip"><span class="code">MB-01</span><span><b>Moonbase Yajie</b><small>Sea of Tranquility · 7 stations · 1 build site</small></span></div>
+      <div class="chip"><span class="code">MB-01</span><span><b>Moonbase Yajie</b><small>Sea of Tranquility · 8 stations</small></span></div>
       <div class="live off" id="live"><span class="dot"></span><span id="statusText">Connecting</span><time id="clock"></time></div>
       <span class="viewers" id="viewers" hidden title="People looking at Moonbase right now"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span id="viewersN"></span></span>
       <button class="panels-btn" id="namesBtn" aria-pressed="false" title="Show or hide building names (N)">Hide names</button>
       <button class="panels-btn" id="panelsBtn" aria-pressed="false">Hide panels</button>
-      <div class="me"><span class="avatar">CY</span><span><b>Yajie</b><small>Base commander</small></span></div>
+      <div class="me"><span class="avatar">CY</span><span><b>Yajie</b><small id="meStatus">Base commander · on duty</small></span></div>
     </header>
 
     <section class="kpis">
@@ -392,13 +399,13 @@ const ISLAND = 58;
 const TILE = 15, APO = TILE * Math.sqrt(3) / 2, GAP = 1.6, SPACING = 2 * APO + GAP;
 const slot = deg => ({ x: +(SPACING * Math.sin(deg * Math.PI / 180)).toFixed(2), z: +(SPACING * Math.cos(deg * Math.PI / 180)).toFixed(2) });
 const ST = {
-  you:     { ...slot(270),  r: 9,  color: 0x3461f5, css: '#3461f5', eyebrow: 'HABITAT · HB-01',   name: "Yajie's Habitat",  sub: 'Where every commit starts' },
+  you:     { ...slot(270),  r: 9,  color: 0x3461f5, css: '#3461f5', eyebrow: 'HABITAT · HB-01',   name: "Yajie's Habitat",  sub: 'Where every commit starts', link: ['https://crlsyajie.github.io/Portfolio/', 'Open my portfolio'] },
   factory: { x: 0, z: 0,  r: 12, color: 0xf2a93b, css: '#e39a22', eyebrow: 'FACTORY · FX-01',   name: 'Build Factory',    sub: 'Builds and checks every crate' },
-  github:  { ...slot(150), r: 10, color: 0x24292f, css: '#24292f', eyebrow: 'WAREHOUSE · WH-GH', name: 'GitHub Warehouse', sub: 'github.com/crlsyajie' },
+  github:  { ...slot(150), r: 10, color: 0x24292f, css: '#24292f', eyebrow: 'WAREHOUSE · WH-GH', name: 'GitHub Warehouse', sub: 'github.com/crlsyajie', link: ['https://github.com/crlsyajie', 'Open my GitHub'] },
   claude:  { ...slot(90),  r: 10, color: 0xd97757, css: '#d97757', eyebrow: 'WORKSHOP · CC-01', name: 'Claude Code Workshop', sub: 'Claude Code sessions' },
   chat:    { x: +(slot(90).x + slot(150).x).toFixed(2), z: +(slot(90).z + slot(150).z).toFixed(2), r: 10, color: 0x38a3d6, css: '#38a3d6', eyebrow: 'COMMS · CT-01', name: 'Claude Chat Tower', sub: 'Conversations on claude.ai' },
   media:   { ...slot(30),  r: 10, color: 0xe0458f, css: '#e0458f', eyebrow: 'FACTORY · CM-01',   name: 'Creative Media Factory', sub: 'Where Claude\'s skills make things' },
-  site2:   { ...slot(210), r: 7,  color: 0x9aa1b8, css: '#9aa1b8', eyebrow: 'BUILD SITE · BS-02', name: 'Empty Build Site', sub: 'Room for the next station', site: true },
+  lounge:  { ...slot(210), r: 9,  color: 0x9d6bd6, css: '#9d6bd6', eyebrow: 'LEISURE · LG-01',   name: 'Off-Duty Lounge', sub: "Where I go when I'm not building" },
   f1:      { ...slot(330), r: 10, color: 0xe10600, css: '#e10600', eyebrow: 'RACING · F1-01',    name: 'Formula 1 Garage', sub: 'F1 GP Predictor: race data and predictions' },
 };
 // Road network. Stops are gates in front of each building; the factory is ringed by the Main Road,
@@ -464,7 +471,7 @@ const STEPS = {
   chat:   ['Chat on claude.ai', 'Passed to Claude Code', 'Summary delivered'],
   f1:     ['F1 data pulled', 'Model run at factory', 'Prediction published'],
 };
-const EV_COLOR = { commit: '#3461f5', push: '#3461f5', pull: '#17b3a3', pr: '#7c5cff', merge: '#17a36b', claude: '#d97757', fail: '#e5484d', skill: '#e0458f', chat: '#38a3d6', f1: '#e10600' };
+const EV_COLOR = { commit: '#3461f5', push: '#3461f5', pull: '#17b3a3', pr: '#7c5cff', merge: '#17a36b', claude: '#d97757', fail: '#e5484d', skill: '#e0458f', chat: '#38a3d6', f1: '#e10600', idle: '#9d6bd6', back: '#d6ad55' };
 const TYPE_LABEL = { commit: 'Commit', push: 'Push', pull: 'Pull', pr: 'Pull request', merge: 'Merge', claude: 'Claude run', fail: 'Failed build', skill: 'Skill', chat: 'Claude chat', f1: 'F1 update' };
 const routeOf = ev => ROUTES[ev.type] || ROUTES.commit;
 
@@ -823,13 +830,13 @@ function pin(hex) {
 const stations = {};
 for (const id in ST) {
   const s = ST[id];
-  const grp = id === 'you' ? habitat() : id === 'factory' ? factory() : id === 'f1' ? paddock() : id === 'media' ? mediaStudio() : id === 'chat' ? chatTower() : s.site ? buildSite() : hexWarehouse(s.css, id);
+  const grp = id === 'you' ? habitat() : id === 'lounge' ? lounge() : id === 'factory' ? factory() : id === 'f1' ? paddock() : id === 'media' ? mediaStudio() : id === 'chat' ? chatTower() : s.site ? buildSite() : hexWarehouse(s.css, id);
   grp.position.set(s.x, 0, s.z); if (id === 'factory' || id === 'claude') grp.scale.setScalar(.8); // leaves room for the Main Road and the chat road
   if (id !== 'factory') { const f = ST.factory; grp.rotation.y = Math.atan2(f.x - s.x, f.z - s.z); }
   grp.traverse(o => { o.userData.station = id; });
   scene.add(grp);
   const tag = document.createElement('div'); tag.className = 'tag'; tag.innerHTML = `<i style="background:${s.css}"></i>`; tag.append(document.createTextNode(s.name));
-  const lab = new CSS2DObject(tag); lab.position.set(s.x, id === 'factory' ? 10.5 : id === 'f1' ? 8 : id === 'chat' ? 16 : s.site ? 3 : 11, s.z); scene.add(lab);
+  const lab = new CSS2DObject(tag); lab.position.set(s.x, id === 'factory' ? 10.5 : id === 'lounge' ? 7 : id === 'f1' ? 8 : id === 'chat' ? 16 : s.site ? 3 : 11, s.z); scene.add(lab);
   stations[id] = { grp, tag, pulse: 0, pin: null };
 }
 
@@ -918,11 +925,83 @@ function updateChat(dt, t) {
   for (let i = bubbles.length - 1; i >= 0; i--) { const b = bubbles[i]; b.t += dt; b.sp.position.y += dt * 1.3; b.sp.material.opacity = Math.max(0, 1 - b.t / 3); if (b.t > 3) { scene.remove(b.sp); b.sp.material.dispose(); bubbles.splice(i, 1); } }
 }
 
+// ---------- Off-Duty Lounge: a deck with a movie corner, a reading nook and a painting easel ----------
+function lounge() {
+  const g = new THREE.Group(), wood = mat(0xcfb08a), cushion = mat(0x9d6bd6), D = {};
+  g.add(at(mesh(new THREE.CylinderGeometry(7.6, 7.9, .5, 40), wood), 0, .25, 0));
+  g.add(at(mesh(new THREE.TorusGeometry(7.6, .14, 8, 64).rotateX(Math.PI / 2), M.blue), 0, .5, 0));
+  // movie corner: screen and sofa
+  const screenMat = new THREE.MeshBasicMaterial({ color: 0x202024 });
+  g.add(at(rbox(4.6, 2.8, .3, M.dark, .1), -3.6, 2.4, -4.4), at(new THREE.Mesh(new THREE.PlaneGeometry(4.2, 2.4), screenMat), -3.6, 2.4, -4.24));
+  for (const x of [-5.2, -2]) g.add(at(mesh(new THREE.CylinderGeometry(.08, .08, 1.2), M.grey), x, .9, -4.4));
+  g.add(at(rbox(3.4, .7, 1.3, cushion, .3), -3.6, .85, -.6), at(rbox(3.4, 1.1, .4, cushion, .2), -3.6, 1.25, .05));
+  // reading nook: armchair, bookshelf, floor lamp
+  g.add(at(rbox(1.6, .7, 1.5, mat(0xd6ad55), .3), 3.8, .85, -1.2), at(rbox(1.6, 1.2, .4, mat(0xd6ad55), .2), 3.8, 1.3, -1.9));
+  g.add(at(rbox(2.4, 3, .7, wood, .1), 4.4, 2, -4.6));
+  ['#e5484d', '#3fb39a', '#d6ad55', '#9d6bd6', '#f4f4f1', '#e10600'].forEach((c, i) => g.add(at(rbox(.3, .8 + (i % 3) * .15, .5, mat(new THREE.Color(c)), .04), 3.5 + i * .34, 1.0 + .4 + (i % 3) * .07, -4.3), at(rbox(.3, .7, .5, mat(new THREE.Color(c)), .04), 3.6 + i * .3, 2.35, -4.3)));
+  const lampMat = toon({ color: 0xfff1c8, emissive: 0xffd27a, emissiveIntensity: .1 });
+  g.add(at(mesh(new THREE.CylinderGeometry(.06, .06, 2.6), M.slate), 2.4, 1.8, -1.6), at(new THREE.Mesh(new THREE.ConeGeometry(.55, .6, 20, 1, true), lampMat), 2.4, 3.2, -1.6));
+  // painting corner: easel, canvas and stool
+  const canvasEl = document.createElement('canvas'); canvasEl.width = canvasEl.height = 128;
+  const cx = canvasEl.getContext('2d'); cx.fillStyle = '#f7f4ec'; cx.fillRect(0, 0, 128, 128);
+  const art = new THREE.CanvasTexture(canvasEl); art.colorSpace = THREE.SRGBColorSpace;
+  const easel = new THREE.Group();
+  for (const [x, rz] of [[-.55, .12], [.55, -.12]]) { const l = at(mesh(new THREE.CylinderGeometry(.06, .06, 3.2), wood), x, 1.5, 0); l.rotation.z = rz; easel.add(l); }
+  const back = at(mesh(new THREE.CylinderGeometry(.06, .06, 3.1), wood), 0, 1.45, -.5); back.rotation.x = -.3; easel.add(back);
+  easel.add(at(rbox(1.7, 1.7, .1, mat(0xf7f4ec), .02), 0, 2.1, .08), at(new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), toon({ map: art })), 0, 2.1, .14));
+  easel.position.set(.4, .5, 3.6); easel.rotation.y = Math.PI; g.add(easel);
+  g.add(at(mesh(new THREE.CylinderGeometry(.35, .35, .7, 16), wood), .4, .85, 5.1));
+  // potted plants for a cozy feel
+  for (const [x, z] of [[-6.2, 2.8], [6.2, 2.6], [0, -6.4]]) g.add(at(mesh(new THREE.CylinderGeometry(.45, .35, .7, 14), mat(0xd9d9d3)), x, .85, z), at(mesh(new THREE.IcosahedronGeometry(.75, 1), mat(0x6fae7c)), x, 1.7, z));
+  // where I sit or stand for each activity (local position + facing)
+  D.spots = { movie: [-3.6, .8, -.4, Math.PI], reading: [3.8, .8, -1.1, Math.PI], painting: [.4, .5, 5.0, Math.PI] };
+  Object.assign(g.userData, D, { screenMat, lampMat, art, cx });
+  return g;
+}
+const IDLE_MS = 10 * 60e3, ACTS = [['movie', 'watching a movie'], ['reading', 'reading a book'], ['painting', 'painting']];
+const me = { last: 0, mode: 'work', act: 0, label: '', since: 0, travel: null, fig: null };
+function updateMe(dt, t) {
+  const L = stations.lounge.grp, u = L.userData, home = stations.you.grp.getObjectByName('astronaut');
+  const want = Date.now() - me.last > IDLE_MS ? 'lounge' : 'work';
+  if (!me.travel && want !== me.mode) { // set off along the roads
+    const P = buildPath(want === 'lounge' ? ['you', 'factory', 'lounge'] : ['lounge', 'factory', 'you']);
+    if (!me.fig) { me.fig = astronaut(); scene.add(me.fig); }
+    if (home) home.visible = false;
+    me.travel = { P, s: 0, to: want }; me.label = want === 'lounge' ? 'heading to the lounge' : 'heading back to work';
+  }
+  if (me.travel) {
+    const tr = me.travel; tr.s = Math.min(tr.P.dist.at(-1), tr.s + dt * 4.5);
+    const [x, z, ux, uz] = walkTo(tr.P, tr.s, -1.9);
+    me.fig.position.set(x, reduced ? 0 : Math.sin(t * 9) ** 2 * .16, z); me.yaw = turnToward(me.yaw ?? 0, Math.atan2(ux, uz), dt * 6); me.fig.rotation.y = me.yaw;
+    if (tr.s >= tr.P.dist.at(-1)) {
+      me.travel = null; me.mode = tr.to;
+      if (tr.to === 'work') { scene.remove(me.fig); me.fig = null; if (home) home.visible = true; }
+      else { me.act = (me.act + 1) % ACTS.length; me.since = Date.now(); }
+    }
+  }
+  if (me.mode === 'lounge' && !me.travel) {
+    if (Date.now() - me.since > 4 * 60e3) { me.act = (me.act + 1) % ACTS.length; me.since = Date.now(); }
+    const [key, label] = ACTS[me.act], [sx, sy, sz, ry] = u.spots[key];
+    me.label = label;
+    me.fig.position.copy(L.localToWorld(tmp.set(sx, sy + (reduced ? 0 : Math.sin(t * 2) * .04), sz)));
+    me.fig.rotation.y = L.rotation.y + ry;
+    // the props come alive for the current activity
+    u.screenMat.color.setHSL(key === 'movie' ? (t * .05) % 1 : 0, key === 'movie' ? .55 : 0, key === 'movie' ? .45 + Math.sin(t * 7) * .08 : .12);
+    u.lampMat.emissiveIntensity = key === 'reading' ? 1.4 : .1;
+    if (key === 'painting' && !reduced && Math.random() < dt * 1.5) {
+      const c = u.cx; c.strokeStyle = pick(['#e5484d', '#3fb39a', '#d6ad55', '#9d6bd6', '#3461f5', '#e0458f']); c.lineWidth = 3 + Math.random() * 6; c.lineCap = 'round';
+      c.beginPath(); const x0 = 10 + Math.random() * 108, y0 = 10 + Math.random() * 108; c.moveTo(x0, y0); c.quadraticCurveTo(x0 + (Math.random() - .5) * 60, y0 + (Math.random() - .5) * 60, x0 + (Math.random() - .5) * 50, y0 + (Math.random() - .5) * 50); c.stroke(); u.art.needsUpdate = true;
+    }
+  } else { u.screenMat.color.setHSL(0, 0, .12); u.lampMat.emissiveIntensity = .1; }
+  const status = me.mode === 'lounge' && !me.travel ? `Off duty · ${me.label}` : me.travel ? me.label[0].toUpperCase() + me.label.slice(1) : 'Base commander · on duty';
+  if ($('meStatus').textContent !== status) { $('meStatus').textContent = status; if (sel === 'lounge') renderStation(); }
+}
+
 // ---------- visitors: one small astronaut per person watching (up to 8), strolling on the empty build site ----------
 const visitors = [];
 function updateVisitors(dt, t) {
-  const want = Math.min(8, viewers), site = ST.site2;
-  while (visitors.length < want) { const v = astronaut(0xd6ad55); v.scale.setScalar(.6); scene.add(v); visitors.push({ g: v, a: Math.random() * TAU, r: 2.2 + Math.random() * 2.6, sp: .25 + Math.random() * .25 }); }
+  const want = Math.min(8, viewers), site = ST.lounge;
+  while (visitors.length < want) { const v = astronaut(0xd6ad55); v.scale.setScalar(.6); scene.add(v); visitors.push({ g: v, a: Math.random() * TAU, r: 8.6 + Math.random() * 1.8, sp: .25 + Math.random() * .25 }); }
   while (visitors.length > want) scene.remove(visitors.pop().g);
   for (const v of visitors) {
     v.a += dt * v.sp; const x = site.x + Math.sin(v.a) * v.r, z = site.z + Math.cos(v.a) * v.r;
@@ -1098,6 +1177,7 @@ if (renderer) {
   let down = null;
   renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
   renderer.domElement.addEventListener('pointerup', e => { if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5) { const id = pick(e); if (id) { sel = id; renderStation(); } } down = null; });
+  renderer.domElement.addEventListener('dblclick', e => { const id = pick(e); if (id && ST[id].link) window.open(ST[id].link[0], '_blank', 'noopener'); });
   renderer.domElement.addEventListener('pointermove', e => { if (e.buttons) return; renderer.domElement.style.cursor = pick(e) ? 'pointer' : 'grab'; });
 }
 
@@ -1119,7 +1199,7 @@ function frame() {
     }
     s.tag.classList.toggle('sel', id === sel);
   }
-  updateWalkers(dt, t); updateChat(dt, t); updateF1(dt, t); updateVisitors(dt, t);
+  updateWalkers(dt, t); updateChat(dt, t); updateF1(dt, t); updateVisitors(dt, t); updateMe(dt, t);
   { const mg = stations.media.grp, fl = mg.userData.flash, on = mediaBusy(), model = mg.getObjectByName('model'), ph = mg.getObjectByName('photog');
     if (on && !reduced && Math.random() < dt * 1.1) fl.emissiveIntensity = 7;
     fl.emissiveIntensity = Math.max(on ? .35 : .15, fl.emissiveIntensity - dt * 14);
@@ -1155,7 +1235,7 @@ function stationIcon(id) {
   return '<svg viewBox="0 0 32 32"><path d="M16 3 27 9.5v13L16 29 5 22.5v-13z" fill="#fff"/></svg>';
 }
 // Test crates each station can send: git actions live at GitHub, Claude runs at Claude, skills at Creative Media.
-const ACTIONS = { github: [['push', 'Push'], ['pull', 'Pull'], ['pr', 'Open PR'], ['merge', 'Merge PR'], ['fail', 'Failed build']], claude: [['claude', 'Claude run']], chat: [['chat', 'Start a chat']], f1: [['f1', 'Update prediction']], media: [['skill', 'Use a skill']] };
+const ACTIONS = { github: [['push', 'Push'], ['pull', 'Pull'], ['pr', 'Open PR'], ['merge', 'Merge PR'], ['fail', 'Failed build']], claude: [['claude', 'Claude run']], chat: [['chat', 'Start a chat']], lounge: [['idle', 'Go off duty'], ['back', 'Back to work']], f1: [['f1', 'Update prediction']], media: [['skill', 'Use a skill']] };
 let lastSkill = '', lastSkillAt = 0;
 const mediaBusy = () => Date.now() - lastSkillAt < 90e3 || rovers.some(r => !r.done && r.wait > 0 && r.route[r.leg] === 'media');
 const htmlCache = {};
@@ -1166,13 +1246,14 @@ function renderStation() {
   const today = rel.filter(e => new Date(e.at).toDateString() === new Date().toDateString()).length;
   const stored = stations[sel].grp.userData.stacks ? stations[sel].grp.userData.stacks.reduce((n, st) => n + (st.userData.n || 0), 0) : 0;
   const cap = stations[sel].grp.userData.stacks ? stations[sel].grp.userData.stacks.length * 8 : 0;
-  const racing = sel === 'f1' && Date.now() - f1At < 90e3, talking = sel === 'chat' && chatNow.active, working = (sel === 'claude' && claudeNow.active) || talking, shooting = sel === 'media' && mediaBusy();
+  const offDuty = sel === 'lounge' && me.mode === 'lounge', racing = sel === 'f1' && Date.now() - f1At < 90e3, talking = sel === 'chat' && chatNow.active, working = (sel === 'claude' && claudeNow.active) || talking, shooting = sel === 'media' && mediaBusy();
   const acts = ACTIONS[sel] ? `<div class="sec">Send a test crate</div><div class="btns">${ACTIONS[sel].map(([t, l]) => `<button data-type="${t}"><i style="background:${EV_COLOR[t]}"></i>${l}</button>`).join('')}</div>` : '';
-  const status = s.site ? '<span class="pill grey">Available</span>' : shooting ? '<span class="pill warn">Shooting</span>' : racing ? '<span class="pill red">Car out</span>' : talking ? '<span class="pill blue">In conversation</span>' : working ? '<span class="pill warn">Working</span>' : inbound ? '<span class="pill blue">Receiving</span>' : '<span class="pill">Operational</span>';
+  const status = s.site ? '<span class="pill grey">Available</span>' : shooting ? '<span class="pill warn">Shooting</span>' : offDuty ? '<span class="pill blue">Off duty</span>' : racing ? '<span class="pill red">Car out</span>' : talking ? '<span class="pill blue">In conversation</span>' : working ? '<span class="pill warn">Working</span>' : inbound ? '<span class="pill blue">Receiving</span>' : '<span class="pill">Operational</span>';
   setHTML('station', `
     <div class="st-head"><span class="st-icon" style="background:${s.css}">${stationIcon(sel)}</span>
       <div><div class="eyebrow">${esc(s.eyebrow)}</div><h2>${esc(s.name)}</h2><p>${esc(s.sub)}</p></div></div>
-    <div class="st-status">${status}<span>${s.site ? 'Pick what to build here next' : shooting ? `Photo shoot for ${esc(lastSkill || 'a skill')}` : racing ? 'Car out on the apron · running the race model' : talking ? `In conversation · ${esc(chatNow.title)}` : working ? `${esc(claudeNow.title)} · ${claudeNow.tools} tool${claudeNow.tools === 1 ? '' : 's'} so far · ${esc(claudeNow.repo)}` : `${inbound} inbound · ${rel.length} handled`}</span></div>
+    ${s.link ? `<a class="st-link" href="${s.link[0]}" target="_blank" rel="noopener">${esc(s.link[1])}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></a>` : ''}
+    <div class="st-status">${status}<span>${s.site ? 'Pick what to build here next' : shooting ? `Photo shoot for ${esc(lastSkill || 'a skill')}` : offDuty ? `Yajie is ${me.label}` : sel === 'lounge' ? (me.travel ? 'Yajie is on the way' : 'Empty: Yajie is at work') : racing ? 'Car out on the apron · running the race model' : talking ? `In conversation · ${esc(chatNow.title)}` : working ? `${esc(claudeNow.title)} · ${claudeNow.tools} tool${claudeNow.tools === 1 ? '' : 's'} so far · ${esc(claudeNow.repo)}` : `${inbound} inbound · ${rel.length} handled`}</span></div>
     ${s.site ? `<p class="muted" style="margin:0;line-height:1.55">This pad is ready for a new station, such as Vercel deploys, a Slack relay or a Linear tracker. Each new service gets its own warehouse and road.</p>` : `
     <div class="tiles">
       ${cap ? `<div class="tile"><div class="k">Crates on site</div><div class="v">${stored} <small class="muted" style="font-size:12px">/ ${cap}</small></div><div class="bar"><i style="width:${Math.round(stored / cap * 100)}%"></i></div></div>` : `<div class="tile"><div class="k">Crates built</div><div class="v">${rel.length}</div></div>`}
@@ -1241,6 +1322,7 @@ function renderClaude() {
   if (sel === 'claude') renderStation();
 }
 function add(ev, animate = true) {
+  if (!ev.local || ev.type === 'chat_start') me.last = Math.max(me.last, Date.parse(ev.at) || Date.now());
   if (String(ev.type).startsWith('claude_')) return activity(ev);
   if (ev.type === 'chat_start') { Object.assign(chatNow, { active: true, title: ev.title || 'New chat', last: Date.now() }); stations.chat.tag.lastChild.textContent = 'Claude Chat · talking'; if (sel === 'chat') renderStation(); return; }
   if (ev.type === 'chat') { chatNow.active = false; stations.chat.tag.lastChild.textContent = ST.chat.name; }
@@ -1261,6 +1343,8 @@ const SIM = {
   fail:   () => ({ title: `Build failed · ${pick(['TypeError in rover.js', 'Lint: unused variable in feed.js', 'Test failed: crate stack overflow'])}`, branch: pick(['main', 'feat/curved-roads']) }),
 };
 function local(type) {
+  if (type === 'idle') { me.last = 0; return; }        // test: as if nothing has happened for a while
+  if (type === 'back') { me.last = Date.now(); return; }
   if (type === 'chat') {
     const topic = pick(['Planning the Moonbase backend', 'Portfolio copy review', 'F1 race prediction', 'Ideas for a Vercel station']);
     add({ type: 'chat_start', title: topic, local: true });
@@ -1287,7 +1371,7 @@ $('panelsBtn').onclick = () => { const bare = document.querySelector('.hud').cla
 const live = $('live'), st = $('statusText');
 let connected = false;
 const testMode = () => { if (connected) return; st.textContent = 'Test mode'; if (!events.length) local('push'); }; // one demo rover so the base is alive
-const takeHistory = list => { events = [...events.filter(x => x.local), ...list].sort((a, b) => String(b.at).localeCompare(String(a.at))); renderAll(); };
+const takeHistory = list => { for (const e of list) if (!e.local) me.last = Math.max(me.last, Date.parse(e.at) || 0); events = [...events.filter(x => x.local), ...list].sort((a, b) => String(b.at).localeCompare(String(a.at))); renderAll(); };
 const online = () => { connected = true; live.classList.remove('off'); st.textContent = 'Live'; };
 const offline = () => { live.classList.add('off'); st.textContent = connected ? 'Reconnecting' : 'Test mode · feed off'; };
 setTimeout(testMode, 2500);
