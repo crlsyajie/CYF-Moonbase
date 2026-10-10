@@ -358,22 +358,36 @@ const ST = {
 // so traffic drives around it instead of through it. Chat's road curls round Claude Code to join its spoke.
 const RING = 10.6, polar = (cx, cz, deg, r) => [cx + r * Math.sin(deg * Math.PI / 180), cz + r * Math.cos(deg * Math.PI / 180)];
 const degTo = (a, b) => Math.atan2(b.x - a.x, b.z - a.z) * 180 / Math.PI;
-const NODES = {}, EDGES = [];
+const NODES = {}, EDGES = [], CHAINS = []; // CHAINS: roads as drawn ({ nodes, kind, closed }); EDGES: the same roads as a graph
 const spokes = Object.keys(ST).filter(id => id !== 'factory' && id !== 'chat');
-for (let k = 0; k < 6; k++) NODES['c' + k] = polar(0, 0, k * 60, RING / Math.cos(Math.PI / 6));        // ring corners
 for (const id of spokes) {
-  const d = degTo(ST.factory, ST[id]), k = Math.round((d - 30) / 60 + 6) % 6;
-  NODES['r:' + id] = polar(0, 0, d, RING);                                                                // where the spoke meets the ring
-  NODES['g:' + id] = polar(ST[id].x, ST[id].z, d + 180, ST[id].r + .5);                                  // gate in front of the building
-  EDGES.push(['r:' + id, 'c' + k, 'main'], ['r:' + id, 'c' + ((k + 1) % 6), 'main']);
+  const d = degTo(ST.factory, ST[id]);
+  NODES['r:' + id] = polar(0, 0, d, RING);                                 // where the spoke meets the Main Road
+  NODES['g:' + id] = polar(ST[id].x, ST[id].z, d + 180, ST[id].r + .5);   // gate in front of the building
+  CHAINS.push({ nodes: ['g:' + id, 'r:' + id], kind: ST[id].site ? 'site' : 'spoke' });
 }
-{ const C = ST.claude, dc = degTo(C, ST.chat), df = degTo(C, ST.factory);
+{ // the Main Road: corners and spoke junctions in order around the factory
+  const ring = [];
+  for (let k = 0; k < 6; k++) {
+    NODES['c' + k] = polar(0, 0, k * 60, RING / Math.cos(Math.PI / 6)); ring.push('c' + k);
+    const mid = spokes.find(id => Math.abs(((degTo(ST.factory, ST[id]) - (k * 60 + 30)) % 360 + 540) % 360 - 180) < 1);
+    if (mid) ring.push('r:' + mid);
+  }
+  CHAINS.push({ nodes: ring, kind: 'main', closed: true });
+}
+{ // the chat road: straight over the bridge, then a true arc around Claude Code, ending at its gate
+  const C = ST.claude, dc = degTo(C, ST.chat), df = degTo(C, ST.factory), R = 9.6, nodes = ['g:chat', 'seam:chat'];
   NODES['g:chat'] = polar(ST.chat.x, ST.chat.z, dc + 180, ST.chat.r + .5);
   NODES['seam:chat'] = [(C.x + ST.chat.x) / 2, (C.z + ST.chat.z) / 2];
-  NODES['bend:chat'] = polar(C.x, C.z, (dc + df) / 2, 10.5);
-  NODES['j:claude'] = polar(C.x, C.z, df, 12.6);
-  EDGES.push(['g:chat', 'seam:chat', 'spoke'], ['seam:chat', 'bend:chat', 'spoke'], ['bend:chat', 'j:claude', 'spoke'], ['j:claude', 'g:claude', 'spoke'], ['j:claude', 'r:claude', 'spoke']); }
-for (const id of spokes) if (id !== 'claude') EDGES.push(['g:' + id, 'r:' + id, ST[id].site ? 'site' : 'spoke']);
+  const span = ((df - dc) % 360 + 360) % 360, steps = Math.ceil(span / 10);
+  for (let i = 0; i <= steps; i++) { NODES['arc' + i] = polar(C.x, C.z, dc + span * i / steps, R); nodes.push('arc' + i); }
+  nodes.push('g:claude');
+  CHAINS.push({ nodes, kind: 'spoke' });
+}
+for (const ch of CHAINS) {
+  const n = ch.nodes; for (let i = 0; i < n.length - 1; i++) EDGES.push([n[i], n[i + 1], ch.kind]);
+  if (ch.closed) EDGES.push([n.at(-1), n[0], ch.kind]);
+}
 const ROAD_SEGS = EDGES.map(([a, b]) => [...NODES[a], ...NODES[b]]);
 const SEAMS = [...spokes.map(id => [ST[id].x / 2, ST[id].z / 2, degTo(ST.factory, ST[id])]), [...NODES['seam:chat'], degTo(ST.claude, ST.chat)]];
 function roadRoute(from, to) { // shortest path over the road graph (Dijkstra; the graph is tiny)
@@ -524,14 +538,39 @@ const M = {
   }
   // roads with dashed centre lines
   const dashes = [], KIND = { main: [4.6, 0x9f9584], spoke: [3.6, 0xb7ab97], site: [3.6, 0xc7bca9] };
-  for (const [na, nb, kind] of EDGES) {
-    const [ax, az] = NODES[na], [bx, bz] = NODES[nb], len = Math.hypot(bx - ax, bz - az), ang = Math.atan2(bz - az, bx - ax), [w, col] = KIND[kind];
-    const road = new THREE.Mesh(new THREE.PlaneGeometry(len, w), mat(col, { roughness: .9 }));
-    road.rotation.set(-Math.PI / 2, 0, -ang); road.position.set((ax + bx) / 2, kind === 'main' ? .07 : .05, (az + bz) / 2); road.receiveShadow = true; scene.add(road);
-    for (const [x, z] of [[ax, az], [bx, bz]]) { const j = new THREE.Mesh(new THREE.CircleGeometry(w / 2, 20), mat(col, { roughness: .9 })); j.rotation.x = -Math.PI / 2; j.position.set(x, kind === 'main' ? .07 : .05, z); j.receiveShadow = true; scene.add(j); }
-    if (kind !== 'site') for (let d = 1.2; d < len - 1.2; d += 3.4) {
-      const x = ax + Math.cos(ang) * d, z = az + Math.sin(ang) * d;
-      if (kind === 'main') { for (const off of [-.22, .22]) dashes.push([x - Math.sin(ang) * off, z + Math.cos(ang) * off, ang]); } else dashes.push([x, z, ang]);
+  const roundCorners = (pts, closed) => { // two Chaikin passes: soft corners, same course
+    let p = pts;
+    for (let it = 0; it < 2; it++) {
+      const q = closed ? [] : [p[0]], m = closed ? p.length : p.length - 1;
+      for (let i = 0; i < m; i++) { const [ax, az] = p[i], [bx, bz] = p[(i + 1) % p.length]; q.push([ax * .75 + bx * .25, az * .75 + bz * .25], [ax * .25 + bx * .75, az * .25 + bz * .75]); }
+      if (!closed) q.push(p.at(-1)); p = q;
+    }
+    return p;
+  };
+  for (const ch of CHAINS) {
+    const [w, col] = KIND[ch.kind], y = ch.kind === 'main' ? .07 : .05, line = ch.kind === 'main' || ch.nodes.length > 2 ? roundCorners(ch.nodes.map(n => NODES[n]), ch.closed) : ch.nodes.map(n => NODES[n]);
+    const N = line.length, pos = [], idx = [], at2 = i => line[(i + N) % N];
+    for (let i = 0; i < N; i++) {
+      const q = line[i], pr = i > 0 || ch.closed ? at2(i - 1) : null, nx = i < N - 1 || ch.closed ? at2(i + 1) : null;
+      const nrm = (u, v) => { const L = Math.hypot(v[0] - u[0], v[1] - u[1]) || 1; return [-(v[1] - u[1]) / L, (v[0] - u[0]) / L]; };
+      const n1 = pr ? nrm(pr, q) : null, n2 = nx ? nrm(q, nx) : null;
+      let mx, mz, k = 1;
+      if (n1 && n2) { mx = n1[0] + n2[0]; mz = n1[1] + n2[1]; const L = Math.hypot(mx, mz) || 1; mx /= L; mz /= L; k = 1 / Math.max(.5, mx * n1[0] + mz * n1[1]); } else [mx, mz] = n1 || n2;
+      pos.push(q[0] + mx * w / 2 * k, y, q[1] + mz * w / 2 * k, q[0] - mx * w / 2 * k, y, q[1] - mz * w / 2 * k);
+    }
+    const segs = ch.closed ? N : N - 1;
+    for (let i = 0; i < segs; i++) { const a2 = i * 2, b2 = ((i + 1) % N) * 2; idx.push(a2, b2, a2 + 1, a2 + 1, b2, b2 + 1); }
+    const gq = new THREE.BufferGeometry(); gq.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); gq.setIndex(idx); gq.computeVertexNormals();
+    const road = new THREE.Mesh(gq, mat(col, { side: THREE.DoubleSide })); road.receiveShadow = true; scene.add(road);
+    if (ch.kind === 'site') continue;
+    let carry = 1.2; // dashes every 3.4 units along the curve
+    for (let i = 0; i < segs; i++) {
+      const [ax, az] = at2(i), [bx, bz] = at2(i + 1), L = Math.hypot(bx - ax, bz - az), ang = Math.atan2(bz - az, bx - ax);
+      let d = carry; for (; d < L; d += 3.4) {
+        const x = ax + (bx - ax) * d / L, z = az + (bz - az) * d / L;
+        if (ch.kind === 'main') { for (const off of [-.22, .22]) dashes.push([x - Math.sin(ang) * off, z + Math.cos(ang) * off, ang]); } else dashes.push([x, z, ang]);
+      }
+      carry = d - L;
     }
   }
   for (const [mx, mz, d] of SEAMS) { // bridges over the seams between pieces
@@ -738,7 +777,7 @@ const stations = {};
 for (const id in ST) {
   const s = ST[id];
   const grp = id === 'you' ? habitat() : id === 'factory' ? factory() : id === 'f1' ? paddock() : id === 'media' ? mediaStudio() : id === 'chat' ? chatTower() : s.site ? buildSite() : hexWarehouse(s.css, id);
-  grp.position.set(s.x, 0, s.z); if (id === 'factory') grp.scale.setScalar(.8); // leaves room for the Main Road
+  grp.position.set(s.x, 0, s.z); if (id === 'factory' || id === 'claude') grp.scale.setScalar(.8); // leaves room for the Main Road and the chat road
   if (id !== 'factory') { const f = ST.factory; grp.rotation.y = Math.atan2(f.x - s.x, f.z - s.z); }
   grp.traverse(o => { o.userData.station = id; });
   scene.add(grp);
@@ -850,9 +889,9 @@ function updateWalkers(dt, t) {
   for (const w of walkers) {
     w.s += w.dir * 3.2 * dt; if (w.s > w.L) { w.s = w.L; w.dir = -1; } if (w.s < 0) { w.s = 0; w.dir = 1; }
     const [x, z, ux, uz] = walkTo(w.P, w.s, -1.9);
-    w.g.position.set(x, H(x, z) + (reduced ? 0 : Math.abs(Math.sin(t * 6 + w.L * w.dir)) * .25), z);
+    w.phase = (w.phase || 0) + dt * 6; w.g.position.set(x, reduced ? 0 : Math.sin(w.phase) ** 2 * .18, z); // smooth sway, no phase jumps
     w.yaw = turnToward(w.yaw ?? 0, Math.atan2(ux * w.dir, uz * w.dir), dt * 6); w.g.rotation.y = w.yaw;
-    if (w.tag) w.tag.innerHTML = `<i style="background:#d97757"></i>Chat · ${esc(claudeNow.repo || 'Claude Code')}`;
+    if (w.tag) { const txt = `<i style="background:#d97757"></i>Chat · ${esc(claudeNow.repo || 'Claude Code')}`; if (w.tagTxt !== txt) { w.tagTxt = txt; w.tag.innerHTML = txt; } } // only touch the page when the text changes
   }
 }
 
