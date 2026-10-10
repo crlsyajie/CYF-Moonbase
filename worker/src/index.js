@@ -87,6 +87,7 @@ export class Hub {
       const [client, server] = Object.values(new WebSocketPair());
       this.state.acceptWebSocket(server);
       server.send(JSON.stringify({ kind: 'history', events: (await this.state.storage.get('history')) || [] }));
+      this.announceViewers();
       return new Response(null, { status: 101, webSocket: client });
     }
     if (url.pathname === '/emit') {
@@ -110,6 +111,13 @@ export class Hub {
     return rest;
   }
 
+  // How many pages are watching right now, sent to every page when someone arrives or leaves.
+  announceViewers() {
+    const open = this.state.getWebSockets().filter(w => w.readyState === 1), msg = JSON.stringify({ kind: 'viewers', count: open.length });
+    for (const w of open) { try { w.send(msg); } catch {} }
+  }
+
   webSocketMessage(ws, msg) { if (msg === 'ping') ws.send('pong'); }
-  webSocketClose(ws, code) { try { ws.close(code, 'bye'); } catch {} }
+  webSocketClose(ws, code) { try { ws.close(code, 'bye'); } catch {} this.announceViewers(); }
+  webSocketError(ws) { try { ws.close(1011, 'error'); } catch {} this.announceViewers(); }
 }

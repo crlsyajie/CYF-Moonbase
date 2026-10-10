@@ -7,7 +7,7 @@ A live view of my dev work as a lunar base. Each push to GitHub, and each Claude
 - **GitHub warehouse** and **Claude warehouse**: hexagon stations at the end of each route
 - **Claude Code Workshop** and **Claude Chat Tower**: two hexagons side by side, one for Claude Code sessions, one for claude.ai chats
 - **Creative Media Factory**: where Claude's skills run; its rooftop billboard shows the skill in use
-- **Formula 1 Paddock**: the F1 GP Predictor; runs of the `f1-gp-update` skill send a crate here and the car races
+- **Formula 1 Garage**: the F1 GP Predictor; runs of the `f1-gp-update` skill send a crate here and the car rolls out onto the apron
 - **Build site**: an empty pad for the next station
 
 ## Live Claude Code activity (local)
@@ -30,7 +30,7 @@ Privacy: the bridge never forwards prompt text or full commands, only the event 
 
 - `POST /github` takes GitHub webhooks (pushes, pull requests, workflow runs), checked against `GITHUB_SECRET`.
 - `POST /hook` takes events from `bridge.py`, which forwards everything when `~/.config/moonbase/upstream.json` exists. It needs `INGEST_TOKEN`.
-- `GET /ws` is the page's live connection.
+- `GET /ws` is the page's live connection. The hub also counts open pages and sends a live "N watching" count; each viewer appears as a visitor astronaut on the base.
 
 Opened from the bridge (127.0.0.1) the page uses the local stream; anywhere else, such as GitHub Pages, it uses the hub. Set `PUBLIC_DETAILS = "false"` in `worker/wrangler.toml` to hide commit messages and chat topics from viewers.
 

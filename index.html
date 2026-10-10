@@ -11,7 +11,7 @@
    in the style of a logistics control room. Phones: the scene on top, the cards flow below it. */
 :root {
   color-scheme: light;
-  --space: #0b1020;
+  --space: #060709;
   --card: #ffffff;
   --ink: #141a2e;
   --muted: #6b7390;
@@ -206,25 +206,25 @@ button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 /* ---- Liquid Glass overlay (Apple-style): frosted, translucent panels over the scene ---- */
 :root {
   --card: rgba(255, 255, 255, .14);
-  --ink: #f5f7ff;
-  --muted: rgba(228, 234, 255, .68);
+  --ink: #f5f4f0;
+  --muted: rgba(236, 234, 228, .66);
   --line: rgba(255, 255, 255, .14);
   --soft: rgba(255, 255, 255, .09);
   --ok: #4ade9b; --ok-bg: rgba(74, 222, 155, .16);
   --warn: #ffc95c; --warn-bg: rgba(255, 201, 92, .16);
   --glass-edge: rgba(255, 255, 255, .34);
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Plus Jakarta Sans", "Helvetica Neue", sans-serif;
-  --shadow: 0 18px 48px rgba(3, 6, 20, .38), inset 0 1px 0 rgba(255, 255, 255, .38), inset 0 -1px 0 rgba(255, 255, 255, .06);
+  --shadow: 0 18px 48px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .38), inset 0 -1px 0 rgba(255, 255, 255, .06);
 }
 body { color: var(--ink); }
 .card {
-  background: linear-gradient(155deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .05) 55%, rgba(255, 255, 255, .1)), rgba(14, 20, 44, .42);
+  background: linear-gradient(155deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .05) 55%, rgba(255, 255, 255, .1)), rgba(10, 10, 12, .42);
   -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
   border: 1px solid var(--glass-edge); border-radius: 22px; box-shadow: var(--shadow);
 }
 .kpi { border-radius: 18px; } .mapctl { border-radius: 18px; }
 .kpi .ic, .st-icon { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); }
-.kpi .ic { background: rgba(120, 150, 255, .22); color: #c9d6ff; }
+.kpi .ic { background: rgba(255, 255, 255, .12); color: #f1eee6; }
 .chip { border-color: var(--line); background: var(--soft); border-radius: 14px; }
 .chip .code { border-radius: 9px; }
 .live { background: var(--ok-bg); color: var(--ok); box-shadow: inset 0 0 0 1px rgba(74, 222, 155, .3); }
@@ -239,33 +239,79 @@ body { color: var(--ink); }
 .fold:hover { color: var(--ink); background: rgba(255, 255, 255, .22); }
 .pill { border-radius: 999px; background: var(--ok-bg); color: var(--ok); }
 .pill.warn { background: var(--warn-bg); color: var(--warn); }
-.pill.blue { background: rgba(120, 150, 255, .2); color: #b9c8ff; }
+.pill.blue { background: rgba(255, 255, 255, .14); color: #f1eee6; }
 .pill.grey { background: var(--soft); color: var(--muted); }
 .pill.red { background: rgba(255, 99, 99, .18); color: #ff9b9b; }
-.eyebrow { color: #9fb4ff; }
+.eyebrow { color: #d9c48a; }
 .tile { background: rgba(255, 255, 255, .08); border-radius: 14px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
-.tile .bar { background: rgba(255, 255, 255, .14); } .tile .bar i { background: linear-gradient(90deg, #7c9bff, #b49cff); }
+.tile .bar { background: rgba(255, 255, 255, .14); } .tile .bar i { background: linear-gradient(90deg, #c99a3e, #ecd08a); }
 .mini .box { background: rgba(212, 162, 107, .22); }
 .shipcard { background: rgba(255, 255, 255, .08); border-radius: 16px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
 .shipcard .art { background: rgba(255, 255, 255, .85); border-radius: 12px; }
 .step .c { background: rgba(255, 255, 255, .1); color: var(--muted); border-color: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2); }
-.step.done .c { background: #5b7cff; color: #fff; }
-.step.now .c { background: rgba(255, 255, 255, .16); color: #b9c8ff; box-shadow: 0 0 0 2px #7c9bff; }
-.step::before { background: rgba(255, 255, 255, .16); } .step.done::before, .step.now::before { background: #7c9bff; }
+.step.done .c { background: #c99a3e; color: #fff; }
+.step.now .c { background: rgba(255, 255, 255, .16); color: #ecd08a; box-shadow: 0 0 0 2px #d6ad55; }
+.step::before { background: rgba(255, 255, 255, .16); } .step.done::before, .step.now::before { background: #d6ad55; }
 .tabs b { background: rgba(255, 255, 255, .12); border-radius: 999px; }
 .log li { border-bottom-color: var(--line); } .log .meta, .log .a { color: var(--muted); }
-@keyframes flash { from { background: rgba(124, 155, 255, .22); } }
+@keyframes flash { from { background: rgba(255, 255, 255, .14); } }
 .working { color: #ffb08f; }
 .tag {
-  background: rgba(20, 28, 56, .42); color: #f5f7ff; border: 1px solid rgba(255, 255, 255, .3);
-  background: rgba(22, 30, 60, .74); will-change: transform;
-  box-shadow: 0 6px 18px rgba(3, 6, 20, .35), inset 0 1px 0 rgba(255, 255, 255, .3);
+  background: rgba(14, 14, 16, .42); color: #f5f7ff; border: 1px solid rgba(255, 255, 255, .3);
+  background: rgba(14, 14, 16, .74); will-change: transform;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .3);
 }
-.tag.sel { outline: none; box-shadow: 0 0 0 2px rgba(124, 155, 255, .9), 0 6px 18px rgba(3, 6, 20, .35); }
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .card { background: rgba(28, 36, 66, .92); } .tag { background: rgba(28, 36, 66, .9); } }
+.tag.sel { outline: none; box-shadow: 0 0 0 2px rgba(236, 208, 138, .9), 0 6px 18px rgba(0, 0, 0, .35); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .card { background: rgba(24, 24, 28, .92); } .tag { background: rgba(24, 24, 28, .9); } }
 .labels.off .tag { opacity: 0; visibility: hidden; }
 .tag { transition: opacity .2s; }
 .mapctl { grid-row: 3; justify-self: start; align-self: start; }
+/* layout fixes: phone layout last so it wins; text never spills out of a card */
+.topbar > *, .kpi > span, .chip > span, .me > span, .st-head > div, .shipcard > span { min-width: 0; }
+.brand, .chip b, .me b, .live, .panels-btn { white-space: nowrap; }
+.chip small, .me small, .kpi .k, .kpi .s, .st-head p, .tr-head h3, .tabs b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-head h2, .shipcard b { overflow-wrap: anywhere; }
+.tag { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 860px) {
+  .hud { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; padding: 16px; gap: 10px; }
+  .hud > * { grid-column: 1 !important; grid-row: auto !important; max-width: none; }
+  .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .topbar { justify-content: space-between; } .brand { margin-right: 0; }
+  #tracking { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) { .kpis { grid-template-columns: minmax(0, 1fr); } .chip { display: none; } }
+/* ---- Liquid Glass, not frosted: nearly clear, light blur, a bright refracting rim and a soft sheen ---- */
+.card {
+  background: linear-gradient(140deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .03) 38%, rgba(255, 255, 255, .02) 62%, rgba(255, 255, 255, .08)), rgba(10, 10, 12, .16);
+  -webkit-backdrop-filter: blur(7px) saturate(170%) brightness(1.06); backdrop-filter: blur(7px) saturate(170%) brightness(1.06);
+  border: 1px solid rgba(255, 255, 255, .16);
+  box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, .7), inset 1px 0 2px rgba(255, 255, 255, .28), inset 0 -1px 1.5px rgba(255, 255, 255, .22), inset -1px 0 2px rgba(255, 255, 255, .12), inset 0 0 22px rgba(255, 255, 255, .05), 0 14px 40px rgba(0, 0, 0, .34);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
+  isolation: isolate;
+}
+.card::before { /* the thick glass edge catching light */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.6px; pointer-events: none; z-index: 1;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .95), rgba(255, 255, 255, .18) 22%, rgba(255, 255, 255, 0) 48%, rgba(255, 255, 255, .08) 72%, rgba(255, 255, 255, .75));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.card::after { /* a soft sheen across the top */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0;
+  background: radial-gradient(120% 60% at 20% -10%, rgba(255, 255, 255, .16), transparent 55%), linear-gradient(180deg, rgba(255, 255, 255, .06), transparent 30%);
+}
+.card > * { position: relative; z-index: 2; }
+.card > .fold { position: absolute; z-index: 3; }
+.tile, .shipcard { background: rgba(255, 255, 255, .06); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .28), inset 0 0 0 1px rgba(255, 255, 255, .07); }
+.panels-btn, .btns button, .fold, .tabs b, .chip {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .04));
+  border: 1px solid rgba(255, 255, 255, .2);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .6), inset 0 -1px 1px rgba(255, 255, 255, .12);
+}
+.panels-btn:hover, .btns button:hover, .fold:hover { background: linear-gradient(180deg, rgba(255, 255, 255, .26), rgba(255, 255, 255, .08)); }
+.tag { background: rgba(14, 14, 16, .55); border-color: rgba(255, 255, 255, .38); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .55), 0 6px 18px rgba(0, 0, 0, .3); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .card { background: rgba(24, 24, 28, .9); } }
+.viewers { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12px; border-radius: 999px; padding: 6px 11px; color: #f1eee6; white-space: nowrap;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .04)); border: 1px solid rgba(255, 255, 255, .2); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .6); }
+.viewers svg { width: 15px; height: 15px; }
 </style>
 </head>
 <body>
@@ -279,6 +325,7 @@ body { color: var(--ink); }
       </div>
       <div class="chip"><span class="code">MB-01</span><span><b>Moonbase Yajie</b><small>Sea of Tranquility · 7 stations · 1 build site</small></span></div>
       <div class="live off" id="live"><span class="dot"></span><span id="statusText">Connecting</span><time id="clock"></time></div>
+      <span class="viewers" id="viewers" hidden title="People looking at Moonbase right now"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span id="viewersN"></span></span>
       <button class="panels-btn" id="namesBtn" aria-pressed="false" title="Show or hide building names (N)">Hide names</button>
       <button class="panels-btn" id="panelsBtn" aria-pressed="false">Hide panels</button>
       <div class="me"><span class="avatar">CY</span><span><b>Yajie</b><small>Base commander</small></span></div>
@@ -352,7 +399,7 @@ const ST = {
   chat:    { x: +(slot(90).x + slot(150).x).toFixed(2), z: +(slot(90).z + slot(150).z).toFixed(2), r: 10, color: 0x38a3d6, css: '#38a3d6', eyebrow: 'COMMS · CT-01', name: 'Claude Chat Tower', sub: 'Conversations on claude.ai' },
   media:   { ...slot(30),  r: 10, color: 0xe0458f, css: '#e0458f', eyebrow: 'FACTORY · CM-01',   name: 'Creative Media Factory', sub: 'Where Claude\'s skills make things' },
   site2:   { ...slot(210), r: 7,  color: 0x9aa1b8, css: '#9aa1b8', eyebrow: 'BUILD SITE · BS-02', name: 'Empty Build Site', sub: 'Room for the next station', site: true },
-  f1:      { ...slot(330), r: 10, color: 0xe10600, css: '#e10600', eyebrow: 'RACING · F1-01',    name: 'Formula 1 Paddock', sub: 'F1 GP Predictor: race data and predictions' },
+  f1:      { ...slot(330), r: 10, color: 0xe10600, css: '#e10600', eyebrow: 'RACING · F1-01',    name: 'Formula 1 Garage', sub: 'F1 GP Predictor: race data and predictions' },
 };
 // Road network. Stops are gates in front of each building; the factory is ringed by the Main Road,
 // so traffic drives around it instead of through it. Chat's road curls round Claude Code to join its spoke.
@@ -448,7 +495,7 @@ let renderer;
 try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
 catch (e) { sceneEl.innerHTML = '<div class="nogl">This browser could not start 3D graphics, so the moon base can\'t be drawn. The cargo log still works.</div>'; }
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111a33);
+scene.background = new THREE.Color(0x060709);
 const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 2000);
 const VIEW = 100;
 const HOME = { az: Math.PI / 4, pol: .98 };
@@ -473,8 +520,8 @@ if (renderer) {
 function setCam(az, pol, tgt = new THREE.Vector3()) { const r = 300; cam.position.set(tgt.x + r * Math.sin(pol) * Math.sin(az), tgt.y + r * Math.cos(pol), tgt.z + r * Math.sin(pol) * Math.cos(az)); cam.lookAt(tgt); }
 
 // ---------- lights ----------
-scene.add(new THREE.HemisphereLight(0xffffff, 0xc9cfe6, 1.5));
-const sun = new THREE.DirectionalLight(0xffffff, 1.7);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xb6b5b0, 1.5));
+const sun = new THREE.DirectionalLight(0xfffaf0, 1.75);
 sun.position.set(-45, 85, 55); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -72, right: 72, top: 72, bottom: -72, near: 1, far: 260 });
 sun.shadow.bias = -.0004; sun.shadow.normalBias = .04; sun.shadow.radius = 4;
@@ -493,9 +540,9 @@ function canvasTex(w, h, draw, repeat) { const c = document.createElement('canva
 const corrugated = (hex, rep = [4, 1]) => canvasTex(64, 8, (x, w, h) => { x.fillStyle = hex; x.fillRect(0, 0, w, h); x.fillStyle = 'rgba(255,255,255,.2)'; x.fillRect(0, 0, 18, h); x.fillStyle = 'rgba(0,0,0,.14)'; x.fillRect(36, 0, 12, h); }, rep);
 const boxTex = canvasTex(64, 64, (x) => { x.fillStyle = '#d4a26b'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#e9c792'; x.fillRect(26, 0, 12, 64); x.strokeStyle = 'rgba(90,55,20,.35)'; x.lineWidth = 3; x.strokeRect(1.5, 1.5, 61, 61); });
 const M = {
-  white: mat(0xeee3c9), grey: mat(0x7a8190), dark: mat(0x4a505c), glass: mat(0x2f5f86),
-  blue: mat(0xe0863a), slate: mat(0x5f6675), sand: mat(0xdcc9a3), stone: mat(0x8f8a82), tire: mat(0x262b40, { roughness: .8 }), pallet: mat(0xb08355, { roughness: .8 }),
-  box: toon({ map: boxTex, roughness: .8 }), cone: mat(0xff7a2e), yellow: mat(0xf2c14e, { roughness: .6 }),
+  white: mat(0xf4f4f1), grey: mat(0xa3a3a0), dark: mat(0x55565a), glass: mat(0x3e4a55),
+  blue: mat(0xd6ad55), slate: mat(0x8f8f8b), sand: mat(0xe4e4de), stone: mat(0xc8c8c3), tire: mat(0x262b40, { roughness: .8 }), pallet: mat(0xb08355, { roughness: .8 }),
+  box: toon({ map: boxTex, roughness: .8 }), cone: mat(0xff7a2e), yellow: mat(0xf2f1ec),
   rock: toon({ color: 0x9a9db0, roughness: 1, flatShading: true }),
 };
 
@@ -506,11 +553,11 @@ const M = {
   for (const id in ST) {
     const s = ST[id], pieceH = 3.2;
     // a clean hexagon piece: flat top, smooth side, colored rim band
-    const top = mesh(new THREE.CylinderGeometry(TILE, TILE, pieceH, 6), [mat(0xcfc3ad), mat(0xe0d6c4), mat(0xb3a68f)]);
+    const top = mesh(new THREE.CylinderGeometry(TILE, TILE, pieceH, 6), [mat(0xcfcfcc), mat(0xe9e9e6), mat(0xababa7)]);
     top.position.set(s.x, -pieceH / 2, s.z); scene.add(top);
     const lip = mesh(new THREE.CylinderGeometry(TILE + .05, TILE + .05, .7, 6, 1, true), mat(s.site ? 0xc3c8d8 : s.color, { side: THREE.DoubleSide }));
     lip.position.set(s.x, -.55, s.z); scene.add(lip);
-    const foot = mesh(new THREE.CylinderGeometry(TILE * .96, TILE * .9, 1.2, 6), mat(0x7d776d)); foot.position.set(s.x, -pieceH - .6, s.z); scene.add(foot);
+    const foot = mesh(new THREE.CylinderGeometry(TILE * .96, TILE * .9, 1.2, 6), mat(0x8a8a86)); foot.position.set(s.x, -pieceH - .6, s.z); scene.add(foot);
   }
   // stone-block border around every piece (like the base of a game asset), with gaps where roads cross
   for (const id in ST) {
@@ -520,14 +567,14 @@ const M = {
       for (let b = 0; b < 5; b++) {
         const t = (b + .5) / 5, cx = x1 + (x2 - x1) * t, cz = z1 + (z2 - z1) * t;
         if (ROAD_SEGS.some(g => segDist(cx, cz, ...g) < 3.6)) continue;
-        const blk = at(rbox(R / 5 - .25, .75, 1, b % 2 ? M.stone : M.slate, .22), cx, .37, cz); blk.rotation.y = -Math.atan2(z2 - z1, x2 - x1); scene.add(blk);
+        const blk = at(rbox(R / 5 - .3, .42, .8, b % 2 ? M.stone : mat(0xdadad5), .2), cx, .21, cz); blk.rotation.y = -Math.atan2(z2 - z1, x2 - x1); scene.add(blk);
       }
     }
   }
   // craters as flat graphic shapes: a soft ring and a darker floor
   for (const c of craters) {
-    const ring = new THREE.Mesh(new THREE.RingGeometry(c.r * .82, c.r, 40), mat(0xece4d4)); ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, .015, c.z); scene.add(ring);
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(c.r * .82, 40), mat(0xcbbda4)); floor.rotation.x = -Math.PI / 2; floor.position.set(c.x, .01, c.z); floor.receiveShadow = true; scene.add(floor);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(c.r * .82, c.r, 40), mat(0xf3f3f0)); ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, .015, c.z); scene.add(ring);
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(c.r * .82, 40), mat(0xd4d4cf)); floor.rotation.x = -Math.PI / 2; floor.position.set(c.x, .01, c.z); floor.receiveShadow = true; scene.add(floor);
   }
   // empty slots on the outer ring: dashed outlines where future pieces can snap in
   const ghostMat = new THREE.LineDashedMaterial({ color: 0x8d96c9, dashSize: 1.4, gapSize: .9, transparent: true, opacity: .55 });
@@ -537,7 +584,7 @@ const M = {
     const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ghostMat); ln.computeLineDistances(); scene.add(ln);
   }
   // roads with dashed centre lines
-  const dashes = [], KIND = { main: [4.6, 0x9f9584], spoke: [3.6, 0xb7ab97], site: [3.6, 0xc7bca9] };
+  const dashes = [], KIND = { main: [4.6, 0xa6a6a2], spoke: [3.6, 0xbdbdb8], site: [3.6, 0xcecec9] };
   const roundCorners = (pts, closed) => { // two Chaikin passes: soft corners, same course
     let p = pts;
     for (let it = 0; it < 2; it++) {
@@ -577,7 +624,7 @@ const M = {
     const ang = (90 - d) * Math.PI / 180, deck = at(rbox(4.2, .5, 5, M.grey, .1), mx, -.22, mz); deck.rotation.y = -ang; scene.add(deck);
     for (const sd of [-2.6, 2.6]) { const rail = at(rbox(4.6, .55, .28, M.blue, .08), mx - Math.sin(ang) * sd, .35, mz + Math.cos(ang) * sd); rail.rotation.y = -ang; scene.add(rail); }
   }
-  { const sign = document.createElement('div'); sign.className = 'tag'; sign.innerHTML = '<i style="background:#f2c14e"></i>Main Road'; const lab = new CSS2DObject(sign); lab.position.set(...[NODES.c3[0], 1.5, NODES.c3[1]]); scene.add(lab); }
+  { const sign = document.createElement('div'); sign.className = 'tag'; sign.innerHTML = '<i style="background:#d6ad55"></i>Main Road'; const lab = new CSS2DObject(sign); lab.position.set(...[NODES.c3[0], 1.5, NODES.c3[1]]); scene.add(lab); }
   const dm = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7, .06, .28), M.yellow, dashes.length), o = new THREE.Object3D();
   dashes.forEach(([x, z, a], i) => { o.position.set(x, .1, z); o.rotation.set(0, -a, 0); o.updateMatrix(); dm.setMatrixAt(i, o.matrix); });
   scene.add(dm);
@@ -585,10 +632,10 @@ const M = {
 
 // ---------- stars & earth ----------
 {
-  const n = 1400, pos = new Float32Array(n * 3), r = rng(3);
+  const n = 2600, pos = new Float32Array(n * 3), r = rng(3);
   for (let i = 0; i < n; i++) { const u = r() * 2 - 1, t = r() * TAU, s = Math.sqrt(1 - u * u); pos.set([600 * s * Math.cos(t), 600 * u, 600 * s * Math.sin(t)], i * 3); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xcfd8ff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: .85 })));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: .85 })));
   const earthTex = canvasTex(256, 128, (x, w, h) => { const img = x.createImageData(w, h);
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const n1 = fbm(i * .04, j * .06, 5), cl = fbm(i * .05 + 40, j * .09, 4), k = (j * w + i) * 4, land = n1 > .55, cloud = cl > .58;
       const col = cloud ? [240, 244, 250] : land ? [86, 150, 96] : [40, 96, 190]; img.data.set([...col, 255], k); }
@@ -618,15 +665,15 @@ function astronaut(visor = 0xf29b38) {
 function habitat() {
   // A modular cream habitat with slate trims and an orange door, a side tank and solar panels, under a glass dome on a stone-ringed base.
   const g = new THREE.Group(), cream = M.white, slate = M.slate, orange = M.blue;
-  g.add(at(mesh(new THREE.CylinderGeometry(8.2, 8.7, .8, 12), mat(0xc0703f)), 0, .4, 0));
-  for (let k = 0; k < 22; k++) { const a = k / 22 * TAU; if (Math.cos(a) > .93) continue; const blk = at(rbox(2.15, .95, 1, k % 2 ? M.stone : slate, .25), Math.sin(a) * 8.1, 1.05, Math.cos(a) * 8.1); blk.rotation.y = a; g.add(blk); }
+  g.add(at(mesh(new THREE.CylinderGeometry(8.2, 8.7, .8, 12), mat(0xd9d9d3)), 0, .4, 0));
+  for (let k = 0; k < 22; k++) { const a = k / 22 * TAU; if (Math.cos(a) > .93) continue; const blk = at(rbox(2.15, .5, .8, k % 2 ? M.stone : mat(0xdadad5), .22), Math.sin(a) * 8.1, 1.05, Math.cos(a) * 8.1); blk.rotation.y = a; g.add(blk); }
   // main module
   g.add(at(rbox(5.2, 5.4, 4.6, cream, .55), -.4, 3.5, -.8));
   for (const y of [1.1, 3.6, 6.05]) g.add(at(rbox(5.5, .42, 4.9, slate, .2), -.4, y, -.8));
   g.add(at(rbox(3.6, .8, 3.1, slate, .3), -.4, 6.6, -.8), at(rbox(2.4, .3, 2, mat(0x4a505c), .1), -.4, 7.1, -.8));
   g.add(at(rbox(2, 1.7, .35, orange, .3), -1.5, 4.8, 1.55), at(rbox(1.5, 1.2, .38, M.glass, .25), -1.5, 4.8, 1.6));
   // door with steps
-  g.add(at(rbox(1.9, 2.7, .45, orange, .25), 1.1, 2.15, 1.55), at(rbox(1.3, 2.1, .5, mat(0xc96f25), .2), 1.1, 2, 1.6));
+  g.add(at(rbox(1.9, 2.7, .45, orange, .25), 1.1, 2.15, 1.55), at(rbox(1.3, 2.1, .5, mat(0xb98f3c), .2), 1.1, 2, 1.6));
   g.add(at(mesh(new THREE.CylinderGeometry(.32, .32, .52, 18).rotateX(Math.PI / 2), M.glass), 1.1, 2.4, 1.66));
   g.add(at(rbox(2.4, .3, .9, slate, .1), 1.1, .95, 2.4), at(rbox(2.4, .3, .9, slate, .1), 1.1, .65, 3.1));
   // side tank
@@ -638,7 +685,7 @@ function habitat() {
   // antenna through the dome
   g.add(at(mesh(new THREE.CylinderGeometry(.08, .14, 9), slate), 4.6, 4.5, -4.8), at(mesh(new THREE.SphereGeometry(.22, 12, 8), orange), 4.6, 9.1, -4.8));
   // glass dome
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(7.7, 48, 24, 0, TAU, 0, Math.PI / 2), toon({ color: 0x8ec0e0, transparent: true, opacity: .26, depthWrite: false, side: THREE.DoubleSide }));
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(7.7, 48, 24, 0, TAU, 0, Math.PI / 2), toon({ color: 0xdfe4e6, transparent: true, opacity: .22, depthWrite: false, side: THREE.DoubleSide }));
   dome.position.y = .8; g.add(dome);
   g.add(at(mesh(new THREE.TorusGeometry(7.7, .22, 8, 64).rotateX(Math.PI / 2), slate), 0, .85, 0));
   const you = at(astronaut(), 6.6, 0, 7.4); you.name = 'astronaut'; g.add(you);
@@ -647,11 +694,11 @@ function habitat() {
 }
 function factory() {
   const g = new THREE.Group(), W = 18, D = 11, Hh = 6;
-  g.add(at(rbox(W, Hh, D, mat(0xeee3c9), .3), 0, Hh / 2, 0));
+  g.add(at(rbox(W, Hh, D, mat(0xf4f4f1), .3), 0, Hh / 2, 0));
   const roofM = toon({ map: corrugated('#2f5bea', [10, 1]), roughness: .45 });
   for (const s of [-1, 1]) { const slab = at(rbox(W + .8, .45, D / 2 + 1.1, roofM, .1), 0, Hh + 1, s * D / 4 + s * .1); slab.rotation.x = s * .36; g.add(slab); }
   const gable = new THREE.Shape([new THREE.Vector2(-D / 2, 0), new THREE.Vector2(D / 2, 0), new THREE.Vector2(0, 2.1)]);
-  const gm = mesh(new THREE.ExtrudeGeometry(gable, { depth: W - .4, bevelEnabled: false }), mat(0xdcc9a3)); gm.rotation.y = Math.PI / 2; at(gm, -W / 2 + .2, Hh - .05, 0); g.add(gm);
+  const gm = mesh(new THREE.ExtrudeGeometry(gable, { depth: W - .4, bevelEnabled: false }), mat(0xe4e4de)); gm.rotation.y = Math.PI / 2; at(gm, -W / 2 + .2, Hh - .05, 0); g.add(gm);
   for (const i of [-1, 0, 1]) {
     g.add(at(rbox(3.6, 4, .5, M.blue, .12), i * 5.2, 2, D / 2 + .05));
     g.add(at(rbox(2.9, 3.4, .4, mat(0x2a3150), .05), i * 5.2, 1.8, D / 2 + .15));
@@ -709,7 +756,7 @@ const billboard = (() => {
 })();
 function mediaStudio() {
   const g = new THREE.Group(), W = 15, D = 9, Hh = 5, pink = mat(0xe0458f);
-  g.add(at(rbox(W, Hh, D, mat(0xeee3c9), .4), 0, Hh / 2, 0));
+  g.add(at(rbox(W, Hh, D, mat(0xf4f4f1), .4), 0, Hh / 2, 0));
   g.add(at(rbox(W + .6, .5, D + .6, toon({ map: corrugated('#e0458f', [10, 1]), roughness: .45 }), .15), 0, Hh + .25, 0));
   for (const z of [D / 2 + .05, -D / 2 - .05]) {
     g.add(at(rbox(W - 3, 2.6, .3, M.glass, .1), 0, 2.4, z));
@@ -782,51 +829,55 @@ for (const id in ST) {
   grp.traverse(o => { o.userData.station = id; });
   scene.add(grp);
   const tag = document.createElement('div'); tag.className = 'tag'; tag.innerHTML = `<i style="background:${s.css}"></i>`; tag.append(document.createTextNode(s.name));
-  const lab = new CSS2DObject(tag); lab.position.set(s.x, id === 'factory' ? 10.5 : id === 'f1' ? 6 : id === 'chat' ? 16 : s.site ? 3 : 11, s.z); scene.add(lab);
+  const lab = new CSS2DObject(tag); lab.position.set(s.x, id === 'factory' ? 10.5 : id === 'f1' ? 8 : id === 'chat' ? 16 : s.site ? 3 : 11, s.z); scene.add(lab);
   stations[id] = { grp, tag, pulse: 0, pin: null };
 }
 
-// ---------- Formula 1 Paddock: a mini circuit with a car lapping it, a grandstand and the pit garage ----------
+// ---------- Formula 1 Garage: a team garage with the car on its stand; it rolls out onto the apron while the F1 model runs ----------
 let f1At = 0;
 function paddock() {
-  const g = new THREE.Group();
-  const curve = new THREE.CatmullRomCurve3([[-6, -2.5], [-2, -6.5], [4.5, -5.5], [7, -1], [4.5, 2.5], [0, 1.5], [-3.5, 4.5], [-7, 3]].map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'catmullrom', .5);
-  const N = 160, w = 1.6, pos = [], idx = [];
-  for (let i = 0; i <= N; i++) {
-    const p = curve.getPointAt(i / N), t = curve.getTangentAt(i / N), nx = -t.z, nz = t.x;
-    pos.push(p.x + nx * w, .12, p.z + nz * w, p.x - nx * w, .12, p.z - nz * w);
-    if (i < N) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
-  }
-  const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); tg.setIndex(idx); tg.computeVertexNormals();
-  const track = new THREE.Mesh(tg, mat(0x2b2f3d, { roughness: .8, side: THREE.DoubleSide })); track.receiveShadow = true; g.add(track);
-  for (let i = 0; i < N; i += 4) { // red and white kerbs
-    const p = curve.getPointAt(i / N), t = curve.getTangentAt(i / N);
-    for (const sd of [1, -1]) { const k = at(new THREE.Mesh(new THREE.BoxGeometry(.5, .08, .35), mat((i / 4) % 2 ? 0xffffff : 0xe10600)), p.x - t.z * (w + .2) * sd, .13, p.z + t.x * (w + .2) * sd); k.rotation.y = Math.atan2(t.x, t.z); g.add(k); }
-  }
-  const st0 = curve.getPointAt(0), tt0 = curve.getTangentAt(0), line = at(new THREE.Mesh(new THREE.BoxGeometry(w * 2, .05, .3), M.white), st0.x, .16, st0.z); line.rotation.y = Math.atan2(tt0.x, tt0.z); g.add(line);
-  // the car
-  const car = new THREE.Group(), red = mat(0xe10600, { roughness: .3, metalness: .2 });
-  car.add(at(rbox(.7, .35, 2.4, red, .12), 0, .32, 0), at(rbox(.45, .2, .9, red, .08), 0, .28, 1.4));
+  const g = new THREE.Group(), red = mat(0xe10600), W = 11, D = 8, Hh = 5.2;
+  // apron in front of the bay (local +z faces the road)
+  g.add(at(rbox(W - 1, .12, 6.4, mat(0x3a3f4b), .05), 0, .06, D / 2 + 3));
+  for (const x of [-3.2, 3.2]) g.add(at(rbox(.18, .04, 5.8, M.white, .02), x, .14, D / 2 + 3));
+  // the garage: cream body, slate trims, a red stripe, open bay
+  g.add(at(rbox(W, Hh, D, M.white, .45), 0, Hh / 2, 0));
+  for (const y of [.35, Hh - .2]) g.add(at(rbox(W + .3, .4, D + .3, M.slate, .15), 0, y, 0));
+  g.add(at(rbox(W + .32, .5, D + .32, red, .12), 0, Hh - .9, 0));
+  g.add(at(rbox(W - 1.6, .5, D - 1.2, M.slate, .2), 0, Hh + .15, -.2));
+  g.add(at(rbox(6.4, 3.6, .2, mat(0x2a2e38), .05), 0, 2, D / 2 + .02));                       // dark bay opening
+  g.add(at(rbox(7, .5, .5, M.slate, .15), 0, 4.05, D / 2 + .1));                               // header
+  for (const x of [-3.45, 3.45]) g.add(at(rbox(.5, 4, .55, M.slate, .15), x, 2, D / 2 + .1)); // door jambs
+  const shutter = at(rbox(6.3, .9, .3, mat(0x8a909c), .1), 0, 3.5, D / 2 + .15); g.add(shutter); // rolled-up shutter
+  const sign = at(new THREE.Mesh(new THREE.PlaneGeometry(3.4, 1.1), new THREE.MeshBasicMaterial({ map: canvasTex(256, 84, (x) => { x.fillStyle = '#e10600'; x.fillRect(0, 0, 256, 84); x.fillStyle = '#fff'; x.font = 'italic 800 52px "Plus Jakarta Sans", sans-serif'; x.textAlign = 'center'; x.fillText('F1', 128, 62); }) })), 0, 4.65, D / 2 + .38);
+  g.add(sign);
+  // inside: tool cabinet and a tire stack
+  g.add(at(rbox(1.6, 1.6, .9, red, .1), -2.4, .8, -2.4), at(rbox(1.62, .12, .92, M.slate, .03), -2.4, 1.1, -2.4));
+  const tire = (x, z, n) => { for (let i = 0; i < n; i++) { g.add(at(mesh(new THREE.CylinderGeometry(.55, .55, .38, 20), M.tire), x, .2 + i * .4, z)); g.add(at(mesh(new THREE.TorusGeometry(.45, .05, 6, 20).rotateX(Math.PI / 2), i % 2 ? red : M.white), x, .4 + i * .4, z)); } };
+  tire(2.6, -2.4, 4); tire(5.4, 5.4, 3); tire(-5.4, 5.6, 2);
+  // the car, on a stand inside the bay
+  const car = new THREE.Group(), body = mat(0xe10600);
+  car.add(at(rbox(.7, .35, 2.4, body, .12), 0, .32, 0), at(rbox(.45, .2, .9, body, .08), 0, .28, 1.4));
   car.add(at(rbox(1.3, .06, .3, M.dark, .02), 0, .2, 1.85), at(rbox(1.1, .3, .12, M.dark, .03), 0, .65, -1.15));
   car.add(at(mesh(new THREE.TorusGeometry(.22, .04, 6, 16, Math.PI), M.dark), 0, .55, .25));
-  for (const [x, z] of [[-.55, .9], [.55, .9], [-.55, -.8], [.55, -.8]]) { const wh = at(mesh(new THREE.CylinderGeometry(.24, .24, .26, 14), M.tire), x, .26, z); wh.rotation.z = Math.PI / 2; car.add(wh); }
-  car.scale.setScalar(1.15); shadowed(car); g.add(car);
-  // grandstand, pit garage and a checkered flag
-  for (let r2 = 0; r2 < 3; r2++) g.add(at(rbox(7, .7, 1, mat(r2 % 2 ? 0xe10600 : 0xf3f4f8), .08), 0, .35 + r2 * .7, 8.4 + r2 * .9));
-  g.add(at(rbox(7.4, .2, 3.6, M.grey, .05), 0, 2.4, 9.3));
-  const pit = at(rbox(4.6, 2.2, 2.6, M.white, .2), -8.6, 1.1, -5.4); g.add(pit);
-  g.add(at(new THREE.Mesh(new THREE.PlaneGeometry(3, 1), new THREE.MeshBasicMaterial({ map: canvasTex(192, 64, (x) => { x.fillStyle = '#e10600'; x.fillRect(0, 0, 192, 64); x.fillStyle = '#fff'; x.font = 'italic 800 40px "Plus Jakarta Sans", sans-serif'; x.textAlign = 'center'; x.fillText('F1', 96, 46); }) })), -8.6, 1.5, -4.09));
-  g.add(at(mesh(new THREE.CylinderGeometry(.06, .06, 4), M.grey), 8.2, 2, 4.5));
-  g.add(at(new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1), toon({ side: THREE.DoubleSide, map: canvasTex(64, 40, (x) => { for (let i = 0; i < 8; i++) for (let j = 0; j < 5; j++) { x.fillStyle = (i + j) % 2 ? '#111' : '#fff'; x.fillRect(i * 8, j * 8, 8, 8); } }) })), 9, 3.5, 4.5));
-  g.userData = { curve, car, u: 0 };
+  const wheels = [];
+  for (const [x, z] of [[-.55, .9], [.55, .9], [-.55, -.8], [.55, -.8]]) { const wh = at(mesh(new THREE.CylinderGeometry(.24, .24, .26, 14), M.tire), x, .26, z); wh.rotation.z = Math.PI / 2; car.add(wh); wheels.push(wh); }
+  car.scale.setScalar(1.5); shadowed(car); car.position.set(0, .15, .3); g.add(car);
+  const stand = at(rbox(1.6, .15, 3, M.slate, .05), 0, .08, .3); g.add(stand);
+  // two mechanics
+  const mechs = [at(astronaut(0xe10600), -2, 0, 2.6), at(astronaut(0xe10600), 2.2, 0, 1.4)];
+  mechs.forEach((m, i) => { m.scale.setScalar(.8); m.rotation.y = i ? -.9 : .9; g.add(m); });
+  g.userData = { car, wheels, mechs, out: 0 };
   return g;
 }
-function updateF1(dt) {
-  const u = stations.f1.grp.userData, racing = Date.now() - f1At < 90e3;
-  u.u = (u.u + dt * (racing ? .14 : .03)) % 1;
-  const p = u.curve.getPointAt(u.u), t = u.curve.getTangentAt(u.u);
-  u.car.position.set(p.x, .1, p.z); u.car.rotation.y = Math.atan2(t.x, t.z);
-  if (racing && !reduced && Math.random() < .3) puff(tmp.copy(u.car.position).applyMatrix4(stations.f1.grp.matrixWorld), new THREE.Vector3(0, .6, 0), .6, .15, .5, 0x9aa1b8, .6);
+function updateF1(dt, t) {
+  const u = stations.f1.grp.userData, busy = Date.now() - f1At < 90e3;
+  const target = busy ? 1 : 0, prev = u.out;
+  u.out += Math.sign(target - u.out) * Math.min(Math.abs(target - u.out), dt * .35); // rolls out onto the apron and back in
+  const e = u.out * u.out * (3 - 2 * u.out);
+  u.car.position.z = .3 + e * 6.6;
+  for (const w of u.wheels) w.rotation.x += (u.out - prev) * 6.6 / (.24 * 1.5);
+  u.mechs.forEach((m, i) => { m.position.y = busy && !reduced ? Math.sin(t * 5 + i * 2) ** 2 * .12 : 0; m.position.z = (i ? 1.4 : 2.6) + e * 4.5; });
 }
 
 // ---------- Claude Chat Tower: comms tower with a turning dish, and a glass lounge where astronauts talk ----------
@@ -865,6 +916,18 @@ function updateChat(dt, t) {
     scene.add(sp); bubbles.push({ sp, t: 0 });
   }
   for (let i = bubbles.length - 1; i >= 0; i--) { const b = bubbles[i]; b.t += dt; b.sp.position.y += dt * 1.3; b.sp.material.opacity = Math.max(0, 1 - b.t / 3); if (b.t > 3) { scene.remove(b.sp); b.sp.material.dispose(); bubbles.splice(i, 1); } }
+}
+
+// ---------- visitors: one small astronaut per person watching (up to 8), strolling on the empty build site ----------
+const visitors = [];
+function updateVisitors(dt, t) {
+  const want = Math.min(8, viewers), site = ST.site2;
+  while (visitors.length < want) { const v = astronaut(0xd6ad55); v.scale.setScalar(.6); scene.add(v); visitors.push({ g: v, a: Math.random() * TAU, r: 2.2 + Math.random() * 2.6, sp: .25 + Math.random() * .25 }); }
+  while (visitors.length > want) scene.remove(visitors.pop().g);
+  for (const v of visitors) {
+    v.a += dt * v.sp; const x = site.x + Math.sin(v.a) * v.r, z = site.z + Math.cos(v.a) * v.r;
+    v.g.position.set(x, reduced ? 0 : Math.sin(t * 5 + v.r) ** 2 * .1, z); v.g.rotation.y = v.a + Math.PI / 2;
+  }
 }
 
 // ---------- Claude conversation: astronauts walk between the Claude warehouse and your habitat ----------
@@ -1056,7 +1119,7 @@ function frame() {
     }
     s.tag.classList.toggle('sel', id === sel);
   }
-  updateWalkers(dt, t); updateChat(dt, t); updateF1(dt);
+  updateWalkers(dt, t); updateChat(dt, t); updateF1(dt, t); updateVisitors(dt, t);
   { const mg = stations.media.grp, fl = mg.userData.flash, on = mediaBusy(), model = mg.getObjectByName('model'), ph = mg.getObjectByName('photog');
     if (on && !reduced && Math.random() < dt * 1.1) fl.emissiveIntensity = 7;
     fl.emissiveIntensity = Math.max(on ? .35 : .15, fl.emissiveIntensity - dt * 14);
@@ -1105,11 +1168,11 @@ function renderStation() {
   const cap = stations[sel].grp.userData.stacks ? stations[sel].grp.userData.stacks.length * 8 : 0;
   const racing = sel === 'f1' && Date.now() - f1At < 90e3, talking = sel === 'chat' && chatNow.active, working = (sel === 'claude' && claudeNow.active) || talking, shooting = sel === 'media' && mediaBusy();
   const acts = ACTIONS[sel] ? `<div class="sec">Send a test crate</div><div class="btns">${ACTIONS[sel].map(([t, l]) => `<button data-type="${t}"><i style="background:${EV_COLOR[t]}"></i>${l}</button>`).join('')}</div>` : '';
-  const status = s.site ? '<span class="pill grey">Available</span>' : shooting ? '<span class="pill warn">Shooting</span>' : racing ? '<span class="pill red">Racing</span>' : talking ? '<span class="pill blue">In conversation</span>' : working ? '<span class="pill warn">Working</span>' : inbound ? '<span class="pill blue">Receiving</span>' : '<span class="pill">Operational</span>';
+  const status = s.site ? '<span class="pill grey">Available</span>' : shooting ? '<span class="pill warn">Shooting</span>' : racing ? '<span class="pill red">Car out</span>' : talking ? '<span class="pill blue">In conversation</span>' : working ? '<span class="pill warn">Working</span>' : inbound ? '<span class="pill blue">Receiving</span>' : '<span class="pill">Operational</span>';
   setHTML('station', `
     <div class="st-head"><span class="st-icon" style="background:${s.css}">${stationIcon(sel)}</span>
       <div><div class="eyebrow">${esc(s.eyebrow)}</div><h2>${esc(s.name)}</h2><p>${esc(s.sub)}</p></div></div>
-    <div class="st-status">${status}<span>${s.site ? 'Pick what to build here next' : shooting ? `Photo shoot for ${esc(lastSkill || 'a skill')}` : racing ? 'Running the race model' : talking ? `In conversation · ${esc(chatNow.title)}` : working ? `${esc(claudeNow.title)} · ${claudeNow.tools} tool${claudeNow.tools === 1 ? '' : 's'} so far · ${esc(claudeNow.repo)}` : `${inbound} inbound · ${rel.length} handled`}</span></div>
+    <div class="st-status">${status}<span>${s.site ? 'Pick what to build here next' : shooting ? `Photo shoot for ${esc(lastSkill || 'a skill')}` : racing ? 'Car out on the apron · running the race model' : talking ? `In conversation · ${esc(chatNow.title)}` : working ? `${esc(claudeNow.title)} · ${claudeNow.tools} tool${claudeNow.tools === 1 ? '' : 's'} so far · ${esc(claudeNow.repo)}` : `${inbound} inbound · ${rel.length} handled`}</span></div>
     ${s.site ? `<p class="muted" style="margin:0;line-height:1.55">This pad is ready for a new station, such as Vercel deploys, a Slack relay or a Linear tracker. Each new service gets its own warehouse and road.</p>` : `
     <div class="tiles">
       ${cap ? `<div class="tile"><div class="k">Crates on site</div><div class="v">${stored} <small class="muted" style="font-size:12px">/ ${cap}</small></div><div class="bar"><i style="width:${Math.round(stored / cap * 100)}%"></i></div></div>` : `<div class="tile"><div class="k">Crates built</div><div class="v">${rel.length}</div></div>`}
@@ -1228,15 +1291,22 @@ const takeHistory = list => { events = [...events.filter(x => x.local), ...list]
 const online = () => { connected = true; live.classList.remove('off'); st.textContent = 'Live'; };
 const offline = () => { live.classList.add('off'); st.textContent = connected ? 'Reconnecting' : 'Test mode · feed off'; };
 setTimeout(testMode, 2500);
-if (FEED_URL.startsWith('ws')) { // Cloudflare hub over a WebSocket, with reconnect and a keep-alive ping
+// Live viewers: everyone's page keeps a socket to the hub, which counts them. Visitors stroll on the build site.
+let viewers = 0;
+const setViewers = n => { viewers = n; $('viewers').hidden = !n; $('viewersN').textContent = `${n} watching`; };
+function hubSocket(url, onMsg, track) {
   let ws, ping;
   const open = () => {
-    ws = new WebSocket(FEED_URL);
-    ws.onopen = () => { online(); clearInterval(ping); ping = setInterval(() => { try { ws.send('ping'); } catch (e) {} }, 25e3); };
-    ws.onmessage = e => { if (e.data === 'pong') return; const m = JSON.parse(e.data); if (m.kind === 'history') takeHistory(m.events); else if (m.kind === 'event') add(m.event); };
-    ws.onclose = () => { clearInterval(ping); offline(); setTimeout(open, 3000); };
+    ws = new WebSocket(url);
+    ws.onopen = () => { if (track) online(); clearInterval(ping); ping = setInterval(() => { try { ws.send('ping'); } catch (e) {} }, 25e3); };
+    ws.onmessage = e => { if (e.data === 'pong') return; const m = JSON.parse(e.data); if (m.kind === 'viewers') setViewers(m.count); else onMsg(m); };
+    ws.onclose = () => { clearInterval(ping); if (track) offline(); setTimeout(open, 3000); };
   };
   open();
+}
+if (LOCAL && !FEED_URL.startsWith('ws')) hubSocket(HUB_WS, () => {}, false); // presence only: events still come from the local bridge
+if (FEED_URL.startsWith('ws')) {
+  hubSocket(FEED_URL, m => { if (m.kind === 'history') takeHistory(m.events); else if (m.kind === 'event') add(m.event); }, true);
 } else if (window.EventSource) {
   const es = new EventSource(FEED_URL);
   es.addEventListener('history', e => takeHistory(JSON.parse(e.data)));
