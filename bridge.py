@@ -90,7 +90,9 @@ def translate(h):
         cmd = str(inp.get("command", ""))
         # Only count a command that actually runs, at the start of the line or after ; && || | (
         # not the same words quoted inside a heredoc or a string.
-        ran = lambda c: re.search(r"(?:^|[;&|(]\s*)" + c.replace(" ", r"\s+") + r"\b", cmd.split("<<")[0], re.M) is not None
+        bare = re.sub(r"<<-?\s*['\"]?(\w+)['\"]?[^\n]*\n.*?\n\s*\1\b", "", cmd, flags=re.S)  # drop heredoc bodies
+        bare = re.sub(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"", "''", bare)  # and quoted text such as commit messages
+        ran = lambda c: re.search(r"(?:^|[;&|(]\s*)" + c.replace(" ", r"\s+") + r"\b", bare, re.M) is not None
         branch = git(cwd, "branch", "--show-current")
         out = []
         if ran("git push"):
