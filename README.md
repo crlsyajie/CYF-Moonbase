@@ -24,8 +24,16 @@ Claude chat (claude.ai) has no hooks. Anything can report a chat by posting `{"t
 
 Privacy: the bridge never forwards prompt text or full commands, only the event kind, tool name, a file's base name and the project folder name.
 
-## Next
+## Hosted hub (Cloudflare Workers, free plan)
 
-A Cloudflare Worker that takes GitHub webhooks (and the same hook events), so the hosted page is live from anywhere. Point the page at it with `?feed=<url>` or by changing `FEED_URL`.
+`worker/` is the hub at https://moonbase.moonbase-hub.workers.dev. It keeps the last 40 crates and relays live events to every open page over WebSockets.
+
+- `POST /github` takes GitHub webhooks (pushes, pull requests, workflow runs), checked against `GITHUB_SECRET`.
+- `POST /hook` takes events from `bridge.py`, which forwards everything when `~/.config/moonbase/upstream.json` exists. It needs `INGEST_TOKEN`.
+- `GET /ws` is the page's live connection.
+
+Opened from the bridge (127.0.0.1) the page uses the local stream; anywhere else, such as GitHub Pages, it uses the hub. Set `PUBLIC_DETAILS = "false"` in `worker/wrangler.toml` to hide commit messages and chat topics from viewers.
+
+Deploy: `cd worker && npx wrangler deploy` (Node.js and a `wrangler login` first). Secrets live only in Cloudflare and in `~/.config/moonbase/`, never in the repo.
 
 Event format: `{ id, type: "push" | "pull" | "pr" | "merge" | "claude" | "fail" | "skill", title, repo, branch?, sha?, at }`

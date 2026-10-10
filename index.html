@@ -330,7 +330,10 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 // Set FEED_URL to the backend's Server-Sent Events stream once it exists.
 // Each message is JSON: { id, type: "push"|"pull"|"pr"|"merge"|"claude"|"fail", title, repo, branch?, sha?, at }
 // Defaults to the local bridge (python3 bridge.py), which Claude Code hooks feed. Override with ?feed=<url>.
-const FEED_URL = new URLSearchParams(location.search).get('feed') || 'http://127.0.0.1:8787/events';
+// Opened from your Mac's bridge: use its local stream. Anywhere else (GitHub Pages): use the Cloudflare hub. Override with ?feed=<url>.
+const HUB_WS = 'wss://moonbase.moonbase-hub.workers.dev/ws';
+const LOCAL = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+const FEED_URL = new URLSearchParams(location.search).get('feed') || (LOCAL ? 'http://127.0.0.1:8787/events' : HUB_WS);
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = id => document.getElementById(id);
@@ -890,16 +893,23 @@ function buildPath(route) {
   const spokeOf = id => id === 'chat' ? 'claude' : id;
   const stop = i => route[i] !== 'factory' ? 'g:' + route[i] : 'r:' + spokeOf(i > 0 ? route[i - 1] : route[i + 1]);
   const pts = [], legEnds = [], side = 1.1;
-  // One continuous lane line for the whole route (so there is no jump where one leg meets the next), smoothed once.
-  const lane = [], stops = [];
+  // One continuous centre line for the whole route, then a properly offset lane (mitred corners, so a right turn
+  // never steps backwards), smoothed once. No jumps where one leg meets the next.
+  const cl = [], stopAt = [];
   for (let i = 0; i < route.length - 1; i++) {
-    const poly = roadRoute(stop(i), stop(i + 1));
-    for (let j = 0; j < poly.length - 1; j++) { // keep to the right-hand lane of each segment
-      const [ax, az] = poly[j], [bx, bz] = poly[j + 1], L = Math.hypot(bx - ax, bz - az) || 1, ox = -(bz - az) / L * side, oz = (bx - ax) / L * side;
-      lane.push([ax + ox, az + oz], [bx + ox, bz + oz]);
-    }
-    stops.push(lane.at(-1));
+    for (const q of roadRoute(stop(i), stop(i + 1))) if (!cl.length || Math.hypot(q[0] - cl.at(-1)[0], q[1] - cl.at(-1)[1]) > 1e-6) cl.push(q);
+    stopAt.push(cl.length - 1);
   }
+  const nrm = (u, v) => { const L = Math.hypot(v[0] - u[0], v[1] - u[1]) || 1; return [-(v[1] - u[1]) / L, (v[0] - u[0]) / L]; };
+  const lane = [], laneAt = [];
+  cl.forEach((q, i) => {
+    const n1 = i > 0 ? nrm(cl[i - 1], q) : null, n2 = i < cl.length - 1 ? nrm(q, cl[i + 1]) : null;
+    if (n1 && n2 && n1[0] * n2[0] + n1[1] * n2[1] < -.5) lane.push([q[0] + n1[0] * side, q[1] + n1[1] * side], [q[0] + n2[0] * side, q[1] + n2[1] * side]); // U-turn: cross to the other lane
+    else if (n1 && n2) { let mx = n1[0] + n2[0], mz = n1[1] + n2[1]; const L = Math.hypot(mx, mz); mx /= L; mz /= L; const k = side / Math.max(.5, mx * n1[0] + mz * n1[1]); lane.push([q[0] + mx * k, q[1] + mz * k]); }
+    else { const n = n1 || n2; lane.push([q[0] + n[0] * side, q[1] + n[1] * side]); }
+    laneAt[i] = lane.length - 1;
+  });
+  const stops = stopAt.map(i => lane[laneAt[i]]);
   pts.push(...smoothLine(lane));
   let from = 0;
   for (const [sx, sz] of stops) { // each stop is the nearest smoothed point after the previous stop
@@ -1175,14 +1185,25 @@ $('panelsBtn').onclick = () => { const bare = document.querySelector('.hud').cla
 const live = $('live'), st = $('statusText');
 let connected = false;
 const testMode = () => { if (connected) return; st.textContent = 'Test mode'; if (!events.length) local('push'); }; // one demo rover so the base is alive
-if (!window.EventSource) testMode();
-else {
+const takeHistory = list => { events = [...events.filter(x => x.local), ...list].sort((a, b) => String(b.at).localeCompare(String(a.at))); renderAll(); };
+const online = () => { connected = true; live.classList.remove('off'); st.textContent = 'Live'; };
+const offline = () => { live.classList.add('off'); st.textContent = connected ? 'Reconnecting' : 'Test mode · feed off'; };
+setTimeout(testMode, 2500);
+if (FEED_URL.startsWith('ws')) { // Cloudflare hub over a WebSocket, with reconnect and a keep-alive ping
+  let ws, ping;
+  const open = () => {
+    ws = new WebSocket(FEED_URL);
+    ws.onopen = () => { online(); clearInterval(ping); ping = setInterval(() => { try { ws.send('ping'); } catch (e) {} }, 25e3); };
+    ws.onmessage = e => { if (e.data === 'pong') return; const m = JSON.parse(e.data); if (m.kind === 'history') takeHistory(m.events); else if (m.kind === 'event') add(m.event); };
+    ws.onclose = () => { clearInterval(ping); offline(); setTimeout(open, 3000); };
+  };
+  open();
+} else if (window.EventSource) {
   const es = new EventSource(FEED_URL);
-  setTimeout(testMode, 2500);
-  es.addEventListener('history', e => { const list = JSON.parse(e.data); events = [...events.filter(x => x.local), ...list].sort((a, b) => String(b.at).localeCompare(String(a.at))); renderAll(); });
+  es.addEventListener('history', e => takeHistory(JSON.parse(e.data)));
   es.onmessage = e => add(JSON.parse(e.data));
-  es.onopen = () => { connected = true; live.classList.remove('off'); st.textContent = 'Live'; };
-  es.onerror = () => { live.classList.add('off'); st.textContent = connected ? 'Reconnecting' : 'Test mode · bridge off'; };
+  es.onopen = online;
+  es.onerror = offline;
 }
 setInterval(renderClaude, 30e3);
 </script>

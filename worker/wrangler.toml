@@ -1,0 +1,19 @@
+name = "moonbase"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "Hub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Hub"]
+
+[vars]
+# Set to "false" to hide commit messages, repo names and chat topics from everyone who opens the page.
+PUBLIC_DETAILS = "true"
+
+# Secrets (set with `npx wrangler secret put <NAME>`, never committed):
+#   INGEST_TOKEN   shared with bridge.py so only your Mac can post Claude activity
+#   GITHUB_SECRET  the secret you give GitHub's webhook settings

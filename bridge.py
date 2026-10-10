@@ -16,11 +16,33 @@ import queue
 import subprocess
 import threading
 import time
+import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("MOONBASE_PORT", "8787"))
 HISTORY_MAX = 40
+
+# Optional: forward every event to the Moonbase hub on Cloudflare, so the hosted page is live too.
+# ~/.config/moonbase/upstream.json = {"url": "https://...workers.dev", "token_file": "..."} (written by the setup, kept private)
+UPSTREAM = None
+try:
+    _cfg = json.load(open(os.path.expanduser("~/.config/moonbase/upstream.json")))
+    UPSTREAM = (_cfg["url"].rstrip("/") + "/hook", open(os.path.expanduser(_cfg["token_file"])).read().strip())
+except Exception:
+    pass
+outbox = queue.Queue()
+
+
+def forwarder():
+    while True:
+        ev = outbox.get()
+        try:
+            req = urllib.request.Request(UPSTREAM[0], data=json.dumps(ev).encode(), method="POST",
+                                         headers={"Content-Type": "application/json", "Authorization": "Bearer " + UPSTREAM[1], "User-Agent": "moonbase-bridge"})
+            urllib.request.urlopen(req, timeout=5).read()
+        except Exception as e:
+            print("hub forward failed:", e)
 
 history = []          # recent crate events, replayed to new viewers
 clients = []          # one queue per open page
@@ -48,6 +70,8 @@ def emit(ev):
             del history[HISTORY_MAX:]
         for q in list(clients):
             q.put(ev)
+    if UPSTREAM:
+        outbox.put(ev)
 
 
 def git(cwd, *args):
@@ -169,5 +193,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print(f"Moonbase on http://127.0.0.1:{PORT}  (page /, hooks → /hook, live feed → /events)")
+    if UPSTREAM:
+        threading.Thread(target=forwarder, daemon=True).start()
+    print(f"Moonbase on http://127.0.0.1:{PORT}{'  + forwarding to ' + UPSTREAM[0] if UPSTREAM else ''}  (page /, hooks → /hook, live feed → /events)")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
