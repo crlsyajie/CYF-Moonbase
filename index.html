@@ -70,6 +70,8 @@ body { background: var(--space); color: var(--ink); font-family: var(--font-ui);
 .kpi .v { font-size: 24px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.15; }
 .kpi .s { color: var(--muted); font-size: 11px; }
 .up { color: var(--ok); font-weight: 700; }
+.working { color: var(--claude); font-weight: 700; }
+.working::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 5px; vertical-align: 1px; animation: beat 1.2s infinite; }
 
 .mapctl { grid-column: 1; grid-row: 2 / 4; justify-self: end; align-self: start; display: flex; flex-direction: column; padding: 6px; gap: 2px; border-radius: 12px; }
 .mapctl button { width: 36px; height: 36px; border: 0; background: transparent; border-radius: 8px; color: var(--ink); cursor: pointer; display: grid; place-items: center; }
@@ -165,6 +167,105 @@ button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
   .chip, .me small { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* compact cards + folding */
+.card { position: relative; }
+.hud { grid-template-columns: minmax(0, 1fr) 300px; gap: 10px; padding: 12px 14px; }
+.topbar { padding: 8px 12px; gap: 10px; }
+.brand { font-size: 17px; } .brand svg { width: 26px; height: 26px; }
+.kpis { gap: 8px; }
+.kpi { padding: 8px 14px 8px 8px; min-width: 0; gap: 10px; border-radius: 14px; }
+.kpi .ic { width: 34px; height: 34px; border-radius: 10px; } .kpi .ic svg { width: 18px; height: 18px; }
+.kpi .k { font-size: 11px; } .kpi .v { font-size: 19px; } .kpi .s { font-size: 10.5px; }
+.station { padding: 12px; } #station { display: grid; gap: 10px; }
+.st-head { padding-right: 30px; } .st-icon { width: 40px; height: 40px; border-radius: 11px; } .st-icon svg { width: 24px; height: 24px; }
+.st-head h2 { font-size: 15px; } .st-status { padding-top: 8px; }
+.tile { padding: 7px 10px; border-radius: 10px; } .tile .v { font-size: 15px; } .tile .k { font-size: 10.5px; }
+.mini li { padding: 6px 0; }
+.tracking { max-width: 640px; padding: 10px 14px; display: block; }
+#tracking { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; align-items: center; }
+.tr-head { margin-bottom: 8px; padding-right: 30px; } .tr-head h3 { font-size: 13.5px; }
+.step .c { width: 28px; height: 28px; } .step::before { top: 13px; } .step b { font-size: 11px; } .step small { font-size: 10px; }
+.shipcard { padding: 8px 10px; grid-template-columns: 40px minmax(0, 1fr); gap: 10px; } .shipcard .art { width: 40px; height: 40px; } .shipcard .art svg { width: 30px; height: 30px; }
+.feed { padding: 10px 12px; max-height: 230px; grid-template-rows: auto minmax(0, 1fr) auto; }
+.tabs { padding-right: 30px; } .tabs b { padding: 4px 9px; font-size: 12px; }
+.hint { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.fold { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border: 0; border-radius: 8px; background: var(--soft); color: var(--muted); display: grid; place-items: center; cursor: pointer; z-index: 2; }
+.fold:hover { color: var(--ink); } .fold svg { width: 15px; height: 15px; transition: transform .2s; }
+.card.min .fold svg { transform: rotate(-90deg); }
+.station.min #station > :not(.st-head) { display: none; }
+.station.min .st-head p { display: none; }
+.tracking.min #tracking { grid-template-columns: minmax(0, 1fr); }
+.tracking.min .steps, .tracking.min .shipcard { display: none; }
+.tracking.min .tr-head { margin-bottom: 0; }
+.feed.min { grid-template-rows: auto; } .feed.min .log, .feed.min .hint { display: none; }
+.panels-btn { font: 600 12px var(--font-ui); border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 10px; padding: 7px 10px; cursor: pointer; }
+.panels-btn:hover { background: var(--soft); }
+.hud.bare .kpis, .hud.bare .station, .hud.bare .tracking, .hud.bare .feed, .hud.bare .mapctl { display: none; }
+.actions { display: grid; gap: 6px; }
+@media (max-width: 1100px) { .hud { grid-template-columns: minmax(0, 1fr) 280px; } #tracking { grid-template-columns: minmax(0, 1fr); } }
+/* ---- Liquid Glass overlay (Apple-style): frosted, translucent panels over the scene ---- */
+:root {
+  --card: rgba(255, 255, 255, .14);
+  --ink: #f5f7ff;
+  --muted: rgba(228, 234, 255, .68);
+  --line: rgba(255, 255, 255, .14);
+  --soft: rgba(255, 255, 255, .09);
+  --ok: #4ade9b; --ok-bg: rgba(74, 222, 155, .16);
+  --warn: #ffc95c; --warn-bg: rgba(255, 201, 92, .16);
+  --glass-edge: rgba(255, 255, 255, .34);
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Plus Jakarta Sans", "Helvetica Neue", sans-serif;
+  --shadow: 0 18px 48px rgba(3, 6, 20, .38), inset 0 1px 0 rgba(255, 255, 255, .38), inset 0 -1px 0 rgba(255, 255, 255, .06);
+}
+body { color: var(--ink); }
+.card {
+  background: linear-gradient(155deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .05) 55%, rgba(255, 255, 255, .1)), rgba(14, 20, 44, .42);
+  -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid var(--glass-edge); border-radius: 22px; box-shadow: var(--shadow);
+}
+.kpi { border-radius: 18px; } .mapctl { border-radius: 18px; }
+.kpi .ic, .st-icon { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); }
+.kpi .ic { background: rgba(120, 150, 255, .22); color: #c9d6ff; }
+.chip { border-color: var(--line); background: var(--soft); border-radius: 14px; }
+.chip .code { border-radius: 9px; }
+.live { background: var(--ok-bg); color: var(--ok); box-shadow: inset 0 0 0 1px rgba(74, 222, 155, .3); }
+.live.off { background: var(--soft); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+.panels-btn, .btns button {
+  background: rgba(255, 255, 255, .12); color: var(--ink); border: 1px solid rgba(255, 255, 255, .22); border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3); transition: background .15s;
+}
+.panels-btn:hover, .btns button:hover { background: rgba(255, 255, 255, .22); }
+.mapctl button { color: var(--ink); border-radius: 12px; } .mapctl button:hover { background: rgba(255, 255, 255, .16); }
+.fold { background: rgba(255, 255, 255, .12); color: var(--muted); border-radius: 999px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25); }
+.fold:hover { color: var(--ink); background: rgba(255, 255, 255, .22); }
+.pill { border-radius: 999px; background: var(--ok-bg); color: var(--ok); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.blue { background: rgba(120, 150, 255, .2); color: #b9c8ff; }
+.pill.grey { background: var(--soft); color: var(--muted); }
+.pill.red { background: rgba(255, 99, 99, .18); color: #ff9b9b; }
+.eyebrow { color: #9fb4ff; }
+.tile { background: rgba(255, 255, 255, .08); border-radius: 14px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.tile .bar { background: rgba(255, 255, 255, .14); } .tile .bar i { background: linear-gradient(90deg, #7c9bff, #b49cff); }
+.mini .box { background: rgba(212, 162, 107, .22); }
+.shipcard { background: rgba(255, 255, 255, .08); border-radius: 16px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.shipcard .art { background: rgba(255, 255, 255, .85); border-radius: 12px; }
+.step .c { background: rgba(255, 255, 255, .1); color: var(--muted); border-color: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2); }
+.step.done .c { background: #5b7cff; color: #fff; }
+.step.now .c { background: rgba(255, 255, 255, .16); color: #b9c8ff; box-shadow: 0 0 0 2px #7c9bff; }
+.step::before { background: rgba(255, 255, 255, .16); } .step.done::before, .step.now::before { background: #7c9bff; }
+.tabs b { background: rgba(255, 255, 255, .12); border-radius: 999px; }
+.log li { border-bottom-color: var(--line); } .log .meta, .log .a { color: var(--muted); }
+@keyframes flash { from { background: rgba(124, 155, 255, .22); } }
+.working { color: #ffb08f; }
+.tag {
+  background: rgba(20, 28, 56, .42); color: #f5f7ff; border: 1px solid rgba(255, 255, 255, .3);
+  background: rgba(22, 30, 60, .74); will-change: transform;
+  box-shadow: 0 6px 18px rgba(3, 6, 20, .35), inset 0 1px 0 rgba(255, 255, 255, .3);
+}
+.tag.sel { outline: none; box-shadow: 0 0 0 2px rgba(124, 155, 255, .9), 0 6px 18px rgba(3, 6, 20, .35); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .card { background: rgba(28, 36, 66, .92); } .tag { background: rgba(28, 36, 66, .9); } }
+.labels.off .tag { opacity: 0; visibility: hidden; }
+.tag { transition: opacity .2s; }
+.mapctl { grid-row: 3; justify-self: start; align-self: start; }
 </style>
 </head>
 <body>
@@ -176,8 +277,10 @@ button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
         <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 28 9v14l-12 7L4 23V9z" fill="#3461f5"/><path d="M16 2 28 9l-12 7L4 9z" fill="#6f8dff"/><path d="M16 16v14l12-7V9z" fill="#2347c9"/><circle cx="20" cy="10.5" r="2.2" fill="#fff" opacity=".9"/></svg>
         Moonbase
       </div>
-      <div class="chip"><span class="code">MB-01</span><span><b>Moonbase Yajie</b><small>Sea of Tranquility · 4 stations · 2 build sites</small></span></div>
+      <div class="chip"><span class="code">MB-01</span><span><b>Moonbase Yajie</b><small>Sea of Tranquility · 7 stations · 1 build site</small></span></div>
       <div class="live off" id="live"><span class="dot"></span><span id="statusText">Connecting</span><time id="clock"></time></div>
+      <button class="panels-btn" id="namesBtn" aria-pressed="false" title="Show or hide building names (N)">Hide names</button>
+      <button class="panels-btn" id="panelsBtn" aria-pressed="false">Hide panels</button>
       <div class="me"><span class="avatar">CY</span><span><b>Yajie</b><small>Base commander</small></span></div>
     </header>
 
@@ -187,7 +290,7 @@ button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
       <div class="kpi card"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="8" r="2.5"/><path d="M6 8.5v7M18 10.5c0 4-6 3-11 5.5"/></svg></span>
         <span><div class="k">Commits logged</div><div class="v" id="kCommits">0</div><div class="s" id="kCommitsS">to the GitHub warehouse</div></span></div>
       <div class="kpi card"><span class="ic" style="background:#fbeee8;color:var(--claude)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v6M12 15v6M3 12h6M15 12h6M5.6 5.6l4.2 4.2M14.2 14.2l4.2 4.2M18.4 5.6l-4.2 4.2M9.8 14.2l-4.2 4.2"/></svg></span>
-        <span><div class="k">Claude runs</div><div class="v" id="kClaude">0</div><div class="s" id="kClaudeS">from the Claude warehouse</div></span></div>
+        <span><div class="k">Claude runs</div><div class="v" id="kClaude">0</div><div class="s" id="kClaudeS">from Claude Code</div></span></div>
     </section>
 
     <div class="mapctl card" role="toolbar" aria-label="Camera">
@@ -199,23 +302,14 @@ button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
       <button id="home" aria-label="Reset view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"/></svg></button>
     </div>
 
-    <aside class="station card" id="station" aria-live="polite"></aside>
+    <aside class="station card" id="stationCard"><button class="fold" aria-label="Fold this panel" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button><div id="station" aria-live="polite"></div></aside>
 
-    <section class="tracking card" id="tracking"></section>
+    <section class="tracking card" id="trackingCard"><button class="fold" aria-label="Fold this panel" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button><div id="tracking"></div></section>
 
-    <section class="feed card">
+    <section class="feed card" id="feedCard"><button class="fold" aria-label="Fold this panel" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
       <div class="tabs"><b>Cargo log</b><span id="logCount"></span></div>
       <ul class="log" id="log"></ul>
-      <div class="sim"><span>Simulate</span>
-        <div class="btns" id="sim">
-          <button data-type="push"><i style="background:#3461f5"></i>Push</button>
-          <button data-type="pull"><i style="background:#17b3a3"></i>Pull</button>
-          <button data-type="pr"><i style="background:#7c5cff"></i>Open PR</button>
-          <button data-type="merge"><i style="background:#17a36b"></i>Merge PR</button>
-          <button data-type="claude"><i style="background:#d97757"></i>Claude run</button>
-          <button data-type="fail"><i style="background:#e5484d"></i>Failed build</button>
-        </div>
-      </div>
+      <p class="hint">Click GitHub, Claude Code, the Chat Tower, Creative Media or F1 on the map to send a test crate from there.</p>
     </section>
   </div>
 </div>
@@ -230,13 +324,13 @@ button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
 // ---------- live feed config ----------
 // Set FEED_URL to the backend's Server-Sent Events stream once it exists.
 // Each message is JSON: { id, type: "push"|"pull"|"pr"|"merge"|"claude"|"fail", title, repo, branch?, sha?, at }
-const FEED_URL = '';
+// Defaults to the local bridge (python3 bridge.py), which Claude Code hooks feed. Override with ?feed=<url>.
+const FEED_URL = new URLSearchParams(location.search).get('feed') || 'http://127.0.0.1:8787/events';
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = id => document.getElementById(id);
@@ -244,19 +338,55 @@ const TAU = Math.PI * 2;
 
 // ---------- the base ----------
 const ISLAND = 58;
+// Each station stands on its own big hexagon piece; the pieces fit together like a honeycomb.
+const TILE = 15, APO = TILE * Math.sqrt(3) / 2, GAP = 1.6, SPACING = 2 * APO + GAP;
+const slot = deg => ({ x: +(SPACING * Math.sin(deg * Math.PI / 180)).toFixed(2), z: +(SPACING * Math.cos(deg * Math.PI / 180)).toFixed(2) });
 const ST = {
-  you:     { x: -30, z: 12,  r: 9,  color: 0x3461f5, css: '#3461f5', eyebrow: 'HABITAT · HB-01',   name: "Yajie's Habitat",  sub: 'Where every commit starts' },
-  factory: { x: -2,  z: -6,  r: 12, color: 0xf2a93b, css: '#e39a22', eyebrow: 'FACTORY · FX-01',   name: 'Build Factory',    sub: 'Builds and checks every crate' },
-  github:  { x: 28,  z: -22, r: 10, color: 0x24292f, css: '#24292f', eyebrow: 'WAREHOUSE · WH-GH', name: 'GitHub Warehouse', sub: 'github.com/crlsyajie' },
-  claude:  { x: 26,  z: 22,  r: 10, color: 0xd97757, css: '#d97757', eyebrow: 'WAREHOUSE · WH-CL', name: 'Claude Warehouse', sub: 'Claude Code sessions' },
-  site1:   { x: -8,  z: 35,  r: 7,  color: 0x9aa1b8, css: '#9aa1b8', eyebrow: 'BUILD SITE · BS-01', name: 'Empty Build Site', sub: 'Room for the next station', site: true },
-  site2:   { x: -27, z: -30, r: 7,  color: 0x9aa1b8, css: '#9aa1b8', eyebrow: 'BUILD SITE · BS-02', name: 'Empty Build Site', sub: 'Room for the next station', site: true },
+  you:     { ...slot(270),  r: 9,  color: 0x3461f5, css: '#3461f5', eyebrow: 'HABITAT · HB-01',   name: "Yajie's Habitat",  sub: 'Where every commit starts' },
+  factory: { x: 0, z: 0,  r: 12, color: 0xf2a93b, css: '#e39a22', eyebrow: 'FACTORY · FX-01',   name: 'Build Factory',    sub: 'Builds and checks every crate' },
+  github:  { ...slot(150), r: 10, color: 0x24292f, css: '#24292f', eyebrow: 'WAREHOUSE · WH-GH', name: 'GitHub Warehouse', sub: 'github.com/crlsyajie' },
+  claude:  { ...slot(90),  r: 10, color: 0xd97757, css: '#d97757', eyebrow: 'WORKSHOP · CC-01', name: 'Claude Code Workshop', sub: 'Claude Code sessions' },
+  chat:    { x: +(slot(90).x + slot(150).x).toFixed(2), z: +(slot(90).z + slot(150).z).toFixed(2), r: 10, color: 0x38a3d6, css: '#38a3d6', eyebrow: 'COMMS · CT-01', name: 'Claude Chat Tower', sub: 'Conversations on claude.ai' },
+  media:   { ...slot(30),  r: 10, color: 0xe0458f, css: '#e0458f', eyebrow: 'FACTORY · CM-01',   name: 'Creative Media Factory', sub: 'Where Claude\'s skills make things' },
+  site2:   { ...slot(210), r: 7,  color: 0x9aa1b8, css: '#9aa1b8', eyebrow: 'BUILD SITE · BS-02', name: 'Empty Build Site', sub: 'Room for the next station', site: true },
+  f1:      { ...slot(330), r: 10, color: 0xe10600, css: '#e10600', eyebrow: 'RACING · F1-01',    name: 'Formula 1 Paddock', sub: 'F1 GP Predictor: race data and predictions' },
 };
-const ROADS = [['you', 'factory'], ['factory', 'github'], ['factory', 'claude'], ['factory', 'site1'], ['factory', 'site2']];
+// Road network. Stops are gates in front of each building; the factory is ringed by the Main Road,
+// so traffic drives around it instead of through it. Chat's road curls round Claude Code to join its spoke.
+const RING = 10.6, polar = (cx, cz, deg, r) => [cx + r * Math.sin(deg * Math.PI / 180), cz + r * Math.cos(deg * Math.PI / 180)];
+const degTo = (a, b) => Math.atan2(b.x - a.x, b.z - a.z) * 180 / Math.PI;
+const NODES = {}, EDGES = [];
+const spokes = Object.keys(ST).filter(id => id !== 'factory' && id !== 'chat');
+for (let k = 0; k < 6; k++) NODES['c' + k] = polar(0, 0, k * 60, RING / Math.cos(Math.PI / 6));        // ring corners
+for (const id of spokes) {
+  const d = degTo(ST.factory, ST[id]), k = Math.round((d - 30) / 60 + 6) % 6;
+  NODES['r:' + id] = polar(0, 0, d, RING);                                                                // where the spoke meets the ring
+  NODES['g:' + id] = polar(ST[id].x, ST[id].z, d + 180, ST[id].r + .5);                                  // gate in front of the building
+  EDGES.push(['r:' + id, 'c' + k, 'main'], ['r:' + id, 'c' + ((k + 1) % 6), 'main']);
+}
+{ const C = ST.claude, dc = degTo(C, ST.chat), df = degTo(C, ST.factory);
+  NODES['g:chat'] = polar(ST.chat.x, ST.chat.z, dc + 180, ST.chat.r + .5);
+  NODES['seam:chat'] = [(C.x + ST.chat.x) / 2, (C.z + ST.chat.z) / 2];
+  NODES['bend:chat'] = polar(C.x, C.z, (dc + df) / 2, 10.5);
+  NODES['j:claude'] = polar(C.x, C.z, df, 12.6);
+  EDGES.push(['g:chat', 'seam:chat', 'spoke'], ['seam:chat', 'bend:chat', 'spoke'], ['bend:chat', 'j:claude', 'spoke'], ['j:claude', 'g:claude', 'spoke'], ['j:claude', 'r:claude', 'spoke']); }
+for (const id of spokes) if (id !== 'claude') EDGES.push(['g:' + id, 'r:' + id, ST[id].site ? 'site' : 'spoke']);
+const ROAD_SEGS = EDGES.map(([a, b]) => [...NODES[a], ...NODES[b]]);
+const SEAMS = [...spokes.map(id => [ST[id].x / 2, ST[id].z / 2, degTo(ST.factory, ST[id])]), [...NODES['seam:chat'], degTo(ST.claude, ST.chat)]];
+function roadRoute(from, to) { // shortest path over the road graph (Dijkstra; the graph is tiny)
+  const dist = { [from]: 0 }, prev = {}, todo = new Set(Object.keys(NODES)), len = (a, b) => Math.hypot(NODES[a][0] - NODES[b][0], NODES[a][1] - NODES[b][1]);
+  while (todo.size) {
+    let u = null; for (const n of todo) if (dist[n] !== undefined && (u === null || dist[n] < dist[u])) u = n;
+    if (u === null || u === to) break; todo.delete(u);
+    for (const [a, b] of EDGES) { const v = a === u ? b : b === u ? a : null; if (v && todo.has(v)) { const nd = dist[u] + len(u, v); if (dist[v] === undefined || nd < dist[v]) { dist[v] = nd; prev[v] = u; } } }
+  }
+  const out = [to]; while (out[0] !== from) out.unshift(prev[out[0]]); return out.map(n => NODES[n]);
+}
 // Each git scenario: the stations its crate visits, and what each stop means.
 const ROUTES = {
   commit: ['you', 'factory', 'github'], push: ['you', 'factory', 'github'], pull: ['github', 'factory', 'you'],
   pr: ['you', 'factory', 'github'], merge: ['github', 'factory', 'github'], claude: ['claude', 'factory', 'you'], fail: ['you', 'factory', 'you'],
+  skill: ['claude', 'media', 'you'], chat: ['chat', 'claude', 'you'], f1: ['claude', 'factory', 'f1'],
 };
 const STEPS = {
   commit: ['Committed', 'Built at factory', 'Stored on GitHub'],
@@ -266,9 +396,12 @@ const STEPS = {
   merge:  ['Merge started', 'Checks passed', 'Merged into main'],
   claude: ['Claude run', 'Built at factory', 'Delivered to you'],
   fail:   ['Pushed', 'Build failed', 'Returned to you'],
+  skill:  ['Skill loaded', 'Made at Creative Media', 'Delivered to you'],
+  chat:   ['Chat on claude.ai', 'Passed to Claude Code', 'Summary delivered'],
+  f1:     ['F1 data pulled', 'Model run at factory', 'Prediction published'],
 };
-const EV_COLOR = { commit: '#3461f5', push: '#3461f5', pull: '#17b3a3', pr: '#7c5cff', merge: '#17a36b', claude: '#d97757', fail: '#e5484d' };
-const TYPE_LABEL = { commit: 'Commit', push: 'Push', pull: 'Pull', pr: 'Pull request', merge: 'Merge', claude: 'Claude run', fail: 'Failed build' };
+const EV_COLOR = { commit: '#3461f5', push: '#3461f5', pull: '#17b3a3', pr: '#7c5cff', merge: '#17a36b', claude: '#d97757', fail: '#e5484d', skill: '#e0458f', chat: '#38a3d6', f1: '#e10600' };
+const TYPE_LABEL = { commit: 'Commit', push: 'Push', pull: 'Pull', pr: 'Pull request', merge: 'Merge', claude: 'Claude run', fail: 'Failed build', skill: 'Skill', chat: 'Claude chat', f1: 'F1 update' };
 const routeOf = ev => ROUTES[ev.type] || ROUTES.commit;
 
 // ---------- noise & terrain ----------
@@ -281,23 +414,16 @@ const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a
 function segDist(px, pz, ax, az, bx, bz) { const dx = bx - ax, dz = bz - az, t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz))); return Math.hypot(px - ax - t * dx, pz - az - t * dz); }
 
 const R = rng(11), craters = [];
-for (let i = 0; i < 400 && craters.length < 46; i++) {
+const hexEdge = (dx, dz) => APO - Math.max(...[30, 90, 150].map(d => Math.abs(dx * Math.sin(d * Math.PI / 180) + dz * Math.cos(d * Math.PI / 180))));
+const inTile = (x, z, m = 0) => Object.values(ST).some(t => hexEdge(x - t.x, z - t.z) >= m);
+for (let i = 0; i < 1200 && craters.length < 40; i++) {
   const r = 1.6 + Math.pow(R(), 2.2) * 7, x = (R() - .5) * 2 * ISLAND, z = (R() - .5) * 2 * ISLAND;
-  if (Math.hypot(x, z) + r > ISLAND - 5) continue;
+  if (!inTile(x, z, r + 3)) continue;
   if (Object.values(ST).some(s => Math.hypot(s.x - x, s.z - z) < s.r + r + 4)) continue;
-  if (ROADS.some(([a, b]) => segDist(x, z, ST[a].x, ST[a].z, ST[b].x, ST[b].z) < r + 5)) continue;
+  if (ROAD_SEGS.some(g => segDist(x, z, ...g) < r + 5)) continue;
   craters.push({ x, z, r, d: r * .28 });
 }
-let shade = 0;
-function H(x, z) {
-  let h = (fbm(x * .05, z * .05) - .5) * 1.6; shade = 0;
-  for (const c of craters) { const d = Math.hypot(x - c.x, z - c.z) / c.r; if (d > 1.7) continue; if (d < 1) { h -= c.d * (1 - d * d); shade -= (1 - d) * .5; } const rim = Math.exp(-(((d - 1) / .22) ** 2)); h += c.d * .5 * rim; shade += rim * .35; }
-  let f = 0;
-  for (const id in ST) { const s = ST[id]; f = Math.max(f, 1 - smooth(s.r, s.r + 6, Math.hypot(x - s.x, z - s.z))); }
-  for (const [a, b] of ROADS) f = Math.max(f, 1 - smooth(2.6, 6, segDist(x, z, ST[a].x, ST[a].z, ST[b].x, ST[b].z)));
-  h *= 1 - f; shade *= 1 - f;
-  return h * (1 - smooth(ISLAND - 8, ISLAND, Math.hypot(x, z)));
-}
+function H(x, z) { return 0; }
 
 // ---------- renderer, camera ----------
 const sceneEl = $('scene');
@@ -305,7 +431,7 @@ let renderer;
 try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
 catch (e) { sceneEl.innerHTML = '<div class="nogl">This browser could not start 3D graphics, so the moon base can\'t be drawn. The cargo log still works.</div>'; }
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0b1020);
+scene.background = new THREE.Color(0x111a33);
 const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 2000);
 const VIEW = 100;
 const HOME = { az: Math.PI / 4, pol: .98 };
@@ -313,11 +439,10 @@ let controls, labels;
 if (renderer) {
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  renderer.toneMapping = THREE.NoToneMapping;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   sceneEl.appendChild(renderer.domElement);
   labels = new CSS2DRenderer(); labels.domElement.className = 'labels'; sceneEl.appendChild(labels.domElement);
-  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), .04).texture;
   setCam(HOME.az, HOME.pol);
   controls = new OrbitControls(cam, renderer.domElement);
   Object.assign(controls, { enableDamping: true, minPolarAngle: .55, maxPolarAngle: 1.2, minZoom: .6, maxZoom: 3.2, screenSpacePanning: true });
@@ -331,15 +456,18 @@ if (renderer) {
 function setCam(az, pol, tgt = new THREE.Vector3()) { const r = 300; cam.position.set(tgt.x + r * Math.sin(pol) * Math.sin(az), tgt.y + r * Math.cos(pol), tgt.z + r * Math.sin(pol) * Math.cos(az)); cam.lookAt(tgt); }
 
 // ---------- lights ----------
-scene.add(new THREE.HemisphereLight(0xe8ecff, 0x50566e, .95));
-const sun = new THREE.DirectionalLight(0xffffff, 2.5);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xc9cfe6, 1.5));
+const sun = new THREE.DirectionalLight(0xffffff, 1.7);
 sun.position.set(-45, 85, 55); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -72, right: 72, top: 72, bottom: -72, near: 1, far: 260 });
-sun.shadow.bias = -.0004; sun.shadow.normalBias = .04;
+sun.shadow.bias = -.0004; sun.shadow.normalBias = .04; sun.shadow.radius = 4;
 scene.add(sun);
 
 // ---------- helpers ----------
-const mat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: .45, metalness: .05, ...o });
+// Clean, illustrated look: every surface uses toon shading with three soft tone steps (no reflections, no CGI sheen).
+const TONES = (() => { const t = new THREE.DataTexture(new Uint8Array([150, 150, 150, 255, 212, 212, 212, 255, 255, 255, 255, 255]), 3, 1); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+function toon(o = {}) { const { roughness, metalness, envMapIntensity, flatShading, ...rest } = o; return new THREE.MeshToonMaterial({ gradientMap: TONES, ...rest }); }
+const mat = (color, o = {}) => toon({ color, ...o });
 const shadowed = m => { m.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); return m; };
 const at = (o, x, y, z) => { o.position.set(x, y, z); return o; };
 const mesh = (g, m) => shadowed(new THREE.Mesh(g, m));
@@ -348,48 +476,69 @@ function canvasTex(w, h, draw, repeat) { const c = document.createElement('canva
 const corrugated = (hex, rep = [4, 1]) => canvasTex(64, 8, (x, w, h) => { x.fillStyle = hex; x.fillRect(0, 0, w, h); x.fillStyle = 'rgba(255,255,255,.2)'; x.fillRect(0, 0, 18, h); x.fillStyle = 'rgba(0,0,0,.14)'; x.fillRect(36, 0, 12, h); }, rep);
 const boxTex = canvasTex(64, 64, (x) => { x.fillStyle = '#d4a26b'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#e9c792'; x.fillRect(26, 0, 12, 64); x.strokeStyle = 'rgba(90,55,20,.35)'; x.lineWidth = 3; x.strokeRect(1.5, 1.5, 61, 61); });
 const M = {
-  white: mat(0xf3f4f8), grey: mat(0xc3c7d4), dark: mat(0x1f2540, { roughness: .3 }), glass: mat(0x1d2440, { roughness: .1, metalness: .4 }),
-  blue: mat(0x3461f5), tire: mat(0x262b40, { roughness: .8 }), pallet: mat(0xb08355, { roughness: .8 }),
-  box: new THREE.MeshStandardMaterial({ map: boxTex, roughness: .8 }), cone: mat(0xff7a2e), yellow: mat(0xf2c14e, { roughness: .6 }),
-  rock: new THREE.MeshStandardMaterial({ color: 0x9a9db0, roughness: 1, flatShading: true }),
+  white: mat(0xeee3c9), grey: mat(0x7a8190), dark: mat(0x4a505c), glass: mat(0x2f5f86),
+  blue: mat(0xe0863a), slate: mat(0x5f6675), sand: mat(0xdcc9a3), stone: mat(0x8f8a82), tire: mat(0x262b40, { roughness: .8 }), pallet: mat(0xb08355, { roughness: .8 }),
+  box: toon({ map: boxTex, roughness: .8 }), cone: mat(0xff7a2e), yellow: mat(0xf2c14e, { roughness: .6 }),
+  rock: toon({ color: 0x9a9db0, roughness: 1, flatShading: true }),
 };
 
 // ---------- island ----------
 {
-  const g = new THREE.PlaneGeometry(ISLAND * 2, ISLAND * 2, 220, 220); g.rotateX(-Math.PI / 2);
-  const p = g.attributes.position, cols = new Float32Array(p.count * 3), base = new THREE.Color(0xdcdee7), dark = new THREE.Color(0xb7bbcb), lite = new THREE.Color(0xf1f2f7), c = new THREE.Color();
-  for (let i = 0; i < p.count; i++) {
-    let x = p.getX(i), z = p.getZ(i); const r = Math.hypot(x, z);
-    if (r > ISLAND) { x *= ISLAND / r; z *= ISLAND / r; }
-    const y = H(x, z); p.setXYZ(i, x, y, z);
-    c.copy(base).lerp(shade < 0 ? dark : lite, Math.min(1, Math.abs(shade))).multiplyScalar(.97 + (fbm(x * .12, z * .12) - .5) * .12);
-    cols.set([c.r, c.g, c.b], i * 3);
+  const base = new THREE.Color(0xdcdee7), dark = new THREE.Color(0xb3b7c8), lite = new THREE.Color(0xf2f3f8), c = new THREE.Color();
+  const dirs = [30, 90, 150].map(d => [Math.sin(d * Math.PI / 180), Math.cos(d * Math.PI / 180)]);
+  for (const id in ST) {
+    const s = ST[id], pieceH = 3.2;
+    // a clean hexagon piece: flat top, smooth side, colored rim band
+    const top = mesh(new THREE.CylinderGeometry(TILE, TILE, pieceH, 6), [mat(0xcfc3ad), mat(0xe0d6c4), mat(0xb3a68f)]);
+    top.position.set(s.x, -pieceH / 2, s.z); scene.add(top);
+    const lip = mesh(new THREE.CylinderGeometry(TILE + .05, TILE + .05, .7, 6, 1, true), mat(s.site ? 0xc3c8d8 : s.color, { side: THREE.DoubleSide }));
+    lip.position.set(s.x, -.55, s.z); scene.add(lip);
+    const foot = mesh(new THREE.CylinderGeometry(TILE * .96, TILE * .9, 1.2, 6), mat(0x7d776d)); foot.position.set(s.x, -pieceH - .6, s.z); scene.add(foot);
   }
-  g.setAttribute('color', new THREE.BufferAttribute(cols, 3)); g.computeVertexNormals();
-  const top = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95, envMapIntensity: .5 }));
-  top.receiveShadow = true; top.castShadow = true; scene.add(top);
-  const rock = new THREE.CylinderGeometry(ISLAND, ISLAND * .45, 20, 90, 6); const rp = rock.attributes.position;
-  for (let i = 0; i < rp.count; i++) { const x = rp.getX(i), y = rp.getY(i), z = rp.getZ(i); if (y > 9.9) continue; const a = Math.atan2(z, x), k = 1 + (vnoise(a * 7, y * .35) - .5) * .18; rp.setXYZ(i, x * k, y, z * k); }
-  rock.computeVertexNormals();
-  scene.add(at(new THREE.Mesh(rock, M.rock), 0, -10.02, 0));
+  // stone-block border around every piece (like the base of a game asset), with gaps where roads cross
+  for (const id in ST) {
+    const s = ST[id], R = TILE - 1;
+    for (let k = 0; k < 6; k++) {
+      const a1 = k * Math.PI / 3, a2 = (k + 1) * Math.PI / 3, x1 = s.x + R * Math.sin(a1), z1 = s.z + R * Math.cos(a1), x2 = s.x + R * Math.sin(a2), z2 = s.z + R * Math.cos(a2);
+      for (let b = 0; b < 5; b++) {
+        const t = (b + .5) / 5, cx = x1 + (x2 - x1) * t, cz = z1 + (z2 - z1) * t;
+        if (ROAD_SEGS.some(g => segDist(cx, cz, ...g) < 3.6)) continue;
+        const blk = at(rbox(R / 5 - .25, .75, 1, b % 2 ? M.stone : M.slate, .22), cx, .37, cz); blk.rotation.y = -Math.atan2(z2 - z1, x2 - x1); scene.add(blk);
+      }
+    }
+  }
+  // craters as flat graphic shapes: a soft ring and a darker floor
+  for (const c of craters) {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(c.r * .82, c.r, 40), mat(0xece4d4)); ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, .015, c.z); scene.add(ring);
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(c.r * .82, 40), mat(0xcbbda4)); floor.rotation.x = -Math.PI / 2; floor.position.set(c.x, .01, c.z); floor.receiveShadow = true; scene.add(floor);
+  }
+  // empty slots on the outer ring: dashed outlines where future pieces can snap in
+  const ghostMat = new THREE.LineDashedMaterial({ color: 0x8d96c9, dashSize: 1.4, gapSize: .9, transparent: true, opacity: .55 });
+  for (let k = 0; k < 6; k++) {
+    const d = 30 + k * 60, cx = 2 * SPACING * Math.sin(d * Math.PI / 180), cz = 2 * SPACING * Math.cos(d * Math.PI / 180);
+    const pts = Array.from({ length: 7 }, (_, i) => new THREE.Vector3(cx + TILE * Math.sin(i * Math.PI / 3), -.4, cz + TILE * Math.cos(i * Math.PI / 3)));
+    const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ghostMat); ln.computeLineDistances(); scene.add(ln);
+  }
   // roads with dashed centre lines
-  const dashes = [];
-  for (const [a, b] of ROADS) {
-    const A = ST[a], B = ST[b], len = Math.hypot(B.x - A.x, B.z - A.z), ang = Math.atan2(B.z - A.z, B.x - A.x);
-    const road = new THREE.Mesh(new THREE.PlaneGeometry(len, 4.4), mat(ST[b].site ? 0xd3d6e1 : 0xc6c9d6, { roughness: .9 }));
-    road.rotation.set(-Math.PI / 2, 0, -ang); road.position.set((A.x + B.x) / 2, .05, (A.z + B.z) / 2); road.receiveShadow = true; scene.add(road);
-    if (!ST[b].site) for (let s = A.r + 1; s < len - B.r - 1; s += 3.4) dashes.push([A.x + Math.cos(ang) * s, A.z + Math.sin(ang) * s, ang]);
+  const dashes = [], KIND = { main: [4.6, 0x9f9584], spoke: [3.6, 0xb7ab97], site: [3.6, 0xc7bca9] };
+  for (const [na, nb, kind] of EDGES) {
+    const [ax, az] = NODES[na], [bx, bz] = NODES[nb], len = Math.hypot(bx - ax, bz - az), ang = Math.atan2(bz - az, bx - ax), [w, col] = KIND[kind];
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(len, w), mat(col, { roughness: .9 }));
+    road.rotation.set(-Math.PI / 2, 0, -ang); road.position.set((ax + bx) / 2, kind === 'main' ? .07 : .05, (az + bz) / 2); road.receiveShadow = true; scene.add(road);
+    for (const [x, z] of [[ax, az], [bx, bz]]) { const j = new THREE.Mesh(new THREE.CircleGeometry(w / 2, 20), mat(col, { roughness: .9 })); j.rotation.x = -Math.PI / 2; j.position.set(x, kind === 'main' ? .07 : .05, z); j.receiveShadow = true; scene.add(j); }
+    if (kind !== 'site') for (let d = 1.2; d < len - 1.2; d += 3.4) {
+      const x = ax + Math.cos(ang) * d, z = az + Math.sin(ang) * d;
+      if (kind === 'main') { for (const off of [-.22, .22]) dashes.push([x - Math.sin(ang) * off, z + Math.cos(ang) * off, ang]); } else dashes.push([x, z, ang]);
+    }
   }
+  for (const [mx, mz, d] of SEAMS) { // bridges over the seams between pieces
+    const ang = (90 - d) * Math.PI / 180, deck = at(rbox(4.2, .5, 5, M.grey, .1), mx, -.22, mz); deck.rotation.y = -ang; scene.add(deck);
+    for (const sd of [-2.6, 2.6]) { const rail = at(rbox(4.6, .55, .28, M.blue, .08), mx - Math.sin(ang) * sd, .35, mz + Math.cos(ang) * sd); rail.rotation.y = -ang; scene.add(rail); }
+  }
+  { const sign = document.createElement('div'); sign.className = 'tag'; sign.innerHTML = '<i style="background:#f2c14e"></i>Main Road'; const lab = new CSS2DObject(sign); lab.position.set(...[NODES.c3[0], 1.5, NODES.c3[1]]); scene.add(lab); }
   const dm = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7, .06, .28), M.yellow, dashes.length), o = new THREE.Object3D();
   dashes.forEach(([x, z, a], i) => { o.position.set(x, .1, z); o.rotation.set(0, -a, 0); o.updateMatrix(); dm.setMatrixAt(i, o.matrix); });
   scene.add(dm);
-  // rocks
-  const rr = rng(5);
-  for (let i = 0, n = 0; i < 200 && n < 34; i++) {
-    const x = (rr() - .5) * 2 * ISLAND, z = (rr() - .5) * 2 * ISLAND, s = .4 + rr() * rr() * 1.8;
-    if (Math.hypot(x, z) > ISLAND - 3 || Object.values(ST).some(t => Math.hypot(t.x - x, t.z - z) < t.r + 4) || ROADS.some(([a, b]) => segDist(x, z, ST[a].x, ST[a].z, ST[b].x, ST[b].z) < 5)) continue;
-    const m = mesh(new THREE.DodecahedronGeometry(s, 0), M.rock); m.position.set(x, H(x, z) + s * .3, z); m.rotation.set(rr() * 3, rr() * 3, 0); m.scale.y = .7; scene.add(m); n++;
-  }
 }
 
 // ---------- stars & earth ----------
@@ -402,7 +551,7 @@ const M = {
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const n1 = fbm(i * .04, j * .06, 5), cl = fbm(i * .05 + 40, j * .09, 4), k = (j * w + i) * 4, land = n1 > .55, cloud = cl > .58;
       const col = cloud ? [240, 244, 250] : land ? [86, 150, 96] : [40, 96, 190]; img.data.set([...col, 255], k); }
     x.putImageData(img, 0, 0); });
-  const earth = new THREE.Mesh(new THREE.SphereGeometry(9, 48, 32), new THREE.MeshStandardMaterial({ map: earthTex, roughness: .7 }));
+  const earth = new THREE.Mesh(new THREE.SphereGeometry(9, 48, 32), toon({ map: earthTex, roughness: .7 }));
   earth.position.set(-95, 48, -95); earth.name = 'earth'; scene.add(earth);
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex(128, 128, (x) => { const g2 = x.createRadialGradient(64, 64, 30, 64, 64, 64); g2.addColorStop(0, 'rgba(120,170,255,.55)'); g2.addColorStop(1, 'rgba(120,170,255,0)'); x.fillStyle = g2; x.fillRect(0, 0, 128, 128); }), depthWrite: false }));
   glow.scale.set(27, 27, 1); glow.position.copy(earth.position); scene.add(glow);
@@ -414,45 +563,53 @@ function stack(n) { // a pallet with up to 8 cardboard boxes
   g.userData.add = () => { const i = g.userData.n || 0; if (i >= 8) return false; const b = rbox(1.25, 1.1, 1.25, M.box, .08); at(b, (i % 2 - .5) * 1.32, .86 + Math.floor(i / 4) * 1.12, ((i >> 1) % 2 - .5) * 1.32); b.rotation.y = (hash(i, n) - .5) * .12; g.add(b); g.userData.n = i + 1; return b; };
   for (let i = 0; i < n; i++) g.userData.add(); return g;
 }
-function astronaut() {
+function astronaut(visor = 0xf29b38) {
   const g = new THREE.Group(), suit = mat(0xf7f7fb, { roughness: .6 });
   g.add(at(mesh(new THREE.CapsuleGeometry(.42, .7, 6, 16), suit), 0, 1.15, 0));
   g.add(at(rbox(.75, .85, .4, mat(0xd6d9e4), .1), 0, 1.3, -.42));
   g.add(at(mesh(new THREE.SphereGeometry(.42, 24, 16), suit), 0, 1.95, 0));
-  g.add(at(mesh(new THREE.SphereGeometry(.33, 24, 16, Math.PI * .2, Math.PI * .6, Math.PI * .28, Math.PI * .38), mat(0xf29b38, { roughness: .15, metalness: .6 })), 0, 1.95, .14));
+  g.add(at(mesh(new THREE.SphereGeometry(.33, 24, 16, Math.PI * .2, Math.PI * .6, Math.PI * .28, Math.PI * .38), mat(visor, { roughness: .15, metalness: .6 })), 0, 1.95, .14));
   for (const s of [-1, 1]) { g.add(at(mesh(new THREE.CapsuleGeometry(.15, .5, 4, 8), suit), s * .2, .4, 0)); const arm = at(mesh(new THREE.CapsuleGeometry(.13, .55, 4, 8), suit), s * .55, 1.2, .05); arm.rotation.z = s * .25; g.add(arm); }
   g.add(at(mesh(new THREE.BoxGeometry(.3, .14, .04), M.blue), .18, 1.42, .4));
   return g;
 }
 function habitat() {
-  const g = new THREE.Group();
-  g.add(at(mesh(new THREE.CylinderGeometry(6, 6.3, 1, 48), M.blue), 0, .5, 0));
-  g.add(at(mesh(new THREE.SphereGeometry(5.7, 48, 24, 0, TAU, 0, Math.PI / 2), mat(0xf6f7fb, { roughness: .3 })), 0, 1, 0));
-  const band = at(mesh(new THREE.TorusGeometry(5.42, .2, 10, 64), M.glass), 0, 2.85, 0); band.rotation.x = Math.PI / 2; g.add(band);
-  const tube = at(mesh(new THREE.CylinderGeometry(1.5, 1.5, 4.4, 28), M.white), 0, 1.6, 6.4); tube.rotation.x = Math.PI / 2; g.add(tube);
-  const ring = at(mesh(new THREE.TorusGeometry(1.5, .22, 10, 28), M.blue), 0, 1.6, 8.6); g.add(ring);
-  g.add(at(mesh(new THREE.CylinderGeometry(1.05, 1.05, .1, 28).rotateX(Math.PI / 2), M.glass), 0, 1.6, 8.66));
-  for (const z of [-3.2, 0.4]) { // solar panels
-    const pnl = new THREE.Group(); pnl.add(at(mesh(new THREE.CylinderGeometry(.14, .14, 2.2), M.grey), 0, 1.1, 0));
-    const face = at(rbox(4.6, .18, 2.6, new THREE.MeshStandardMaterial({ map: canvasTex(64, 32, (x) => { x.fillStyle = '#2346c4'; x.fillRect(0, 0, 64, 32); x.strokeStyle = 'rgba(255,255,255,.35)'; x.lineWidth = 1; for (let i = 0; i <= 64; i += 8) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 32); x.stroke(); } for (let j = 0; j <= 32; j += 8) { x.beginPath(); x.moveTo(0, j); x.lineTo(64, j); x.stroke(); } }), roughness: .25, metalness: .3 }), .06), 0, 2.3, 0);
-    face.rotation.z = .45; pnl.add(face); at(pnl, -9.5, 0, z); g.add(pnl);
-  }
-  g.add(at(mesh(new THREE.CylinderGeometry(.08, .08, 5.4), M.grey), 4.6, 2.7, -4.6));
-  g.add(at(mesh(new THREE.CylinderGeometry(.05, .05, 2.4).rotateZ(Math.PI / 2), M.grey), 5.8, 5.3, -4.6));
-  g.add(at(rbox(2.4, 1.4, .08, M.blue, .03), 5.8, 4.55, -4.6));
-  const dish = at(mesh(new THREE.SphereGeometry(1.6, 24, 12, 0, TAU, 0, .95), mat(0xf6f7fb, { side: THREE.DoubleSide })), -4.5, 3.6, -5.5); dish.rotation.set(-2.3, 0, .5); g.add(dish);
-  g.add(at(mesh(new THREE.CylinderGeometry(.15, .25, 3), M.grey), -4.5, 1.5, -5.5));
-  const you = at(astronaut(), 3.2, 0, 9.4); you.name = 'astronaut'; g.add(you);
-  g.userData.stacks = [at(stack(2), -4.4, 0, 8.6)]; g.add(...g.userData.stacks);
+  // A modular cream habitat with slate trims and an orange door, a side tank and solar panels, under a glass dome on a stone-ringed base.
+  const g = new THREE.Group(), cream = M.white, slate = M.slate, orange = M.blue;
+  g.add(at(mesh(new THREE.CylinderGeometry(8.2, 8.7, .8, 12), mat(0xc0703f)), 0, .4, 0));
+  for (let k = 0; k < 22; k++) { const a = k / 22 * TAU; if (Math.cos(a) > .93) continue; const blk = at(rbox(2.15, .95, 1, k % 2 ? M.stone : slate, .25), Math.sin(a) * 8.1, 1.05, Math.cos(a) * 8.1); blk.rotation.y = a; g.add(blk); }
+  // main module
+  g.add(at(rbox(5.2, 5.4, 4.6, cream, .55), -.4, 3.5, -.8));
+  for (const y of [1.1, 3.6, 6.05]) g.add(at(rbox(5.5, .42, 4.9, slate, .2), -.4, y, -.8));
+  g.add(at(rbox(3.6, .8, 3.1, slate, .3), -.4, 6.6, -.8), at(rbox(2.4, .3, 2, mat(0x4a505c), .1), -.4, 7.1, -.8));
+  g.add(at(rbox(2, 1.7, .35, orange, .3), -1.5, 4.8, 1.55), at(rbox(1.5, 1.2, .38, M.glass, .25), -1.5, 4.8, 1.6));
+  // door with steps
+  g.add(at(rbox(1.9, 2.7, .45, orange, .25), 1.1, 2.15, 1.55), at(rbox(1.3, 2.1, .5, mat(0xc96f25), .2), 1.1, 2, 1.6));
+  g.add(at(mesh(new THREE.CylinderGeometry(.32, .32, .52, 18).rotateX(Math.PI / 2), M.glass), 1.1, 2.4, 1.66));
+  g.add(at(rbox(2.4, .3, .9, slate, .1), 1.1, .95, 2.4), at(rbox(2.4, .3, .9, slate, .1), 1.1, .65, 3.1));
+  // side tank
+  g.add(at(mesh(new THREE.CylinderGeometry(1.55, 1.55, 3.8, 28), cream), 3.4, 2.7, -.2), at(mesh(new THREE.CylinderGeometry(1.58, 1.58, .8, 28), orange), 3.4, 2.4, -.2));
+  g.add(at(mesh(new THREE.CylinderGeometry(1.35, 1.55, .45, 28), slate), 3.4, 4.8, -.2), at(rbox(1.2, 1.2, 1.4, slate, .2), 2.1, 3, -.2));
+  // solar panels
+  const panelTex = canvasTex(64, 32, (x) => { x.fillStyle = '#3b4a66'; x.fillRect(0, 0, 64, 32); x.strokeStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i <= 64; i += 8) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 32); x.stroke(); } for (let j = 0; j <= 32; j += 8) { x.beginPath(); x.moveTo(0, j); x.lineTo(64, j); x.stroke(); } });
+  for (const [px, pz] of [[-4.6, 2.6], [-2.4, 3.9]]) { const pn = new THREE.Group(); pn.add(at(mesh(new THREE.CylinderGeometry(.1, .1, 1.2), slate), 0, .6, 0)); const f = at(rbox(2, .12, 1.4, toon({ map: panelTex }), .05), 0, 1.25, 0); f.rotation.x = -.5; pn.add(f); pn.position.set(px, .8, pz); pn.rotation.y = .5; g.add(pn); }
+  // antenna through the dome
+  g.add(at(mesh(new THREE.CylinderGeometry(.08, .14, 9), slate), 4.6, 4.5, -4.8), at(mesh(new THREE.SphereGeometry(.22, 12, 8), orange), 4.6, 9.1, -4.8));
+  // glass dome
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(7.7, 48, 24, 0, TAU, 0, Math.PI / 2), toon({ color: 0x8ec0e0, transparent: true, opacity: .26, depthWrite: false, side: THREE.DoubleSide }));
+  dome.position.y = .8; g.add(dome);
+  g.add(at(mesh(new THREE.TorusGeometry(7.7, .22, 8, 64).rotateX(Math.PI / 2), slate), 0, .85, 0));
+  const you = at(astronaut(), 6.6, 0, 7.4); you.name = 'astronaut'; g.add(you);
+  g.userData.stacks = [at(stack(2), -6.4, 0, 9.4)]; g.add(...g.userData.stacks);
   return g;
 }
 function factory() {
   const g = new THREE.Group(), W = 18, D = 11, Hh = 6;
-  g.add(at(rbox(W, Hh, D, mat(0xeef0f6), .3), 0, Hh / 2, 0));
-  const roofM = new THREE.MeshStandardMaterial({ map: corrugated('#2f5bea', [10, 1]), roughness: .45 });
+  g.add(at(rbox(W, Hh, D, mat(0xeee3c9), .3), 0, Hh / 2, 0));
+  const roofM = toon({ map: corrugated('#2f5bea', [10, 1]), roughness: .45 });
   for (const s of [-1, 1]) { const slab = at(rbox(W + .8, .45, D / 2 + 1.1, roofM, .1), 0, Hh + 1, s * D / 4 + s * .1); slab.rotation.x = s * .36; g.add(slab); }
   const gable = new THREE.Shape([new THREE.Vector2(-D / 2, 0), new THREE.Vector2(D / 2, 0), new THREE.Vector2(0, 2.1)]);
-  const gm = mesh(new THREE.ExtrudeGeometry(gable, { depth: W - .4, bevelEnabled: false }), mat(0xe2e5ee)); gm.rotation.y = Math.PI / 2; at(gm, -W / 2 + .2, Hh - .05, 0); g.add(gm);
+  const gm = mesh(new THREE.ExtrudeGeometry(gable, { depth: W - .4, bevelEnabled: false }), mat(0xdcc9a3)); gm.rotation.y = Math.PI / 2; at(gm, -W / 2 + .2, Hh - .05, 0); g.add(gm);
   for (const i of [-1, 0, 1]) {
     g.add(at(rbox(3.6, 4, .5, M.blue, .12), i * 5.2, 2, D / 2 + .05));
     g.add(at(rbox(2.9, 3.4, .4, mat(0x2a3150), .05), i * 5.2, 1.8, D / 2 + .15));
@@ -460,10 +617,10 @@ function factory() {
   }
   g.add(at(mesh(new THREE.CylinderGeometry(.95, 1.1, 6, 24), M.white), W / 2 - 2.5, Hh + 3, -D / 4));
   g.add(at(mesh(new THREE.CylinderGeometry(1.0, 1.0, .6, 24), M.blue), W / 2 - 2.5, Hh + 4.6, -D / 4));
-  const badge = new THREE.Mesh(new THREE.CircleGeometry(1.6, 40), new THREE.MeshStandardMaterial({ map: canvasTex(128, 128, (x) => { x.fillStyle = '#fff'; x.beginPath(); x.arc(64, 64, 62, 0, TAU); x.fill(); x.fillStyle = '#3461f5'; x.font = '800 54px Plus Jakarta Sans, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('FX', 64, 68); }), transparent: true }));
+  const badge = new THREE.Mesh(new THREE.CircleGeometry(1.6, 40), toon({ map: canvasTex(128, 128, (x) => { x.fillStyle = '#fff'; x.beginPath(); x.arc(64, 64, 62, 0, TAU); x.fill(); x.fillStyle = '#3461f5'; x.font = '800 54px Plus Jakarta Sans, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('FX', 64, 68); }), transparent: true }));
   badge.position.set(-3, Hh + 1.95, D / 4 + .5); badge.rotation.x = -Math.PI / 2 + .36; g.add(badge);
   // shipping container
-  const cont = at(rbox(8, 3, 3.2, new THREE.MeshStandardMaterial({ map: corrugated('#17b3a3', [12, 1]), roughness: .5 }), .1), -14.5, 1.5, 6); cont.rotation.y = .25; g.add(cont);
+
   g.userData.stack = new THREE.Vector3(W / 2 - 2.5, Hh + 6.4, -D / 4);
   return g;
 }
@@ -483,14 +640,64 @@ function hexWarehouse(roofHex, kind) {
   g.add(hex(Rr + .7, Rr + .9, .5, M.grey, .25));
   g.add(hex(Rr, Rr, Hh, M.white, Hh / 2 + .5));
   g.add(hex(Rr + .05, Rr + .05, .6, mat(new THREE.Color(roofHex)), Hh - .1));
-  const roofM = new THREE.MeshStandardMaterial({ map: corrugated(roofHex, [12, 1]), roughness: .45 });
+  const roofM = toon({ map: corrugated(roofHex, [12, 1]), roughness: .45 });
   g.add(hex(Rr * .42, Rr + .6, 2.4, roofM, Hh + 1.7));
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(Rr * .42, Rr * .42, .35, 40), [roofM, new THREE.MeshStandardMaterial({ map: badgeTex(kind), roughness: .4 }), roofM]);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(Rr * .42, Rr * .42, .35, 40), [roofM, toon({ map: badgeTex(kind), roughness: .4 }), roofM]);
   shadowed(cap); cap.position.y = Hh + 3.07; cap.rotation.y = -Math.PI / 4; g.add(cap);
   g.add(at(rbox(3.6, 4, .55, mat(new THREE.Color(roofHex)), .12), 0, 2.4, Rr * .866 + .05));
   g.add(at(rbox(2.9, 3.3, .4, mat(0x2a3150), .05), 0, 2.1, Rr * .866 + .15));
   for (const a of [-1, 1]) { const w = at(rbox(1.6, .9, .2, M.glass, .05), 0, 4.1, 0); const grp = new THREE.Group(); grp.add(w); w.position.set(0, 4.1, Rr * .866 + .02); grp.rotation.y = a * Math.PI / 3; g.add(grp); }
-  g.userData.stacks = [at(stack(3), -4.2, 0, 9), at(stack(1), 4.2, 0, 9)]; g.add(...g.userData.stacks);
+  if (kind === 'github') { g.userData.stacks = [at(stack(3), -4.2, 0, 9), at(stack(1), 4.2, 0, 9)]; g.add(...g.userData.stacks); }
+  return g;
+}
+// Creative Media Factory: a studio with a rooftop billboard showing the skill in use.
+const billboard = (() => {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 160;
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const draw = (top, big) => {
+    const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 512, 160);
+    g.addColorStop(0, '#e0458f'); g.addColorStop(1, '#7c5cff'); x.fillStyle = g; x.fillRect(0, 0, 512, 160);
+    x.fillStyle = 'rgba(255,255,255,.75)'; x.font = '700 22px "Plus Jakarta Sans", sans-serif'; x.textAlign = 'center'; x.fillText(top, 256, 46);
+    x.fillStyle = '#fff'; let size = 54; x.font = `800 ${size}px "Plus Jakarta Sans", sans-serif`;
+    while (x.measureText(big).width > 470 && size > 22) { size -= 2; x.font = `800 ${size}px "Plus Jakarta Sans", sans-serif`; }
+    x.fillText(big, 256, 112); tex.needsUpdate = true;
+  };
+  draw('CREATIVE MEDIA', 'Ready for a skill');
+  return { tex, draw };
+})();
+function mediaStudio() {
+  const g = new THREE.Group(), W = 15, D = 9, Hh = 5, pink = mat(0xe0458f);
+  g.add(at(rbox(W, Hh, D, mat(0xeee3c9), .4), 0, Hh / 2, 0));
+  g.add(at(rbox(W + .6, .5, D + .6, toon({ map: corrugated('#e0458f', [10, 1]), roughness: .45 }), .15), 0, Hh + .25, 0));
+  for (const z of [D / 2 + .05, -D / 2 - .05]) {
+    g.add(at(rbox(W - 3, 2.6, .3, M.glass, .1), 0, 2.4, z));
+    for (let i = -2; i <= 2; i++) g.add(at(rbox(.18, 2.8, .45, pink, .05), i * 2.4, 2.4, z));
+  }
+  const bb = new THREE.Group(); bb.name = 'billboard'; bb.position.y = Hh; // turns to face the viewer every frame
+  for (const x of [-4, 4]) bb.add(at(mesh(new THREE.CylinderGeometry(.22, .22, 3), M.grey), x, 1.9, 0));
+  bb.add(at(rbox(12.4, 4.2, .5, M.dark, .15), 0, 5, 0));
+  const sc = new THREE.Mesh(new THREE.PlaneGeometry(11.8, 3.7), new THREE.MeshBasicMaterial({ map: billboard.tex, toneMapped: false }));
+  sc.position.set(0, 5, .27); bb.add(sc); g.add(bb);
+  // a camera on a tripod and a paint palette by the door
+  const cam3 = new THREE.Group();
+  for (let k = 0; k < 3; k++) { const leg = at(mesh(new THREE.CylinderGeometry(.07, .07, 2.2), M.grey), Math.cos(k * 2.1) * .45, 1, Math.sin(k * 2.1) * .45); leg.rotation.set(Math.sin(k * 2.1) * .25, 0, -Math.cos(k * 2.1) * .25); cam3.add(leg); }
+  cam3.add(at(rbox(1.1, .8, 1.5, M.dark, .12), 0, 2.4, 0));
+  const lens = at(mesh(new THREE.CylinderGeometry(.32, .38, .7, 20), M.glass), 0, 2.4, .95); lens.rotation.x = Math.PI / 2; cam3.add(lens);
+  // photo shoot: backdrop, model, photographer behind the camera, and two softboxes that flash
+  const shoot = new THREE.Group(), paper = mat(0xfbe3ef, { roughness: .8 });
+  shoot.add(at(rbox(7, 4.4, .3, paper, .1), 0, 2.2, -5.1), at(rbox(7, .12, 2.8, paper, .05), 0, .06, -6.5));
+  const model = at(astronaut(0xe0458f), 0, .12, -6.6); model.rotation.y = Math.PI; model.name = 'model'; shoot.add(model);
+  shoot.add(at(cam3, 0, 0, -9.6));
+  const photog = at(astronaut(0x3461f5), .3, 0, -10.8); photog.name = 'photog'; shoot.add(photog);
+  const flash = toon({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: .15 });
+  for (const sx of [-3.4, 3.4]) {
+    const sb = new THREE.Group(); sb.add(at(mesh(new THREE.CylinderGeometry(.08, .08, 3.2), M.grey), 0, 1.6, 0));
+    sb.add(at(rbox(1.7, 1.3, .6, M.dark, .1), 0, 3.4, 0)); sb.add(at(new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.05), flash), 0, 3.4, .31));
+    sb.position.set(sx, 0, -8.6); sb.rotation.y = Math.atan2(-sx, 2); shoot.add(sb);
+  }
+  g.add(shoot); g.userData.flash = flash;
+  const pal = at(mesh(new THREE.CylinderGeometry(1.1, 1.1, .16, 28), mat(0xd9a066)), -W / 2 - 1.6, .4, 2.5); g.add(pal);
+  ['#e0458f', '#3461f5', '#f2c14e', '#17a36b'].forEach((col, k) => pal.add(at(mesh(new THREE.SphereGeometry(.2, 12, 8), mat(new THREE.Color(col))), Math.cos(k * 1.3) * .6, .12, Math.sin(k * 1.3) * .6)));
   return g;
 }
 function buildSite() {
@@ -527,14 +734,123 @@ function pin(hex) {
 const stations = {};
 for (const id in ST) {
   const s = ST[id];
-  const grp = id === 'you' ? habitat() : id === 'factory' ? factory() : s.site ? buildSite() : hexWarehouse(s.css, id);
-  grp.position.set(s.x, 0, s.z);
+  const grp = id === 'you' ? habitat() : id === 'factory' ? factory() : id === 'f1' ? paddock() : id === 'media' ? mediaStudio() : id === 'chat' ? chatTower() : s.site ? buildSite() : hexWarehouse(s.css, id);
+  grp.position.set(s.x, 0, s.z); if (id === 'factory') grp.scale.setScalar(.8); // leaves room for the Main Road
   if (id !== 'factory') { const f = ST.factory; grp.rotation.y = Math.atan2(f.x - s.x, f.z - s.z); }
   grp.traverse(o => { o.userData.station = id; });
   scene.add(grp);
   const tag = document.createElement('div'); tag.className = 'tag'; tag.innerHTML = `<i style="background:${s.css}"></i>`; tag.append(document.createTextNode(s.name));
-  const lab = new CSS2DObject(tag); lab.position.set(s.x, id === 'factory' ? 12.5 : s.site ? 3 : 11, s.z); scene.add(lab);
+  const lab = new CSS2DObject(tag); lab.position.set(s.x, id === 'factory' ? 10.5 : id === 'f1' ? 6 : id === 'chat' ? 16 : s.site ? 3 : 11, s.z); scene.add(lab);
   stations[id] = { grp, tag, pulse: 0, pin: null };
+}
+
+// ---------- Formula 1 Paddock: a mini circuit with a car lapping it, a grandstand and the pit garage ----------
+let f1At = 0;
+function paddock() {
+  const g = new THREE.Group();
+  const curve = new THREE.CatmullRomCurve3([[-6, -2.5], [-2, -6.5], [4.5, -5.5], [7, -1], [4.5, 2.5], [0, 1.5], [-3.5, 4.5], [-7, 3]].map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'catmullrom', .5);
+  const N = 160, w = 1.6, pos = [], idx = [];
+  for (let i = 0; i <= N; i++) {
+    const p = curve.getPointAt(i / N), t = curve.getTangentAt(i / N), nx = -t.z, nz = t.x;
+    pos.push(p.x + nx * w, .12, p.z + nz * w, p.x - nx * w, .12, p.z - nz * w);
+    if (i < N) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+  }
+  const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); tg.setIndex(idx); tg.computeVertexNormals();
+  const track = new THREE.Mesh(tg, mat(0x2b2f3d, { roughness: .8, side: THREE.DoubleSide })); track.receiveShadow = true; g.add(track);
+  for (let i = 0; i < N; i += 4) { // red and white kerbs
+    const p = curve.getPointAt(i / N), t = curve.getTangentAt(i / N);
+    for (const sd of [1, -1]) { const k = at(new THREE.Mesh(new THREE.BoxGeometry(.5, .08, .35), mat((i / 4) % 2 ? 0xffffff : 0xe10600)), p.x - t.z * (w + .2) * sd, .13, p.z + t.x * (w + .2) * sd); k.rotation.y = Math.atan2(t.x, t.z); g.add(k); }
+  }
+  const st0 = curve.getPointAt(0), tt0 = curve.getTangentAt(0), line = at(new THREE.Mesh(new THREE.BoxGeometry(w * 2, .05, .3), M.white), st0.x, .16, st0.z); line.rotation.y = Math.atan2(tt0.x, tt0.z); g.add(line);
+  // the car
+  const car = new THREE.Group(), red = mat(0xe10600, { roughness: .3, metalness: .2 });
+  car.add(at(rbox(.7, .35, 2.4, red, .12), 0, .32, 0), at(rbox(.45, .2, .9, red, .08), 0, .28, 1.4));
+  car.add(at(rbox(1.3, .06, .3, M.dark, .02), 0, .2, 1.85), at(rbox(1.1, .3, .12, M.dark, .03), 0, .65, -1.15));
+  car.add(at(mesh(new THREE.TorusGeometry(.22, .04, 6, 16, Math.PI), M.dark), 0, .55, .25));
+  for (const [x, z] of [[-.55, .9], [.55, .9], [-.55, -.8], [.55, -.8]]) { const wh = at(mesh(new THREE.CylinderGeometry(.24, .24, .26, 14), M.tire), x, .26, z); wh.rotation.z = Math.PI / 2; car.add(wh); }
+  car.scale.setScalar(1.15); shadowed(car); g.add(car);
+  // grandstand, pit garage and a checkered flag
+  for (let r2 = 0; r2 < 3; r2++) g.add(at(rbox(7, .7, 1, mat(r2 % 2 ? 0xe10600 : 0xf3f4f8), .08), 0, .35 + r2 * .7, 8.4 + r2 * .9));
+  g.add(at(rbox(7.4, .2, 3.6, M.grey, .05), 0, 2.4, 9.3));
+  const pit = at(rbox(4.6, 2.2, 2.6, M.white, .2), -8.6, 1.1, -5.4); g.add(pit);
+  g.add(at(new THREE.Mesh(new THREE.PlaneGeometry(3, 1), new THREE.MeshBasicMaterial({ map: canvasTex(192, 64, (x) => { x.fillStyle = '#e10600'; x.fillRect(0, 0, 192, 64); x.fillStyle = '#fff'; x.font = 'italic 800 40px "Plus Jakarta Sans", sans-serif'; x.textAlign = 'center'; x.fillText('F1', 96, 46); }) })), -8.6, 1.5, -4.09));
+  g.add(at(mesh(new THREE.CylinderGeometry(.06, .06, 4), M.grey), 8.2, 2, 4.5));
+  g.add(at(new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1), toon({ side: THREE.DoubleSide, map: canvasTex(64, 40, (x) => { for (let i = 0; i < 8; i++) for (let j = 0; j < 5; j++) { x.fillStyle = (i + j) % 2 ? '#111' : '#fff'; x.fillRect(i * 8, j * 8, 8, 8); } }) })), 9, 3.5, 4.5));
+  g.userData = { curve, car, u: 0 };
+  return g;
+}
+function updateF1(dt) {
+  const u = stations.f1.grp.userData, racing = Date.now() - f1At < 90e3;
+  u.u = (u.u + dt * (racing ? .14 : .03)) % 1;
+  const p = u.curve.getPointAt(u.u), t = u.curve.getTangentAt(u.u);
+  u.car.position.set(p.x, .1, p.z); u.car.rotation.y = Math.atan2(t.x, t.z);
+  if (racing && !reduced && Math.random() < .3) puff(tmp.copy(u.car.position).applyMatrix4(stations.f1.grp.matrixWorld), new THREE.Vector3(0, .6, 0), .6, .15, .5, 0x9aa1b8, .6);
+}
+
+// ---------- Claude Chat Tower: comms tower with a turning dish, and a glass lounge where astronauts talk ----------
+function chatTower() {
+  const g = new THREE.Group(), sky = mat(0x38a3d6), glassDome = mat(0xdff1fb, { transparent: true, opacity: .32, roughness: .08, metalness: .1 });
+  g.add(at(mesh(new THREE.CylinderGeometry(4.6, 4.8, .6, 40), M.grey), -3, .3, 2.5));
+  g.add(at(mesh(new THREE.TorusGeometry(4.6, .18, 8, 48).rotateX(Math.PI / 2), sky), -3, .62, 2.5));
+  const dome = at(new THREE.Mesh(new THREE.SphereGeometry(4.5, 40, 20, 0, TAU, 0, Math.PI / 2.3), glassDome), -3, .6, 2.5); g.add(dome);
+  g.add(at(mesh(new THREE.CylinderGeometry(1.2, 1.2, .14, 28), M.white), -3, 1.45, 2.5), at(mesh(new THREE.CylinderGeometry(.15, .25, .85), M.grey), -3, 1, 2.5));
+  const talkers = [];
+  for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + .4, p = at(astronaut(0x38a3d6), -3 + Math.sin(a) * 2.1, .6, 2.5 + Math.cos(a) * 2.1); p.scale.setScalar(.7); p.rotation.y = a + Math.PI; g.add(p); talkers.push(p); }
+  // the tower
+  g.add(at(mesh(new THREE.CylinderGeometry(.55, 1.5, 12, 6), M.white), 3.6, 6, -2.4));
+  for (const y of [3, 6.5, 10]) g.add(at(mesh(new THREE.TorusGeometry(1.5 - y * .08, .16, 8, 6).rotateX(Math.PI / 2), sky), 3.6, y, -2.4));
+  const dish = new THREE.Group(); dish.name = 'dish'; dish.position.set(3.6, 12.4, -2.4);
+  const bowl = at(mesh(new THREE.SphereGeometry(2.6, 28, 12, 0, TAU, 0, 1), mat(0xf6f7fb, { side: THREE.DoubleSide })), 0, .6, 0); bowl.rotation.x = -1.9; dish.add(bowl);
+  const horn = at(mesh(new THREE.ConeGeometry(.22, 1.6, 12), M.grey), 0, 1.1, 1.1); horn.rotation.x = 1.2; dish.add(horn);
+  const beacon = toon({ color: 0x38a3d6, emissive: 0x38a3d6, emissiveIntensity: .4 });
+  dish.add(at(new THREE.Mesh(new THREE.SphereGeometry(.32, 16, 10), beacon), 0, 2.1, 0));
+  g.add(dish);
+  g.userData = { talkers, beacon, lounge: new THREE.Vector3(-3, 4, 2.5) };
+  return g;
+}
+const chatNow = { active: false, title: '', last: 0 };
+const bubbleTex = canvasTex(128, 96, (x) => { x.fillStyle = '#fff'; x.beginPath(); x.roundRect(6, 6, 116, 64, 22); x.fill(); x.beginPath(); x.moveTo(36, 66); x.lineTo(26, 90); x.lineTo(58, 68); x.fill(); x.fillStyle = '#38a3d6'; for (const cx of [40, 64, 88]) { x.beginPath(); x.arc(cx, 38, 7, 0, TAU); x.fill(); } });
+const bubbles = [];
+function updateChat(dt, t) {
+  if (chatNow.active && Date.now() - chatNow.last > 15 * 60e3) chatNow.active = false;
+  const g = stations.chat.grp, u = g.userData, on = chatNow.active;
+  g.getObjectByName('dish').rotation.y += dt * (on ? 1.4 : .25);
+  u.beacon.emissiveIntensity = on ? 1.5 + Math.sin(t * 6) * 1.2 : .4;
+  u.talkers.forEach((p, k) => { p.position.y = .6 + (on && !reduced ? Math.abs(Math.sin(t * 4 + k * 2)) * .18 : 0); });
+  if (on && !reduced && Math.random() < dt * 1.3) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex, transparent: true, depthWrite: false }));
+    sp.position.copy(u.lounge).applyMatrix4(g.matrixWorld).add(new THREE.Vector3((Math.random() - .5) * 4, 0, (Math.random() - .5) * 4)); sp.scale.set(2.4, 1.8, 1);
+    scene.add(sp); bubbles.push({ sp, t: 0 });
+  }
+  for (let i = bubbles.length - 1; i >= 0; i--) { const b = bubbles[i]; b.t += dt; b.sp.position.y += dt * 1.3; b.sp.material.opacity = Math.max(0, 1 - b.t / 3); if (b.t > 3) { scene.remove(b.sp); b.sp.material.dispose(); bubbles.splice(i, 1); } }
+}
+
+// ---------- Claude conversation: astronauts walk between the Claude warehouse and your habitat ----------
+const walkers = [];
+function walkTo(P, s, side) { // point on path P at distance s, pushed sideways off the rover lane
+  let lo = 0, hi = P.dist.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P.dist[m] <= s) lo = m; else hi = m; }
+  const a = P.pts[lo], b = P.pts[hi], f = Math.min(1, Math.max(0, (s - P.dist[lo]) / ((P.dist[hi] - P.dist[lo]) || 1)));
+  const dx = b.x - a.x, dz = b.z - a.z, L = Math.hypot(dx, dz) || 1;
+  return [a.x + dx * f - dz / L * side, a.z + dz * f + dx / L * side, dx / L, dz / L];
+}
+function updateWalkers(dt, t) {
+  if (claudeNow.active && !walkers.length) {
+    const P = buildPath(['claude', 'factory', 'you']), L = P.dist.at(-1);
+    for (let i = 0; i < 3; i++) {
+      const g = astronaut(0xd97757); g.scale.setScalar(.75); scene.add(g);
+      const w = { g, P, L, s: L * (i / 3), dir: i % 2 ? -1 : 1 };
+      if (i === 0) { const tag = document.createElement('div'); tag.className = 'tag'; w.tag = tag; w.lab = new CSS2DObject(tag); w.lab.position.set(0, 3.6, 0); g.add(w.lab); }
+      walkers.push(w);
+    }
+  }
+  if (!claudeNow.active && walkers.length) { for (const w of walkers.splice(0)) scene.remove(w.g); return; }
+  for (const w of walkers) {
+    w.s += w.dir * 3.2 * dt; if (w.s > w.L) { w.s = w.L; w.dir = -1; } if (w.s < 0) { w.s = 0; w.dir = 1; }
+    const [x, z, ux, uz] = walkTo(w.P, w.s, -1.9);
+    w.g.position.set(x, H(x, z) + (reduced ? 0 : Math.abs(Math.sin(t * 6 + w.L * w.dir)) * .25), z);
+    w.yaw = turnToward(w.yaw ?? 0, Math.atan2(ux * w.dir, uz * w.dir), dt * 6); w.g.rotation.y = w.yaw;
+    if (w.tag) w.tag.innerHTML = `<i style="background:#d97757"></i>Chat · ${esc(claudeNow.repo || 'Claude Code')}`;
+  }
 }
 
 // ---------- puffs (factory steam, rover dust) ----------
@@ -542,7 +858,7 @@ const puffs = [];
 const puffGeo = new THREE.SphereGeometry(1, 12, 8);
 function puff(p, v, life, s0, s1, color, op) {
   let o = puffs.find(q => q.t >= q.life);
-  if (!o) { if (puffs.length > 90) return; o = { m: new THREE.Mesh(puffGeo, new THREE.MeshStandardMaterial({ transparent: true, depthWrite: false, roughness: 1 })) }; scene.add(o.m); puffs.push(o); }
+  if (!o) { if (puffs.length > 90) return; o = { m: new THREE.Mesh(puffGeo, toon({ transparent: true, depthWrite: false, roughness: 1 })) }; scene.add(o.m); puffs.push(o); }
   Object.assign(o, { t: 0, life, s0, s1, op, v: v.clone() }); o.m.material.color.set(color); o.m.position.copy(p); o.m.visible = true;
 }
 function updatePuffs(dt) {
@@ -552,18 +868,52 @@ function updatePuffs(dt) {
 // ---------- rovers ----------
 const rovers = [];
 const SPEED = 11, FACTORY_WAIT = 1.4;
-function buildPath(route) {
-  const pts = [], legEnds = [];
-  for (let i = 0; i < route.length - 1; i++) {
-    const A = ST[route[i]], B = ST[route[i + 1]], dx = B.x - A.x, dz = B.z - A.z, L = Math.hypot(dx, dz), ux = dx / L, uz = dz / L;
-    const sx = A.x + ux * (A.r - 1.5), sz = A.z + uz * (A.r - 1.5), ex = B.x - ux * (B.r - 1.5), ez = B.z - uz * (B.r - 1.5), n = Math.ceil(Math.hypot(ex - sx, ez - sz));
-    for (let k = i ? 1 : 0; k <= n; k++) { const t = k / n, side = 1.1; pts.push(new THREE.Vector3(sx + (ex - sx) * t - uz * side, .05, sz + (ez - sz) * t + ux * side)); }
-    legEnds.push(pts.length - 1);
+// Rounds a polyline's corners (Chaikin, 3 passes) and resamples it every half unit, so movement is even and turns are curves.
+function smoothLine(line) {
+  let p = line;
+  for (let it = 0; it < 3; it++) {
+    const q = [p[0]];
+    for (let i = 0; i < p.length - 1; i++) { const [ax, az] = p[i], [bx, bz] = p[i + 1]; q.push([ax * .75 + bx * .25, az * .75 + bz * .25], [ax * .25 + bx * .75, az * .25 + bz * .75]); }
+    q.push(p.at(-1)); p = q;
   }
+  const out = [new THREE.Vector3(p[0][0], .05, p[0][1])]; let carry = 0;
+  for (let i = 0; i < p.length - 1; i++) {
+    const [ax, az] = p[i], [bx, bz] = p[i + 1], L = Math.hypot(bx - ax, bz - az);
+    let d = .5 - carry; for (; d <= L; d += .5) out.push(new THREE.Vector3(ax + (bx - ax) * d / L, .05, az + (bz - az) * d / L));
+    carry = L - (d - .5);
+  }
+  out.push(new THREE.Vector3(p.at(-1)[0], .05, p.at(-1)[1]));
+  return out;
+}
+const turnToward = (cur, target, k) => cur + Math.atan2(Math.sin(target - cur), Math.cos(target - cur)) * Math.min(1, k);
+function buildPath(route) {
+  const spokeOf = id => id === 'chat' ? 'claude' : id;
+  const stop = i => route[i] !== 'factory' ? 'g:' + route[i] : 'r:' + spokeOf(i > 0 ? route[i - 1] : route[i + 1]);
+  const pts = [], legEnds = [], side = 1.1;
+  // One continuous lane line for the whole route (so there is no jump where one leg meets the next), smoothed once.
+  const lane = [], stops = [];
+  for (let i = 0; i < route.length - 1; i++) {
+    const poly = roadRoute(stop(i), stop(i + 1));
+    for (let j = 0; j < poly.length - 1; j++) { // keep to the right-hand lane of each segment
+      const [ax, az] = poly[j], [bx, bz] = poly[j + 1], L = Math.hypot(bx - ax, bz - az) || 1, ox = -(bz - az) / L * side, oz = (bx - ax) / L * side;
+      lane.push([ax + ox, az + oz], [bx + ox, bz + oz]);
+    }
+    stops.push(lane.at(-1));
+  }
+  pts.push(...smoothLine(lane));
+  let from = 0;
+  for (const [sx, sz] of stops) { // each stop is the nearest smoothed point after the previous stop
+    let best = from, bd = Infinity;
+    for (let k = from; k < pts.length; k++) { const d = (pts[k].x - sx) ** 2 + (pts[k].z - sz) ** 2; if (d < bd) { bd = d; best = k; } }
+    legEnds.push(best); from = best + 1;
+  }
+  legEnds[legEnds.length - 1] = pts.length - 1;
   const dist = [0]; for (let i = 1; i < pts.length; i++) dist.push(dist[i - 1] + pts[i].distanceTo(pts[i - 1]));
   return { pts, dist, legEnds };
 }
 function ship(ev) {
+  if (ev.type === 'f1') f1At = Date.now();
+  if (ev.type === 'skill') { const k = ev.skill || String(ev.title).replace(/^Skill · /, ''); lastSkill = k; lastSkillAt = Date.now(); billboard.draw('NOW USING SKILL', k); stations.media.tag.lastChild.textContent = 'Creative Media · ' + k; }
   if (!renderer) return;
   const route = routeOf(ev), path = buildPath(route), g = rover(), p = pin(EV_COLOR[ev.type] || EV_COLOR.commit);
   g.add(at(p, 0, 4.2, 0)); g.position.copy(path.pts[0]); g.scale.setScalar(.01); scene.add(g);
@@ -576,7 +926,13 @@ function updateRovers(dt, t) {
     const r = rovers[i], P = r.path, g = r.g;
     if (r.done) { r.fade += dt; g.scale.setScalar(Math.max(.01, 1 - r.fade * 1.6)); if (r.fade > .7) { scene.remove(g); rovers.splice(i, 1); } continue; }
     if (g.scale.x < 1) g.scale.setScalar(Math.min(1, g.scale.x + dt * 3));
-    if (r.wait > 0) { r.wait -= dt; if (Math.random() < .5) puff(tmp.copy(stations.factory.grp.userData.stack).add(stations.factory.grp.position), new THREE.Vector3((Math.random() - .5) * .6, 2.6, (Math.random() - .5) * .6), 2.4, .5, 2, r.ev.type === 'fail' ? 0x4a4f63 : 0xffffff, .8); continue; }
+    if (r.wait > 0) {
+      r.wait -= dt; const at_ = r.route[r.leg];
+      if (at_ === 'media') { if (Math.random() < .6) puff(tmp.set(ST.media.x + (Math.random() - .5) * 9, 10 + Math.random() * 2, ST.media.z + (Math.random() - .5) * 2), new THREE.Vector3((Math.random() - .5) * 2, 1.5 + Math.random() * 2, (Math.random() - .5) * 2), 1.3, .25, .7, pick(['#e0458f', '#7c5cff', '#f2c14e', '#3461f5']), .9); }
+      else if (at_ !== 'factory') { if (Math.random() < .5) puff(tmp.set(ST[at_].x + (Math.random() - .5) * 4, 8 + Math.random() * 2, ST[at_].z + (Math.random() - .5) * 4), new THREE.Vector3((Math.random() - .5) * 1.5, 1.6, (Math.random() - .5) * 1.5), 1.3, .25, .7, ST[at_].css, .9); }
+      else if (Math.random() < .5) puff(tmp.copy(stations.factory.grp.userData.stack).add(stations.factory.grp.position), new THREE.Vector3((Math.random() - .5) * .6, 2.6, (Math.random() - .5) * .6), 2.4, .5, 2, r.ev.type === 'fail' ? 0x4a4f63 : 0xffffff, .8);
+      continue;
+    }
     r.s += SPEED * dt;
     while (r.idx < P.pts.length - 1 && P.dist[r.idx + 1] <= r.s) r.idx++;
     const legEnd = P.legEnds[r.leg];
@@ -586,8 +942,8 @@ function updateRovers(dt, t) {
       r.wait = FACTORY_WAIT;
     }
     const a = P.pts[r.idx], b = P.pts[Math.min(r.idx + 1, P.pts.length - 1)], seg = Math.max(1e-6, P.dist[r.idx + 1] - P.dist[r.idx] || 1), f = Math.min(1, (r.s - P.dist[r.idx]) / seg);
-    g.position.lerpVectors(a, b, f); g.position.y = H(g.position.x, g.position.z) * .5 + .02;
-    if (a !== b) g.lookAt(tmp.set(b.x, g.position.y, b.z));
+    g.position.lerpVectors(a, b, f); g.position.y = H(g.position.x, g.position.z) + .02;
+    if (a !== b) { const head = Math.atan2(b.x - a.x, b.z - a.z); r.yaw = r.yaw === undefined ? head : turnToward(r.yaw, head, dt * 7); g.rotation.y = r.yaw; }
     for (const w of g.userData.wheels) w.rotation.x += dt * SPEED / .58;
     if (Math.random() < .55) { tmp.set((Math.random() - .5) * 2.4, .3, -2.6).applyQuaternion(g.quaternion).add(g.position); puff(tmp, new THREE.Vector3((Math.random() - .5) * .8, .6 + Math.random() * .8, (Math.random() - .5) * .8), 1.1, .25, .9, 0xc9ccd8, .55); }
   }
@@ -651,8 +1007,16 @@ function frame() {
     }
     s.tag.classList.toggle('sel', id === sel);
   }
+  updateWalkers(dt, t); updateChat(dt, t); updateF1(dt);
+  { const mg = stations.media.grp, fl = mg.userData.flash, on = mediaBusy(), model = mg.getObjectByName('model'), ph = mg.getObjectByName('photog');
+    if (on && !reduced && Math.random() < dt * 1.1) fl.emissiveIntensity = 7;
+    fl.emissiveIntensity = Math.max(on ? .35 : .15, fl.emissiveIntensity - dt * 14);
+    model.rotation.y = Math.PI + (on && !reduced ? Math.sin(t * .9) * .7 : 0); model.position.y = .12 + (on && !reduced ? Math.abs(Math.sin(t * 1.8)) * .15 : 0);
+    ph.position.y = on && !reduced ? Math.abs(Math.sin(t * 3)) * .08 : 0; }
+  const bbo = stations.media.grp.getObjectByName('billboard'); if (bbo) bbo.rotation.y = az - stations.media.grp.rotation.y;
   const astro = stations.you.grp.getObjectByName('astronaut');
   if (astro && !reduced) { astro.position.y = Math.abs(Math.sin(t * 2.2)) * .25; astro.rotation.y = Math.sin(t * .5) * .5; }
+  if (claudeNow.active) { stations.claude.pulse = Math.max(stations.claude.pulse, .6); if (!reduced && Math.random() < .12) puff(tmp.set(ST.claude.x, 9.6, ST.claude.z), new THREE.Vector3((Math.random() - .5) * .8, 1.8, (Math.random() - .5) * .8), 1.6, .25, .8, 0xd97757, .7); }
   if (!reduced && Math.random() < .08) puff(tmp.copy(stations.factory.grp.userData.stack).add(stations.factory.grp.position), new THREE.Vector3(.3, 1.6, 0), 3, .4, 1.6, 0xffffff, .5);
   renderer.render(scene, cam); labels.render(scene, cam);
   requestAnimationFrame(frame);
@@ -678,17 +1042,25 @@ function stationIcon(id) {
   if (s.site) return '<svg viewBox="0 0 32 32" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M16 8v16M8 16h16"/></svg>';
   return '<svg viewBox="0 0 32 32"><path d="M16 3 27 9.5v13L16 29 5 22.5v-13z" fill="#fff"/></svg>';
 }
+// Test crates each station can send: git actions live at GitHub, Claude runs at Claude, skills at Creative Media.
+const ACTIONS = { github: [['push', 'Push'], ['pull', 'Pull'], ['pr', 'Open PR'], ['merge', 'Merge PR'], ['fail', 'Failed build']], claude: [['claude', 'Claude run']], chat: [['chat', 'Start a chat']], f1: [['f1', 'Update prediction']], media: [['skill', 'Use a skill']] };
+let lastSkill = '', lastSkillAt = 0;
+const mediaBusy = () => Date.now() - lastSkillAt < 90e3 || rovers.some(r => !r.done && r.wait > 0 && r.route[r.leg] === 'media');
+const htmlCache = {};
+const setHTML = (id, html) => { if (htmlCache[id] !== html) { htmlCache[id] = html; $(id).innerHTML = html; } };
 function renderStation() {
   const s = ST[sel], rel = events.filter(e => routeOf(e).includes(sel)), into = events.filter(e => routeOf(e).at(-1) === sel);
   const inbound = rovers.filter(r => !r.done && r.route.at(-1) === sel).length;
   const today = rel.filter(e => new Date(e.at).toDateString() === new Date().toDateString()).length;
   const stored = stations[sel].grp.userData.stacks ? stations[sel].grp.userData.stacks.reduce((n, st) => n + (st.userData.n || 0), 0) : 0;
   const cap = stations[sel].grp.userData.stacks ? stations[sel].grp.userData.stacks.length * 8 : 0;
-  const status = s.site ? '<span class="pill grey">Available</span>' : inbound ? '<span class="pill blue">Receiving</span>' : '<span class="pill">Operational</span>';
-  $('station').innerHTML = `
+  const racing = sel === 'f1' && Date.now() - f1At < 90e3, talking = sel === 'chat' && chatNow.active, working = (sel === 'claude' && claudeNow.active) || talking, shooting = sel === 'media' && mediaBusy();
+  const acts = ACTIONS[sel] ? `<div class="sec">Send a test crate</div><div class="btns">${ACTIONS[sel].map(([t, l]) => `<button data-type="${t}"><i style="background:${EV_COLOR[t]}"></i>${l}</button>`).join('')}</div>` : '';
+  const status = s.site ? '<span class="pill grey">Available</span>' : shooting ? '<span class="pill warn">Shooting</span>' : racing ? '<span class="pill red">Racing</span>' : talking ? '<span class="pill blue">In conversation</span>' : working ? '<span class="pill warn">Working</span>' : inbound ? '<span class="pill blue">Receiving</span>' : '<span class="pill">Operational</span>';
+  setHTML('station', `
     <div class="st-head"><span class="st-icon" style="background:${s.css}">${stationIcon(sel)}</span>
       <div><div class="eyebrow">${esc(s.eyebrow)}</div><h2>${esc(s.name)}</h2><p>${esc(s.sub)}</p></div></div>
-    <div class="st-status">${status}<span>${s.site ? 'Pick what to build here next' : `${inbound} inbound · ${rel.length} handled`}</span></div>
+    <div class="st-status">${status}<span>${s.site ? 'Pick what to build here next' : shooting ? `Photo shoot for ${esc(lastSkill || 'a skill')}` : racing ? 'Running the race model' : talking ? `In conversation · ${esc(chatNow.title)}` : working ? `${esc(claudeNow.title)} · ${claudeNow.tools} tool${claudeNow.tools === 1 ? '' : 's'} so far · ${esc(claudeNow.repo)}` : `${inbound} inbound · ${rel.length} handled`}</span></div>
     ${s.site ? `<p class="muted" style="margin:0;line-height:1.55">This pad is ready for a new station, such as Vercel deploys, a Slack relay or a Linear tracker. Each new service gets its own warehouse and road.</p>` : `
     <div class="tiles">
       ${cap ? `<div class="tile"><div class="k">Crates on site</div><div class="v">${stored} <small class="muted" style="font-size:12px">/ ${cap}</small></div><div class="bar"><i style="width:${Math.round(stored / cap * 100)}%"></i></div></div>` : `<div class="tile"><div class="k">Crates built</div><div class="v">${rel.length}</div></div>`}
@@ -697,11 +1069,12 @@ function renderStation() {
       <div class="tile"><div class="k">Last arrival</div><div class="v" style="font-size:15px">${into[0] ? esc(ago(into[0].at)) : '—'}</div></div>
     </div>
     <div class="sec">Recent crates <span>${rel.length ? rel.length + ' total' : ''}</span></div>
-    <ul class="mini">${rel.slice(0, 4).map(e => `<li><span class="box">${ICON.box}</span><span><div class="t">${esc(e.title || '(no message)')}</div><div class="w">${esc(TYPE_LABEL[e.type] || e.type)} · ${esc(e.repo || '')}${e.local ? ' · test' : ''}</div></span><span class="w">${esc(ago(e.at))}</span></li>`).join('') || '<li style="display:block" class="muted">No crates through here yet.</li>'}</ul>`}`;
+    <ul class="mini">${rel.slice(0, 4).map(e => `<li><span class="box">${ICON.box}</span><span><div class="t">${esc(e.title || '(no message)')}</div><div class="w">${esc(TYPE_LABEL[e.type] || e.type)} · ${esc(e.repo || '')}${e.local ? ' · test' : ''}</div></span><span class="w">${esc(ago(e.at))}</span></li>`).join('') || '<li style="display:block" class="muted">No crates through here yet.</li>'}</ul>`}
+    ${acts}`);
 }
 function renderTracking() {
   const r = tracked, ev = r ? r.ev : events[0];
-  if (!ev) { $('tracking').innerHTML = `<div><div class="tr-head"><h3>Shipment tracking</h3></div><p class="muted" style="margin:0">No shipments yet. Push a commit, or press one of the <b>Simulate</b> buttons to send a rover across the base.</p></div>`; return; }
+  if (!ev) { setHTML('tracking', `<div><div class="tr-head"><h3>Shipment tracking</h3></div><p class="muted" style="margin:0">No shipments yet. Push a commit, or open GitHub, Claude or Creative Media and send a test crate.</p></div>`); return; }
   const type = STEPS[ev.type] ? ev.type : 'commit', route = routeOf(ev), labelsS = STEPS[type];
   const reached = r ? r.leg + 1 : 3, done = !r || r.done;
   const failed = type === 'fail' && reached > 1, X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
@@ -711,12 +1084,12 @@ function renderTracking() {
   let state = DONE[type] || '<span class="pill">Delivered</span>', eta = '';
   if (r && !r.done) {
     const left = (r.path.dist.at(-1) - r.s) / SPEED + (r.leg < r.path.legEnds.length - 1 ? FACTORY_WAIT : 0) + Math.max(0, r.wait);
-    state = r.wait > 0 ? (type === 'fail' ? '<span class="pill red">Build failing</span>' : `<span class="pill warn">${type === 'pr' || type === 'merge' ? 'Running checks' : 'Building'}</span>`) : failed ? '<span class="pill red">Returning</span>' : '<span class="pill blue">In transit</span>'; eta = `<span class="eta">${Math.ceil(left)}s left</span>`;
+    state = r.wait > 0 ? (type === 'fail' ? '<span class="pill red">Build failing</span>' : `<span class="pill warn">${type === 'pr' || type === 'merge' ? 'Running checks' : type === 'chat' ? 'Handing off' : 'Building'}</span>`) : failed ? '<span class="pill red">Returning</span>' : '<span class="pill blue">In transit</span>'; eta = `<span class="eta">${Math.ceil(left)}s left</span>`;
   } else eta = `<span class="eta">${esc(ago(ev.at))}</span>`;
-  $('tracking').innerHTML = `
+  setHTML('tracking', `
     <div><div class="tr-head"><h3>Shipment tracking</h3><span>${esc(ev.sha ? ev.sha.slice(0, 7) : '#' + String(ev.id).slice(-6))} · ${esc(ev.repo || '')}</span></div><div class="steps">${steps}</div></div>
     <div class="shipcard"><span class="art"><svg viewBox="0 0 48 48" width="40" height="40"><rect x="4" y="22" width="26" height="12" rx="3" fill="#eef0f6"/><rect x="26" y="16" width="14" height="18" rx="3" fill="#3461f5"/><rect x="9" y="12" width="14" height="12" rx="2" fill="#d4a26b"/><rect x="14.5" y="12" width="3" height="12" fill="#e9c792"/><circle cx="12" cy="36" r="4" fill="#262b40"/><circle cx="33" cy="36" r="4" fill="#262b40"/></svg></span>
-      <span style="min-width:0"><b>${esc(ev.title || '(no message)')}</b><p>To: ${esc(ST[route.at(-1)].name)}</p>${state}${eta}</span></div>`;
+      <span style="min-width:0"><b>${esc(ev.title || '(no message)')}</b><p>To: ${esc(ST[route.at(-1)].name)}</p>${state}${eta}</span></div>`);
 }
 function renderLog(fresh = new Set()) {
   const log = $('log'); log.innerHTML = '';
@@ -740,7 +1113,27 @@ setInterval(() => { renderTracking(); renderStation(); }, 400);
 setInterval(() => renderLog(), 60000);
 const tick = () => { $('clock').textContent = hhmm(Date.now()); }; tick(); setInterval(tick, 10000);
 
-function add(ev, animate = true) { if (events.some(x => x.id === ev.id)) return; events.unshift(ev); events.sort((a, b) => String(b.at).localeCompare(String(a.at))); if (animate) ship(ev); renderAll(new Set([ev.id])); }
+// Live Claude Code activity (from hooks): not crates, just the warehouse lighting up.
+const claudeNow = { active: false, title: '', tools: 0, repo: '', last: 0 };
+function activity(ev) {
+  Object.assign(claudeNow, { active: true, title: ev.title, repo: ev.repo, last: Date.now() });
+  claudeNow.tools = ev.type === 'claude_start' ? 0 : (ev.tools || claudeNow.tools + 1);
+  if (/^Using skill /.test(ev.title)) { lastSkill = ev.title.slice(12); lastSkillAt = Date.now(); }
+  if (ev.type === 'claude_tool' && renderer) for (let i = 0; i < 8; i++) puff(tmp.set(ST.claude.x + (Math.random() - .5) * 3, 9.5, ST.claude.z + (Math.random() - .5) * 3), new THREE.Vector3((Math.random() - .5) * 2, 2 + Math.random() * 2, (Math.random() - .5) * 2), 1.2, .3, .9, 0xd97757, .9);
+  renderClaude();
+}
+function renderClaude() {
+  if (claudeNow.active && Date.now() - claudeNow.last > 10 * 60e3) claudeNow.active = false; // idle out after 10 minutes
+  $('kClaudeS').innerHTML = claudeNow.active ? `<span class="working">${esc(claudeNow.title)}</span>` : 'from Claude Code';
+  stations.claude.tag.lastChild.textContent = claudeNow.active ? 'Claude Code · working' : ST.claude.name;
+  if (sel === 'claude') renderStation();
+}
+function add(ev, animate = true) {
+  if (String(ev.type).startsWith('claude_')) return activity(ev);
+  if (ev.type === 'chat_start') { Object.assign(chatNow, { active: true, title: ev.title || 'New chat', last: Date.now() }); stations.chat.tag.lastChild.textContent = 'Claude Chat · talking'; if (sel === 'chat') renderStation(); return; }
+  if (ev.type === 'chat') { chatNow.active = false; stations.chat.tag.lastChild.textContent = ST.chat.name; }
+  if (ev.type === 'claude' && !ev.local) { claudeNow.active = false; renderClaude(); }
+  if (events.some(x => x.id === ev.id)) return; events.unshift(ev); events.sort((a, b) => String(b.at).localeCompare(String(a.at))); if (animate) ship(ev); renderAll(new Set([ev.id])); }
 // Simulated git scenarios with realistic details (marked as tests, never counted in totals).
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const sha = () => Array.from({ length: 40 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
@@ -751,26 +1144,47 @@ const SIM = {
   pr:     () => ({ title: `PR #${++prNo} · ${pick(['Add a Vercel station', 'Rover pathing on curves', 'Night mode for the base'])}`, branch: pick(['feat/vercel-station', 'feat/curved-roads', 'feat/night-mode']) }),
   merge:  () => ({ title: `Merge PR #${prNo} into main`, branch: 'main' }),
   claude: () => ({ title: pick(['Write the Worker backend', 'Refactor the feed parser', 'Review the rover pathing']), branch: 'claude/session' }),
+  skill:  () => { const k = pick(['adobe-fonts', 'dataviz', 'pptx', 'artifact-design', 'adobe-edit-quick-cut', 'seedance-shot-prompter']); return { title: `Skill · ${k}`, skill: k, branch: 'claude/session' }; },
+  f1:     () => ({ title: `F1 prediction · ${pick(['United States GP', 'Mexico City GP', 'São Paulo GP'])}`, branch: 'f1-gp-update' }),
   fail:   () => ({ title: `Build failed · ${pick(['TypeError in rover.js', 'Lint: unused variable in feed.js', 'Test failed: crate stack overflow'])}`, branch: pick(['main', 'feat/curved-roads']) }),
 };
 function local(type) {
+  if (type === 'chat') {
+    const topic = pick(['Planning the Moonbase backend', 'Portfolio copy review', 'F1 race prediction', 'Ideas for a Vercel station']);
+    add({ type: 'chat_start', title: topic, local: true });
+    setTimeout(() => add({ id: 'test-' + Date.now(), type: 'chat', title: 'Chat finished · ' + topic, repo: 'claude.ai', at: new Date().toISOString(), local: true }), 9000);
+    return;
+  }
   const d = SIM[type]();
-  add({ id: 'test-' + Date.now(), type, title: d.title, repo: type === 'claude' ? 'Claude Code' : 'CYF-Moonbase', branch: d.branch, sha: type === 'claude' ? undefined : sha(), at: new Date().toISOString(), local: true });
+  add({ id: 'test-' + Date.now(), type, title: d.title, skill: d.skill, repo: type === 'claude' || type === 'skill' ? 'Claude Code' : type === 'f1' ? 'F1 GP Predictor' : 'CYF-Moonbase', branch: d.branch, sha: ['claude', 'skill', 'f1'].includes(type) ? undefined : sha(), at: new Date().toISOString(), local: true });
 }
-document.querySelectorAll('#sim button').forEach(b => { b.onclick = () => local(b.dataset.type); });
+$('station').addEventListener('click', e => { const b = e.target.closest('button[data-type]'); if (b) local(b.dataset.type); });
+// fold buttons (remembered per viewer) and the hide-all toggle
+document.querySelectorAll('.fold').forEach(b => {
+  const card = b.closest('.card'), key = 'fold-' + card.id, set = m => { card.classList.toggle('min', m); b.setAttribute('aria-expanded', String(!m)); };
+  try { set(localStorage.getItem(key) === '1'); } catch (e) {}
+  b.onclick = () => { const m = !card.classList.contains('min'); set(m); try { localStorage.setItem(key, m ? '1' : '0'); } catch (e) {} };
+});
+function setNames(off) { const l = document.querySelector('.labels'); if (l) l.classList.toggle('off', off); $('namesBtn').textContent = off ? 'Show names' : 'Hide names'; $('namesBtn').setAttribute('aria-pressed', String(off)); try { localStorage.setItem('hide-names', off ? '1' : '0'); } catch (e) {} }
+try { if (localStorage.getItem('hide-names') === '1') setNames(true); } catch (e) {}
+$('namesBtn').onclick = () => setNames(!document.querySelector('.labels')?.classList.contains('off'));
+addEventListener('keydown', e => { if ((e.key === 'n' || e.key === 'N') && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) setNames(!document.querySelector('.labels')?.classList.contains('off')); });
+$('panelsBtn').onclick = () => { const bare = document.querySelector('.hud').classList.toggle('bare'); $('panelsBtn').textContent = bare ? 'Show panels' : 'Hide panels'; $('panelsBtn').setAttribute('aria-pressed', String(bare)); };
 
 // live feed
 const live = $('live'), st = $('statusText');
-if (!FEED_URL || !window.EventSource) {
-  st.textContent = 'Test mode';
-  setTimeout(() => local('push'), 900); // one demo rover so the base is alive on arrival
-} else {
+let connected = false;
+const testMode = () => { if (connected) return; st.textContent = 'Test mode'; if (!events.length) local('push'); }; // one demo rover so the base is alive
+if (!window.EventSource) testMode();
+else {
   const es = new EventSource(FEED_URL);
-  es.addEventListener('history', e => { const list = JSON.parse(e.data); events = [...events.filter(x => x.local), ...list].sort((a, b) => String(b.at).localeCompare(String(a.at))); if (list[0]) ship(list[0]); renderAll(); });
+  setTimeout(testMode, 2500);
+  es.addEventListener('history', e => { const list = JSON.parse(e.data); events = [...events.filter(x => x.local), ...list].sort((a, b) => String(b.at).localeCompare(String(a.at))); renderAll(); });
   es.onmessage = e => add(JSON.parse(e.data));
-  es.onopen = () => { live.classList.remove('off'); st.textContent = 'Live'; };
-  es.onerror = () => { live.classList.add('off'); st.textContent = 'Reconnecting'; };
+  es.onopen = () => { connected = true; live.classList.remove('off'); st.textContent = 'Live'; };
+  es.onerror = () => { live.classList.add('off'); st.textContent = connected ? 'Reconnecting' : 'Test mode · bridge off'; };
 }
+setInterval(renderClaude, 30e3);
 </script>
 </body>
 </html>
