@@ -84,6 +84,32 @@ def git(cwd, *args):
         return ""
 
 
+def watch_deploy(cwd, sha, name):
+    """After a push, follow GitHub's public deployment status for that commit (GitHub Pages, Vercel, Netlify...)
+    and launch the rocket when one succeeds. Works without webhooks for public repos; about 20 requests per push."""
+    m = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$", git(cwd, "remote", "get-url", "origin"))
+    if not m or not sha:
+        return
+    owner, repo = m.groups()
+    get = lambda url: json.load(urllib.request.urlopen(urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": "moonbase-bridge"}), timeout=10))
+    deadline, seen_any = time.time() + 8 * 60, False
+    while time.time() < deadline:
+        time.sleep(30)
+        try:
+            for d in get(f"https://api.github.com/repos/{owner}/{repo}/deployments?sha={sha}&per_page=5"):
+                seen_any = True
+                states = get(d["statuses_url"])
+                if states and states[0].get("state") == "success":
+                    emit({"type": "deploy", "title": f"Live · {d.get('environment') or 'production'}", "repo": name, "sha": sha, "id": "deploy-" + sha})
+                    return
+                if states and states[0].get("state") in ("failure", "error"):
+                    return
+        except Exception as e:
+            print("deploy watch:", e)
+        if not seen_any and time.time() > deadline - 5 * 60:  # nothing deploys from this repo
+            return
+
+
 def translate(h):
     # Claude chat (claude.ai) has no hooks; a connector or script can post {"type": "chat_start" | "chat", "title": ...}.
     if h.get("type") in ("chat_start", "chat"):
@@ -123,7 +149,9 @@ def translate(h):
         branch = git(cwd, "branch", "--show-current")
         out = []
         if ran("git push"):
-            out.append({"type": "push", "title": git(cwd, "log", "-1", "--format=%s") or "Push", "sha": git(cwd, "rev-parse", "HEAD"), "branch": branch, "repo": repo})
+            head = git(cwd, "rev-parse", "HEAD")
+            out.append({"type": "push", "title": git(cwd, "log", "-1", "--format=%s") or "Push", "sha": head, "branch": branch, "repo": repo})
+            threading.Thread(target=watch_deploy, args=(cwd, head, repo), daemon=True).start()
         if ran("git pull"):
             out.append({"type": "pull", "title": "Pull " + (git(cwd, "rev-parse", "--abbrev-ref", "@{u}") or "from origin"), "sha": git(cwd, "rev-parse", "HEAD"), "branch": branch, "repo": repo})
         if ran("gh pr create"):
