@@ -1382,12 +1382,15 @@ function hubSocket(url, onMsg, track) {
   const open = () => {
     ws = new WebSocket(url);
     ws.onopen = () => { if (track) online(); clearInterval(ping); ping = setInterval(() => { try { ws.send('ping'); } catch (e) {} }, 25e3); };
-    ws.onmessage = e => { if (e.data === 'pong') return; const m = JSON.parse(e.data); if (m.kind === 'viewers') setViewers(m.count); else onMsg(m); };
+    ws.onmessage = e => { if (e.data === 'pong') return; const m = JSON.parse(e.data); if (m.kind === 'viewers') setViewers(m.count); else if (m.kind === 'state') { if (m.chatSince && Date.now() - Date.parse(m.chatSince) < 15 * 60e3) add({ type: 'chat_start', at: m.chatSince }); } else onMsg(m); };
     ws.onclose = () => { clearInterval(ping); if (track) offline(); setTimeout(open, 3000); };
   };
   open();
 }
-if (LOCAL && !FEED_URL.startsWith('ws')) hubSocket(HUB_WS, () => {}, false); // presence only: events still come from the local bridge
+if (LOCAL && !FEED_URL.startsWith('ws')) hubSocket(HUB_WS, m => { // presence, plus what only the hub sees: claude.ai chats and GitHub webhooks
+  if (m.kind === 'event' && (m.event.type === 'chat' || m.event.type === 'chat_start' || String(m.event.id).startsWith('gh-'))) add(m.event);
+  if (m.kind === 'history') for (const ev of m.events) if (ev.type === 'chat' || String(ev.id).startsWith('gh-')) add(ev, false);
+}, false);
 if (FEED_URL.startsWith('ws')) {
   hubSocket(FEED_URL, m => { if (m.kind === 'history') takeHistory(m.events); else if (m.kind === 'event') add(m.event); }, true);
 } else if (window.EventSource) {

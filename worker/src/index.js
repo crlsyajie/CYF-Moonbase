@@ -120,11 +120,15 @@ export class Hub {
       const [client, server] = Object.values(new WebSocketPair());
       this.state.acceptWebSocket(server);
       server.send(JSON.stringify({ kind: 'history', events: (await this.state.storage.get('history')) || [] }));
+      const chat = await this.state.storage.get('chat'); // a chat that started before this page opened
+      if (chat) server.send(JSON.stringify({ kind: 'state', chatSince: chat }));
       this.announceViewers();
       return new Response(null, { status: 101, webSocket: client });
     }
     if (url.pathname === '/emit') {
       const ev = this.redact(await req.json());
+      if (ev.type === 'chat_start') await this.state.storage.put('chat', ev.at);
+      if (ev.type === 'chat') await this.state.storage.delete('chat');
       if (!LIVE_ONLY.has(ev.type)) {
         const h = (await this.state.storage.get('history')) || [];
         if (h.some(x => x.id === ev.id)) return new Response(null, { status: 204 }); // the same push can arrive from the bridge and from GitHub
