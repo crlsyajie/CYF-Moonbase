@@ -128,6 +128,10 @@ def translate(h):
             out.append({"type": "pull", "title": "Pull " + (git(cwd, "rev-parse", "--abbrev-ref", "@{u}") or "from origin"), "sha": git(cwd, "rev-parse", "HEAD"), "branch": branch, "repo": repo})
         if ran("gh pr create"):
             out.append({"type": "pr", "title": "PR opened · " + (git(cwd, "log", "-1", "--format=%s") or branch), "branch": branch, "repo": repo})
+        for tool_cmd in ("wrangler deploy", "vercel --prod", "netlify deploy", "firebase deploy"):
+            if ran(tool_cmd):  # PostToolUse only fires when the command succeeded
+                out.append({"type": "deploy", "title": "Deployed with " + tool_cmd.split()[0], "repo": repo, "branch": branch})
+                break
         if ran("gh pr merge"):
             out.append({"type": "merge", "title": "Merged a pull request", "branch": branch, "repo": repo})
         return out

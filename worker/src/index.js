@@ -9,7 +9,7 @@
 // so idle connections cost nothing on the free plan.
 
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' };
-const TYPES = new Set(['push', 'pull', 'pr', 'merge', 'fail', 'claude', 'skill', 'f1', 'chat', 'chat_start', 'claude_start', 'claude_tool']);
+const TYPES = new Set(['deploy', 'push', 'pull', 'pr', 'merge', 'fail', 'claude', 'skill', 'f1', 'chat', 'chat_start', 'claude_start', 'claude_tool']);
 const LIVE_ONLY = new Set(['claude_start', 'claude_tool', 'chat_start']); // activity pulses, not crates: never stored
 
 export default {
@@ -91,6 +91,10 @@ function fromGitHub(kind, p) {
     if (p.action === 'opened') return [{ type: 'pr', title: `PR #${pr.number} · ${pr.title}`, repo, branch: pr.head?.ref }];
     if (p.action === 'closed' && pr.merged) return [{ type: 'merge', title: `Merged PR #${pr.number} · ${pr.title}`, repo, branch: pr.base?.ref, sha: pr.merge_commit_sha }];
   }
+  if (kind === 'deployment_status' && p.deployment_status?.state === 'success')
+    return [{ type: 'deploy', title: `Live · ${p.deployment?.environment || 'production'}`, repo, sha: p.deployment?.sha, id: 'deploy-' + (p.deployment?.sha || p.deployment_status.id) }];
+  if (kind === 'page_build' && p.build?.status === 'built')
+    return [{ type: 'deploy', title: 'GitHub Pages updated', repo, sha: p.build?.commit, id: 'deploy-' + (p.build?.commit || p.id) }];
   if (kind === 'workflow_run' && p.action === 'completed' && p.workflow_run?.conclusion === 'failure')
     return [{ type: 'fail', title: `Build failed · ${p.workflow_run.name}`, repo, branch: p.workflow_run.head_branch, sha: p.workflow_run.head_sha }];
   return [];
