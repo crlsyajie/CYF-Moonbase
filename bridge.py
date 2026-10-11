@@ -84,10 +84,10 @@ def git(cwd, *args):
         return ""
 
 
-def watch_deploy(cwd, sha, name):
+def watch_deploy(remote, sha, name):
     """After a push, follow GitHub's public deployment status for that commit (GitHub Pages, Vercel, Netlify...)
     and launch the rocket when one succeeds. Works without webhooks for public repos; about 20 requests per push."""
-    m = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$", git(cwd, "remote", "get-url", "origin"))
+    m = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$", remote or "")
     if not m or not sha:
         return
     owner, repo = m.groups()
@@ -146,16 +146,18 @@ def translate(h):
         bare = re.sub(r"<<-?\s*['\"]?(\w+)['\"]?[^\n]*\n.*?\n\s*\1\b", "", cmd, flags=re.S)  # drop heredoc bodies
         bare = re.sub(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"", "''", bare)  # and quoted text such as commit messages
         ran = lambda c: re.search(r"(?:^|[;&|(]\s*)" + c.replace(" ", r"\s+") + r"\b", bare, re.M) is not None
-        branch = git(cwd, "branch", "--show-current")
+        gi = h.get("git") or {}  # filled in by hooks/moonbase_hook.py, since this background service can't read ~/Documents
+        g = lambda key, *args: gi.get(key) or git(cwd, *args)
+        branch = g("branch", "branch", "--show-current")
         out = []
         if ran("git push"):
-            head = git(cwd, "rev-parse", "HEAD")
-            out.append({"type": "push", "title": git(cwd, "log", "-1", "--format=%s") or "Push", "sha": head, "branch": branch, "repo": repo})
-            threading.Thread(target=watch_deploy, args=(cwd, head, repo), daemon=True).start()
+            head = g("head", "rev-parse", "HEAD")
+            out.append({"type": "push", "title": g("subject", "log", "-1", "--format=%s") or "Push", "sha": head, "branch": branch, "repo": repo})
+            threading.Thread(target=watch_deploy, args=(g("remote", "remote", "get-url", "origin"), head, repo), daemon=True).start()
         if ran("git pull"):
-            out.append({"type": "pull", "title": "Pull " + (git(cwd, "rev-parse", "--abbrev-ref", "@{u}") or "from origin"), "sha": git(cwd, "rev-parse", "HEAD"), "branch": branch, "repo": repo})
+            out.append({"type": "pull", "title": "Pull " + (g("upstream", "rev-parse", "--abbrev-ref", "@{u}") or "from origin"), "sha": g("head", "rev-parse", "HEAD"), "branch": branch, "repo": repo})
         if ran("gh pr create"):
-            out.append({"type": "pr", "title": "PR opened · " + (git(cwd, "log", "-1", "--format=%s") or branch), "branch": branch, "repo": repo})
+            out.append({"type": "pr", "title": "PR opened · " + (g("subject", "log", "-1", "--format=%s") or branch), "branch": branch, "repo": repo})
         for tool_cmd in ("wrangler deploy", "vercel --prod", "netlify deploy", "firebase deploy"):
             if ran(tool_cmd):  # PostToolUse only fires when the command succeeded
                 out.append({"type": "deploy", "title": "Deployed with " + tool_cmd.split()[0], "repo": repo, "branch": branch})
