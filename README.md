@@ -20,7 +20,7 @@ python3 bridge.py
 
 Then open http://127.0.0.1:8787 (the bridge serves the page too). Without the bridge the page falls back to test mode; each station's panel has buttons to send test crates.
 
-Claude chat (claude.ai) has no hooks. Anything can report a chat by posting `{"type": "chat_start" | "chat", "title": "..."}` to the bridge's `/hook`; the planned Worker will offer this as a claude.ai connector.
+Claude chat (claude.ai) has no hooks; it reports chats through the hub's MCP connector instead (see below).
 
 Privacy: the bridge never forwards prompt text or full commands, only the event kind, tool name, a file's base name and the project folder name.
 
@@ -30,6 +30,7 @@ Privacy: the bridge never forwards prompt text or full commands, only the event 
 
 - `POST /github` takes GitHub webhooks (pushes, pull requests, workflow runs), checked against `GITHUB_SECRET`.
 - `POST /hook` takes events from `bridge.py`, which forwards everything when `~/.config/moonbase/upstream.json` exists. It needs `INGEST_TOKEN`.
+- `POST /mcp/<MCP_KEY>` is a tiny MCP server, added to claude.ai as a custom connector, so Claude Chat can report chats (`moonbase_chat_started`, `moonbase_chat_finished`). The key in the address keeps it private.
 - `GET /ws` is the page's live connection. The hub also counts open pages and sends a live "N watching" count; each viewer appears as a visitor astronaut on the base.
 
 Opened from the bridge (127.0.0.1) the page uses the local stream; anywhere else, such as GitHub Pages, it uses the hub. Set `PUBLIC_DETAILS = "false"` in `worker/wrangler.toml` to hide commit messages and chat topics from viewers.

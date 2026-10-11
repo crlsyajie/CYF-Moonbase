@@ -1253,7 +1253,7 @@ function renderStation() {
     <div class="st-head"><span class="st-icon" style="background:${s.css}">${stationIcon(sel)}</span>
       <div><div class="eyebrow">${esc(s.eyebrow)}</div><h2>${esc(s.name)}</h2><p>${esc(s.sub)}</p></div></div>
     ${s.link ? `<a class="st-link" href="${s.link[0]}" target="_blank" rel="noopener">${esc(s.link[1])}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></a>` : ''}
-    <div class="st-status">${status}<span>${s.site ? 'Pick what to build here next' : shooting ? `Photo shoot for ${esc(lastSkill || 'a skill')}` : offDuty ? `Yajie is ${me.label}` : sel === 'lounge' ? (me.travel ? 'Yajie is on the way' : 'Empty: Yajie is at work') : racing ? 'Car out on the apron · running the race model' : talking ? `In conversation · ${esc(chatNow.title)}` : working ? `${esc(claudeNow.title)} · ${claudeNow.tools} tool${claudeNow.tools === 1 ? '' : 's'} so far · ${esc(claudeNow.repo)}` : `${inbound} inbound · ${rel.length} handled`}</span></div>
+    <div class="st-status">${status}<span>${s.site ? 'Pick what to build here next' : shooting ? `Photo shoot for ${esc(lastSkill || 'a skill')}` : offDuty ? `Yajie is ${me.label}` : sel === 'lounge' ? (me.travel ? 'Yajie is on the way' : 'Empty: Yajie is at work') : racing ? 'Car out on the apron · running the race model' : talking ? 'In conversation' : working ? `${esc(claudeNow.title)} · ${claudeNow.tools} tool${claudeNow.tools === 1 ? '' : 's'} so far · ${esc(claudeNow.repo)}` : `${inbound} inbound · ${rel.length} handled`}</span></div>
     ${s.site ? `<p class="muted" style="margin:0;line-height:1.55">This pad is ready for a new station, such as Vercel deploys, a Slack relay or a Linear tracker. Each new service gets its own warehouse and road.</p>` : `
     <div class="tiles">
       ${cap ? `<div class="tile"><div class="k">Crates on site</div><div class="v">${stored} <small class="muted" style="font-size:12px">/ ${cap}</small></div><div class="bar"><i style="width:${Math.round(stored / cap * 100)}%"></i></div></div>` : `<div class="tile"><div class="k">Crates built</div><div class="v">${rel.length}</div></div>`}
@@ -1324,7 +1324,7 @@ function renderClaude() {
 function add(ev, animate = true) {
   if (!ev.local || ev.type === 'chat_start') me.last = Math.max(me.last, Date.parse(ev.at) || Date.now());
   if (String(ev.type).startsWith('claude_')) return activity(ev);
-  if (ev.type === 'chat_start') { Object.assign(chatNow, { active: true, title: ev.title || 'New chat', last: Date.now() }); stations.chat.tag.lastChild.textContent = 'Claude Chat · talking'; if (sel === 'chat') renderStation(); return; }
+  if (ev.type === 'chat_start') { Object.assign(chatNow, { active: true, title: '', last: Date.now() }); // chat content is never shown, only that a chat is going on stations.chat.tag.lastChild.textContent = 'Claude Chat · talking'; if (sel === 'chat') renderStation(); return; }
   if (ev.type === 'chat') { chatNow.active = false; stations.chat.tag.lastChild.textContent = ST.chat.name; }
   if (ev.type === 'claude' && !ev.local) { claudeNow.active = false; renderClaude(); }
   if (events.some(x => x.id === ev.id)) return; events.unshift(ev); events.sort((a, b) => String(b.at).localeCompare(String(a.at))); if (animate) ship(ev); renderAll(new Set([ev.id])); }
@@ -1346,9 +1346,8 @@ function local(type) {
   if (type === 'idle') { me.last = 0; return; }        // test: as if nothing has happened for a while
   if (type === 'back') { me.last = Date.now(); return; }
   if (type === 'chat') {
-    const topic = pick(['Planning the Moonbase backend', 'Portfolio copy review', 'F1 race prediction', 'Ideas for a Vercel station']);
-    add({ type: 'chat_start', title: topic, local: true });
-    setTimeout(() => add({ id: 'test-' + Date.now(), type: 'chat', title: 'Chat finished · ' + topic, repo: 'claude.ai', at: new Date().toISOString(), local: true }), 9000);
+    add({ type: 'chat_start', local: true });
+    setTimeout(() => add({ id: 'test-' + Date.now(), type: 'chat', title: 'Chat finished', repo: 'claude.ai', at: new Date().toISOString(), local: true }), 9000);
     return;
   }
   const d = SIM[type]();

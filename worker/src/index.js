@@ -2,6 +2,7 @@
 //
 //   POST /hook    events already translated by bridge.py ({ type, title, repo, ... }); needs "Authorization: Bearer <INGEST_TOKEN>"
 //   POST /github  GitHub webhooks (push, pull_request, workflow_run); checked against GITHUB_SECRET
+//   POST /mcp/<MCP_KEY>  a tiny MCP server, added to claude.ai as a custom connector, so Claude Chat can report chats
 //   GET  /ws      the page's live connection: first {kind: "history", events}, then {kind: "event", event} as they happen
 //
 // One Durable Object ("Hub") holds the history and the open WebSockets. It uses the hibernation API,
@@ -33,10 +34,42 @@ export default {
       return new Response('ok');
     }
 
+    if (env.MCP_KEY && url.pathname === '/mcp/' + env.MCP_KEY) return mcp(req, hub);
     if (url.pathname === '/') return new Response('Moonbase hub is running.', { headers: CORS });
     return new Response('not found', { status: 404, headers: CORS });
   },
 };
+
+// ---- Claude Chat connector: a minimal MCP server (Streamable HTTP, stateless JSON responses) ----
+const TOOLS = [
+  { name: 'moonbase_chat_started', description: "Tell Yajie's Moonbase that a chat is in progress, so its Claude Chat Tower lights up. Call it once near the start of a conversation. It takes no arguments: nothing about the chat's content is sent.",
+    inputSchema: { type: 'object', properties: {} } },
+  { name: 'moonbase_chat_finished', description: "Tell Yajie's Moonbase that the chat's task is done, so a crate rolls from the Chat Tower to the Habitat. Call it once, when you give the final answer to the task. It takes no arguments.",
+    inputSchema: { type: 'object', properties: {} } },
+];
+async function mcp(req, hub) {
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } });
+  const msg = await req.json().catch(() => null);
+  if (!msg || msg.jsonrpc !== '2.0') return Response.json({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }, { status: 400 });
+  if (msg.id === undefined) return new Response(null, { status: 202 }); // notifications (e.g. notifications/initialized)
+  const ok = result => Response.json({ jsonrpc: '2.0', id: msg.id, result });
+  const fail = (code, message) => Response.json({ jsonrpc: '2.0', id: msg.id, error: { code, message } });
+  switch (msg.method) {
+    case 'initialize':
+      return ok({ protocolVersion: msg.params?.protocolVersion || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: 'moonbase', version: '1.0.0' },
+        instructions: "Moonbase is Yajie's live dev-activity scene. Call moonbase_chat_started near the start of a chat and moonbase_chat_finished when the task is done. Neither takes arguments; no chat content is shared." });
+    case 'ping': return ok({});
+    case 'tools/list': return ok({ tools: TOOLS });
+    case 'tools/call': {
+      const name = msg.params?.name; // chat content never leaves claude.ai: only "a chat is going on" and "it finished"
+      if (name === 'moonbase_chat_started') await emit(hub, clean({ type: 'chat_start', title: 'Chat in progress', repo: 'claude.ai' }));
+      else if (name === 'moonbase_chat_finished') await emit(hub, clean({ type: 'chat', title: 'Chat finished', repo: 'claude.ai' }));
+      else return fail(-32602, 'Unknown tool: ' + name);
+      return ok({ content: [{ type: 'text', text: name === 'moonbase_chat_started' ? 'The Chat Tower on Moonbase is lit up.' : 'A crate is on its way to the Habitat on Moonbase.' }] });
+    }
+    default: return fail(-32601, 'Method not found: ' + msg.method);
+  }
+}
 
 const emit = (hub, ev) => hub.fetch('https://hub/emit', { method: 'POST', body: JSON.stringify(ev) });
 

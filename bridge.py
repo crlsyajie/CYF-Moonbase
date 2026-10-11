@@ -21,6 +21,9 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("MOONBASE_PORT", "8787"))
+# On-demand: the bridge exits after this many minutes with no Claude activity and no page open (0 = never).
+IDLE_MIN = float(os.environ.get("MOONBASE_IDLE_MIN", "30"))
+last_seen = time.time()
 HISTORY_MAX = 40
 
 # Optional: forward every event to the Moonbase hub on Cloudflare, so the hosted page is live too.
@@ -148,6 +151,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path != "/hook":
             self.send_response(404); self.end_headers(); return
+        global last_seen
+        last_seen = time.time()
         try:
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0) or 0)) or b"{}")
             for ev in translate(body):
@@ -192,7 +197,19 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
+def idle_watch():
+    while True:
+        time.sleep(60)
+        with lock:
+            busy = bool(clients)
+        if busy:
+            continue
+        if IDLE_MIN and time.time() - last_seen > IDLE_MIN * 60:
+            print("idle, stopping"); os._exit(0)
+
+
 if __name__ == "__main__":
+    threading.Thread(target=idle_watch, daemon=True).start()
     if UPSTREAM:
         threading.Thread(target=forwarder, daemon=True).start()
     print(f"Moonbase on http://127.0.0.1:{PORT}{'  + forwarding to ' + UPSTREAM[0] if UPSTREAM else ''}  (page /, hooks → /hook, live feed → /events)")
