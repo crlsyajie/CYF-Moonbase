@@ -1324,7 +1324,7 @@ function renderClaude() {
 function add(ev, animate = true) {
   if (!ev.local || ev.type === 'chat_start') me.last = Math.max(me.last, Date.parse(ev.at) || Date.now());
   if (String(ev.type).startsWith('claude_')) return activity(ev);
-  if (ev.type === 'chat_start') { Object.assign(chatNow, { active: true, title: '', last: Date.now() }); // chat content is never shown, only that a chat is going on stations.chat.tag.lastChild.textContent = 'Claude Chat · talking'; if (sel === 'chat') renderStation(); return; }
+  if (ev.type === 'chat_start') { Object.assign(chatNow, { active: true, title: '', last: Date.now() }); /* chat content is never shown, only that a chat is going on */ stations.chat.tag.lastChild.textContent = 'Claude Chat · talking'; if (sel === 'chat') renderStation(); return; }
   if (ev.type === 'chat') { chatNow.active = false; stations.chat.tag.lastChild.textContent = ST.chat.name; }
   if (ev.type === 'claude' && !ev.local) { claudeNow.active = false; renderClaude(); }
   if (events.some(x => x.id === ev.id)) return; events.unshift(ev); events.sort((a, b) => String(b.at).localeCompare(String(a.at))); if (animate) ship(ev); renderAll(new Set([ev.id])); }
