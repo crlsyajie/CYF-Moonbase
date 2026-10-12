@@ -340,6 +340,15 @@ body { color: var(--ink); }
 .overview svg { width: 16px; height: 16px; }
 .overview:focus-visible { outline: 2px solid #d6ad55; outline-offset: 2px; }
 @media (max-width: 860px) { .overview { position: fixed; top: auto; bottom: 20px; } }
+.sessions-card { pointer-events: none; display: flex; align-items: center; gap: 6px; white-space: nowrap; font: 600 11px var(--font-ui); color: #f5f4f0;
+  padding: 4px 10px 4px 8px; border-radius: 999px; background: rgba(14, 14, 16, .74); border: 1px solid rgba(255, 255, 255, .38);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .55), 0 6px 18px rgba(0, 0, 0, .3); will-change: transform; transition: opacity .2s; }
+.sc-dot { width: 8px; height: 8px; border-radius: 50%; background: #d97757; box-shadow: 0 0 0 3px rgba(217, 119, 87, .25); animation: beat 1.4s infinite; }
+.sc-dots { display: inline-flex; gap: 3px; margin-left: 2px; }
+.sc-dots i { width: 6px; height: 6px; border-radius: 50%; background: #4ade9b; }
+.sc-dots i.idle { background: rgba(236, 234, 228, .4); }
+.labels.off .sessions-card { opacity: 0; visibility: hidden; }
+.tag[hidden], .sessions-card[hidden], [hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -1197,7 +1206,6 @@ function updateWalkers(dt, t) {
     for (let i = 0; i < 3; i++) {
       const g = astronaut(0xd97757); g.scale.setScalar(.75); scene.add(g);
       const w = { g, P, L, s: L * (i / 3), dir: i % 2 ? -1 : 1 };
-      if (i === 0) { const tag = document.createElement('div'); tag.className = 'tag'; w.tag = tag; w.lab = new CSS2DObject(tag); w.lab.position.set(0, 3.6, 0); g.add(w.lab); }
       walkers.push(w);
     }
   }
@@ -1207,7 +1215,6 @@ function updateWalkers(dt, t) {
     const [x, z, ux, uz] = walkTo(w.P, w.s, -1.9);
     w.phase = (w.phase || 0) + dt * 6; w.g.position.set(x, reduced ? 0 : Math.sin(w.phase) ** 2 * .18, z); // smooth sway, no phase jumps
     w.yaw = turnToward(w.yaw ?? 0, Math.atan2(ux * w.dir, uz * w.dir), dt * 6); w.g.rotation.y = w.yaw;
-    if (w.tag) { const txt = `<i style="background:#d97757"></i>Chat · ${esc(claudeNow.repo || 'Claude Code')}`; if (w.tagTxt !== txt) { w.tagTxt = txt; w.tag.innerHTML = txt; } } // only touch the page when the text changes
   }
 }
 
@@ -1422,6 +1429,7 @@ function renderStation() {
   const stored = stations[sel].grp.userData.stacks ? stations[sel].grp.userData.stacks.reduce((n, st) => n + (st.userData.n || 0), 0) : 0;
   const cap = stations[sel].grp.userData.stacks ? stations[sel].grp.userData.stacks.length * 8 : 0;
   const offDuty = sel === 'lounge' && me.mode === 'lounge', racing = sel === 'f1' && Date.now() - f1At < 90e3, talking = sel === 'chat' && chatNow.active, working = (sel === 'claude' && claudeNow.active) || talking, shooting = sel === 'media' && mediaBusy();
+  const sessList = sel === 'claude' && sessions.size ? `<div class="sec">Active sessions <span>${sessions.size}</span></div><ul class="mini">${[...sessions.entries()].sort((a, b) => b[1].last - a[1].last).map(([k, v]) => `<li><span class="box" style="background:${v.done ? 'rgba(255,255,255,.1)' : 'rgba(74,222,155,.18)'}"><i style="width:8px;height:8px;border-radius:50%;background:${v.done ? 'rgba(236,234,228,.45)' : '#4ade9b'}"></i></span><span><div class="t">${esc(prettyRepo(k))}</div><div class="w">${esc(v.done ? 'Finished' : v.title || 'Working')}</div></span><span class="w">${esc(ago(new Date(v.last).toISOString()))}</span></li>`).join('')}</ul>` : '';
   const acts = ACTIONS[sel] ? `<div class="sec">Send a test crate</div><div class="btns">${ACTIONS[sel].map(([t, l]) => `<button data-type="${t}"><i style="background:${EV_COLOR[t]}"></i>${l}</button>`).join('')}</div>` : '';
   const status = s.site ? '<span class="pill grey">Available</span>' : shooting ? '<span class="pill warn">Shooting</span>' : offDuty ? '<span class="pill blue">Off duty</span>' : racing ? '<span class="pill red">Car out</span>' : talking ? '<span class="pill blue">In conversation</span>' : working ? '<span class="pill warn">Working</span>' : inbound ? '<span class="pill blue">Receiving</span>' : '<span class="pill">Operational</span>';
   setHTML('station', `
@@ -1438,7 +1446,7 @@ function renderStation() {
     </div>
     <div class="sec">Recent crates <span>${rel.length ? rel.length + ' total' : ''}</span></div>
     <ul class="mini">${rel.slice(0, 4).map(e => `<li><span class="box">${ICON.box}</span><span><div class="t">${esc(e.title || '(no message)')}</div><div class="w">${esc(TYPE_LABEL[e.type] || e.type)} · ${esc(e.repo || '')}${e.local ? ' · test' : ''}</div></span><span class="w">${esc(ago(e.at))}</span></li>`).join('') || '<li style="display:block" class="muted">No crates through here yet.</li>'}</ul>`}
-    ${acts}`);
+    ${sessList}${acts}`);
 }
 function renderTracking() {
   const r = tracked, ev = r ? r.ev : events[0];
@@ -1483,7 +1491,29 @@ const tick = () => { $('clock').textContent = hhmm(Date.now()); }; tick(); setIn
 
 // Live Claude Code activity (from hooks): not crates, just the warehouse lighting up.
 const claudeNow = { active: false, title: '', tools: 0, repo: '', last: 0 };
+// ---- active Claude Code sessions, shown as one clean card over the Claude Code Workshop ----
+const sessions = new Map(); // project → { title, tools, last, done }
+const prettyRepo = r => !r ? 'Claude Code' : /^scratch-\d{4}-\d{2}-\d{2}/.test(r) ? 'Scratch session' : r;
+let sessionCard = null;
+function renderSessions() {
+  if (!renderer) return;
+  if (!sessionCard) {
+    const el = document.createElement('div'); el.className = 'sessions-card';
+    sessionCard = new CSS2DObject(el); sessionCard.position.set(ST.claude.x, 11, ST.claude.z); scene.add(sessionCard);
+  }
+  const now = Date.now();
+  for (const [k, v] of sessions) if (now - v.last > (v.done ? 2 : 10) * 60e3) sessions.delete(k);
+  const list = [...sessions.entries()].sort((a, b) => b[1].last - a[1].last), on = list.length > 0;
+  sessionCard.element.hidden = !on; stations.claude.tag.hidden = on;
+  if (!on) return;
+  const working = list.filter(([, v]) => !v.done).length;
+  const dots = list.slice(0, 6).map(([, v]) => `<i class="${v.done ? 'idle' : ''}"></i>`).join('');
+  const html = `<span class="sc-dot"></span>Claude Code · ${working || list.length} session${(working || list.length) === 1 ? '' : 's'}<span class="sc-dots">${dots}</span>`;
+  if (sessionCard.element.dataset.html !== html) { sessionCard.element.dataset.html = html; sessionCard.element.innerHTML = html; if (sel === 'claude') renderStation(); }
+}
+setInterval(renderSessions, 1000);
 function activity(ev) {
+  { const k = ev.repo || 'Claude Code', v = sessions.get(k) || { tools: 0 }; sessions.set(k, { ...v, title: ev.title, tools: ev.tools || v.tools + 1, last: Date.now(), done: false }); renderSessions(); }
   Object.assign(claudeNow, { active: true, title: ev.title, repo: ev.repo, last: Date.now() });
   claudeNow.tools = ev.type === 'claude_start' ? 0 : (ev.tools || claudeNow.tools + 1);
   if (/^Using skill /.test(ev.title)) { lastSkill = ev.title.slice(12); lastSkillAt = Date.now(); }
@@ -1501,7 +1531,7 @@ function add(ev, animate = true) {
   if (String(ev.type).startsWith('claude_')) return activity(ev);
   if (ev.type === 'chat_start') { Object.assign(chatNow, { active: true, title: '', last: Date.now() }); /* chat content is never shown, only that a chat is going on */ stations.chat.tag.lastChild.textContent = 'Claude Chat · talking'; if (sel === 'chat') renderStation(); return; }
   if (ev.type === 'chat') { chatNow.active = false; stations.chat.tag.lastChild.textContent = ST.chat.name; }
-  if (ev.type === 'claude' && !ev.local) { claudeNow.active = false; renderClaude(); }
+  if (ev.type === 'claude' && !ev.local) { claudeNow.active = [...sessions.values()].some(v => !v.done && Date.now() - v.last < 60e3 && v !== sessions.get(ev.repo)); const v = sessions.get(ev.repo); if (v) { v.done = true; v.last = Date.now(); } renderClaude(); renderSessions(); }
   if (events.some(x => x.id === ev.id)) return; events.unshift(ev); events.sort((a, b) => String(b.at).localeCompare(String(a.at))); if (animate) ship(ev); renderAll(new Set([ev.id])); }
 // Simulated git scenarios with realistic details (marked as tests, never counted in totals).
 const pick = a => a[Math.floor(Math.random() * a.length)];
