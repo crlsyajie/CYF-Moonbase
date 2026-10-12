@@ -339,7 +339,7 @@ body { color: var(--ink); }
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, .6), 0 10px 30px rgba(0, 0, 0, .35); }
 .overview svg { width: 16px; height: 16px; }
 .overview:focus-visible { outline: 2px solid #d6ad55; outline-offset: 2px; }
-@media (max-width: 860px) { .overview { position: fixed; top: auto; bottom: 20px; } }
+@media (max-width: 860px) { .overview { position: absolute; top: 12px; bottom: auto; } } /* over the 3D view, clear of the cards */
 .sessions-card { pointer-events: none; display: flex; align-items: center; gap: 6px; white-space: nowrap; font: 600 11px var(--font-ui); color: #f5f4f0;
   padding: 4px 10px 4px 8px; border-radius: 999px; background: rgba(14, 14, 16, .74); border: 1px solid rgba(255, 255, 255, .38);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, .55), 0 6px 18px rgba(0, 0, 0, .3); will-change: transform; transition: opacity .2s; }
@@ -349,6 +349,14 @@ body { color: var(--ink); }
 .sc-dots i.idle { background: rgba(236, 234, 228, .4); }
 .labels.off .sessions-card { opacity: 0; visibility: hidden; }
 .tag[hidden], .sessions-card[hidden], [hidden] { display: none !important; }
+/* glass cards never scroll themselves (their rim and sheen would scroll away and double up); only their content scrolls, vertically */
+.station { overflow: hidden; display: flex; flex-direction: column; }
+#station { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; }
+#station > * { min-width: 0; }
+.buildings { overflow: hidden; display: flex; flex-direction: column; }
+#blList { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+.feed .log { overflow-x: hidden; }
+.card { overflow: clip; } /* trims without ever becoming a scroll box */
 </style>
 </head>
 <body>
