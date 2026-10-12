@@ -428,7 +428,7 @@ const ST = {
   you:     { ...slot(270),  r: 9,  color: 0x3461f5, css: '#3461f5', eyebrow: 'HABITAT · HB-01',   name: "Yajie's Habitat",  sub: 'Where every commit starts', link: ['https://crlsyajie.github.io/Portfolio/', 'Open my portfolio'] },
   factory: { x: 0, z: 0,  r: 12, color: 0xf2a93b, css: '#e39a22', eyebrow: 'FACTORY · FX-01',   name: 'Build Factory',    sub: 'Builds and checks every crate' },
   github:  { ...slot(150), r: 10, color: 0x24292f, css: '#24292f', eyebrow: 'WAREHOUSE · WH-GH', name: 'GitHub Warehouse', sub: 'github.com/crlsyajie', link: ['https://github.com/crlsyajie', 'Open my GitHub'] },
-  claude:  { ...slot(90),  r: 10, color: 0xd97757, css: '#d97757', eyebrow: 'WORKSHOP · CC-01', name: 'Claude Code Workshop', sub: 'Claude Code sessions' },
+  claude:  { ...slot(90),  r: 9, color: 0xd97757, css: '#d97757', eyebrow: 'WORKSHOP · CC-01', name: 'Claude Code Workshop', sub: 'Claude Code sessions' },
   chat:    { x: +(slot(90).x + slot(150).x).toFixed(2), z: +(slot(90).z + slot(150).z).toFixed(2), r: 10, color: 0x38a3d6, css: '#38a3d6', eyebrow: 'COMMS · CT-01', name: 'Claude Chat Tower', sub: 'Conversations on claude.ai' },
   launch:  { x: +(slot(270).x * 2).toFixed(2), z: +(slot(270).z * 2).toFixed(2), r: 10, color: 0xf97316, css: '#f97316', eyebrow: 'LAUNCH · LP-01', name: 'Launch Pad', sub: 'Every successful deploy lifts off from here' },
   media:   { ...slot(30),  r: 10, color: 0xe0458f, css: '#e0458f', eyebrow: 'FACTORY · CM-01',   name: 'Creative Media Factory', sub: 'Where Claude\'s skills make things' },
@@ -457,15 +457,27 @@ for (const id of spokes) {
   }
   CHAINS.push({ nodes: ring, kind: 'main', closed: true });
 }
-for (const [child, parent] of Object.entries(LINKED)) { // straight over the bridge, then a true arc around the parent building to its gate
-  const C = ST[parent], dc = degTo(C, ST[child]), df = degTo(C, ST.factory), R = 9.6, nodes = ['g:' + child, 'seam:' + child];
-  NODES['g:' + child] = polar(ST[child].x, ST[child].z, dc + 180, ST[child].r + .5);
-  NODES['seam:' + child] = [(C.x + ST[child].x) / 2, (C.z + ST[child].z) / 2];
+for (const [child, parent] of Object.entries(LINKED)) {
+  // Laid out like a road junction: straight and square across the bridge, then a circular fillet (radius FIL) that meets
+  // the arc around the parent building on a tangent, and the arc runs to the parent's gate. FIL keeps every turn wider
+  // than half the road, so the strip never folds.
+  const C = ST[parent], K = ST[child], dc = degTo(C, K), df = degTo(C, ST.factory), R = C.r + .5, FIL = 2.2;
+  NODES['g:' + child] = polar(K.x, K.z, dc + 180, K.r + .5);
+  NODES['seam:' + child] = [(C.x + K.x) / 2, (C.z + K.z) / 2];
   let span = ((df - dc) % 360 + 360) % 360; if (span > 180.5) span -= 360;
-  const steps = Math.ceil(Math.abs(span) / 10);
-  for (let i = 0; i <= steps; i++) { NODES[`arc:${child}${i}`] = polar(C.x, C.z, dc + span * i / steps, R); nodes.push(`arc:${child}${i}`); }
-  nodes.push('g:' + parent);
-  CHAINS.push({ nodes, kind: 'spoke' });
+  const sg = Math.sign(span || 1), off = Math.asin(FIL / (R + FIL)) * 180 / Math.PI, aF = dc + sg * off;
+  const F = polar(C.x, C.z, aF, R + FIL), P0 = polar(C.x, C.z, dc, (R + FIL) * Math.cos(off * Math.PI / 180));
+  const phi0 = Math.atan2(P0[1] - F[1], P0[0] - F[0]), phi1 = Math.atan2(C.z - F[1], C.x - F[0]);
+  let dphi = phi1 - phi0; dphi = Math.atan2(Math.sin(dphi), Math.cos(dphi));
+  const pts = [];
+  for (let i = 0; i <= 10; i++) { const ph = phi0 + dphi * i / 10; pts.push([F[0] + FIL * Math.cos(ph), F[1] + FIL * Math.sin(ph)]); }
+  let rest = df - aF; rest = ((rest % 360) + 540) % 360 - 180; if (Math.sign(rest) !== sg && Math.abs(rest) > .5) rest += sg * 360;
+  const steps = Math.max(1, Math.ceil(Math.abs(rest) / 5));
+  for (let i = 1; i < steps; i++) pts.push(polar(C.x, C.z, aF + rest * i / steps, R));
+  const nodes = ['g:' + child, 'seam:' + child];
+  pts.forEach((q, i) => { NODES[`lk:${child}${i}`] = q; nodes.push(`lk:${child}${i}`); });
+  nodes.push('g:' + parent); // the arc ends exactly on the gate (R = parent's gate radius), so there is no stub
+  CHAINS.push({ nodes, kind: 'spoke', dense: true });
 }
 for (const ch of CHAINS) {
   const n = ch.nodes; for (let i = 0; i < n.length - 1; i++) EDGES.push([n[i], n[i + 1], ch.kind]);
@@ -634,7 +646,8 @@ const M = {
     return p;
   };
   for (const ch of CHAINS) {
-    const [w, col] = KIND[ch.kind], y = ch.kind === 'main' ? .07 : .05, line = ch.kind === 'main' || ch.nodes.length > 2 ? roundCorners(ch.nodes.map(n => NODES[n]), ch.closed) : ch.nodes.map(n => NODES[n]);
+    const [w, col] = KIND[ch.kind], y = ch.kind === 'main' ? .07 : .05, line = ch.dense ? ch.nodes.map(n => NODES[n]) : ch.kind === 'main' || ch.nodes.length > 2 ? roundCorners(ch.nodes.map(n => NODES[n]), ch.closed) : ch.nodes.map(n => NODES[n]);
+    for (let i = line.length - 1; i > 0; i--) if (Math.hypot(line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]) < .12) line.splice(i - (i === line.length - 1 ? 1 : 0), 1); // drop stubs that would fold the strip
     const N = line.length, pos = [], idx = [], at2 = i => line[(i + N) % N];
     for (let i = 0; i < N; i++) {
       const q = line[i], pr = i > 0 || ch.closed ? at2(i - 1) : null, nx = i < N - 1 || ch.closed ? at2(i + 1) : null;
