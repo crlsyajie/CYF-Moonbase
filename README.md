@@ -6,7 +6,7 @@ A live view of my dev work as a lunar base. Each push to GitHub, and each Claude
 - **Factory**: where every commit gets built and checked, ringed by the **Main Road** that links every station
 - **GitHub warehouse** and **Claude warehouse**: hexagon stations at the end of each route
 - **Claude Code Workshop** and **Claude Chat Tower**: two hexagons side by side, one for Claude Code sessions, one for claude.ai chats
-- **Creative Media Factory**: where Claude's skills run; its rooftop billboard shows the skill in use
+- **Creative Media Factory**: where Claude's skills run; a party starts there (dance floor, disco ball, dancers, confetti) while a skill runs
 - **Formula 1 Garage**: the F1 GP Predictor; runs of the `f1-gp-update` skill send a crate here and the car rolls out onto the apron
 - **Launch Pad**: behind the Habitat; every successful deploy (GitHub Pages builds, deployment statuses, or `wrangler`/`vercel`/`netlify`/`firebase` deploys run from Claude Code) launches the rocket
 - **Off-Duty Lounge**: after 10 minutes with no activity I walk here and watch a movie, read or paint; any activity sends me back to work

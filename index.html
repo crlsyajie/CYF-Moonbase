@@ -907,7 +907,20 @@ function mediaStudio() {
     sb.add(at(rbox(1.7, 1.3, .6, M.dark, .1), 0, 3.4, 0)); sb.add(at(new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.05), flash), 0, 3.4, .31));
     sb.position.set(sx, 0, -8.6); sb.rotation.y = Math.atan2(-sx, 2); shoot.add(sb);
   }
-  g.add(shoot); g.userData.flash = flash;
+  g.add(shoot); g.userData.flash = flash; cam3.name = 'cam3';
+  // party kit (shown while a skill runs): a glowing dance floor, a disco ball, guests and balloons
+  const party = new THREE.Group(); party.name = 'party';
+  const tiles = [];
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const m = toon({ color: 0x22232a, emissive: 0x000000, emissiveIntensity: 1.6 }); tiles.push(m); party.add(at(rbox(1.55, .14, 1.55, m, .05), i * 1.62, .14, -8.2 + j * 1.62)); }
+  const arm = at(rbox(.18, .18, 3.4, M.grey, .04), 0, Hh + .9, -6.2); party.add(arm, at(mesh(new THREE.CylinderGeometry(.03, .03, 1), M.grey), 0, Hh + .35, -7.8));
+  const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(.75, 1), new THREE.MeshStandardMaterial({ color: 0xdfe3ea, metalness: .9, roughness: .15, flatShading: true, emissive: 0x6b6f80, emissiveIntensity: .4 }));
+  ball.position.set(0, Hh - .5, -7.8); party.add(ball);
+  const guests = [[-1.7, -8.8, 0xe0458f], [1.7, -8.4, 0x2fc4e8], [0, -9.8, 0xf2b33d]].map(([x, z, c]) => { const a = at(astronaut(c), x, .2, z); a.scale.setScalar(.75); party.add(a); return a; });
+  const balloons = [[-3.6, -6.2, 0xe5484d], [3.6, -6.4, 0x2fc4e8], [-4.4, -10.2, 0xf2b33d], [4.4, -10, 0x9d6bd6], [0, -11.8, 0x4ade9b]].map(([x, z, c], k) => {
+    const b = new THREE.Group(), bl = at(mesh(new THREE.SphereGeometry(.55, 16, 12), toon({ color: c, roughness: .35 })), 0, 3.4, 0); bl.scale.set(1, 1.18, 1); b.add(bl);
+    b.add(at(mesh(new THREE.CylinderGeometry(.015, .015, 2.9), M.white), 0, 1.5, 0)); b.position.set(x, 0, z); b.userData.k = k; party.add(b); return b; });
+  party.scale.setScalar(.001); g.add(party);
+  Object.assign(g.userData, { party, tiles, ball, guests, balloons, partyK: 0 });
   const pal = at(mesh(new THREE.CylinderGeometry(1.1, 1.1, .16, 28), mat(0xd9a066)), -W / 2 - 1.6, .4, 2.5); g.add(pal);
   ['#e0458f', '#3461f5', '#f2c14e', '#17a36b'].forEach((col, k) => pal.add(at(mesh(new THREE.SphereGeometry(.2, 12, 8), mat(new THREE.Color(col))), Math.cos(k * 1.3) * .6, .12, Math.sin(k * 1.3) * .6)));
   return g;
@@ -1096,6 +1109,7 @@ function chatTower() {
 const chatNow = { active: false, title: '', last: 0 };
 const bubbleTex = canvasTex(128, 96, (x) => { x.fillStyle = '#fff'; x.beginPath(); x.roundRect(6, 6, 116, 64, 22); x.fill(); x.beginPath(); x.moveTo(36, 66); x.lineTo(26, 90); x.lineTo(58, 68); x.fill(); x.fillStyle = '#38a3d6'; for (const cx of [40, 64, 88]) { x.beginPath(); x.arc(cx, 38, 7, 0, TAU); x.fill(); } });
 const bubbles = [];
+const notes = [], noteTex = canvasTex(64, 64, (x) => { x.fillStyle = '#fff'; x.font = '900 52px "Plus Jakarta Sans", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('\u266A', 32, 34); });
 function updateChat(dt, t) {
   if (chatNow.active && Date.now() - chatNow.last > 15 * 60e3) chatNow.active = false;
   const g = stations.chat.grp, u = g.userData, on = chatNow.active;
@@ -1390,11 +1404,28 @@ function frame() {
     s.tag.classList.toggle('sel', id === sel);
   }
   updateWalkers(dt, t); updateChat(dt, t); updateLaunch(dt, t); updateF1(dt, t); updateVisitors(dt, t); updateMe(dt, t);
-  { const mg = stations.media.grp, fl = mg.userData.flash, on = mediaBusy(), model = mg.getObjectByName('model'), ph = mg.getObjectByName('photog');
-    if (on && !reduced && Math.random() < dt * 1.1) fl.emissiveIntensity = 7;
-    fl.emissiveIntensity = Math.max(on ? .35 : .15, fl.emissiveIntensity - dt * 14);
-    model.rotation.y = Math.PI + (on && !reduced ? Math.sin(t * .9) * .7 : 0); model.position.y = .12 + (on && !reduced ? Math.abs(Math.sin(t * 1.8)) * .15 : 0);
-    ph.position.y = on && !reduced ? Math.abs(Math.sin(t * 3)) * .08 : 0; }
+  { // the Creative Media Factory throws a party while a skill runs
+    const mg = stations.media.grp, u = mg.userData, fl = u.flash, on = mediaBusy(), model = mg.getObjectByName('model'), ph = mg.getObjectByName('photog');
+    u.partyK = Math.max(0, Math.min(1, u.partyK + (on ? dt * 2 : -dt * 1.2)));
+    const k = u.partyK, live = k > .02 && !reduced;
+    u.party.scale.setScalar(Math.max(.001, k)); u.party.visible = k > .01; mg.getObjectByName('cam3').visible = k < .5;
+    u.tiles.forEach((m, i) => { if (k > .01) { m.emissive.setHSL(((t * .35 + i * .13) % 1), .9, .5); m.emissiveIntensity = k * (.6 + .6 * (Math.sin(t * 6 + i * 1.7) > .2)); } else m.emissiveIntensity = 0; });
+    u.ball.rotation.y += dt * 1.6; u.ball.material.emissive.setHSL((t * .2) % 1, .6, .4);
+    fl.color.setHSL(on ? (t * .5) % 1 : 0, on ? .9 : 0, 1); fl.emissive.setHSL(on ? (t * .5 + .3) % 1 : 0, on ? .9 : 0, on ? .55 : 1);
+    fl.emissiveIntensity = on ? (Math.sin(t * 14) > 0 ? 3.5 : .6) : Math.max(.15, fl.emissiveIntensity - dt * 4);
+    const dance = (a, i, base) => { a.position.y = base + (live ? Math.abs(Math.sin(t * 6 + i)) * .35 : 0); a.rotation.y = (a.userData.ry ?? (a.userData.ry = a.rotation.y)) + (live ? Math.sin(t * 2.4 + i) * 1.2 : 0); a.rotation.z = live ? Math.sin(t * 6 + i) * .12 : 0; };
+    dance(model, 0, .12); dance(ph, 1.4, 0); u.guests.forEach((g2, i) => dance(g2, 2 + i * 1.3, .2));
+    u.balloons.forEach(b => { b.position.y = live ? Math.sin(t * 1.6 + b.userData.k) * .25 : 0; b.rotation.z = live ? Math.sin(t * 1.1 + b.userData.k) * .08 : 0; });
+    if (live && Math.random() < dt * 22) { // confetti
+      const p = mg.localToWorld(tmp.set((Math.random() - .5) * 6, 6 + Math.random() * 2, -8.2 + (Math.random() - .5) * 5));
+      puff(p, new THREE.Vector3((Math.random() - .5) * 1.4, -2.2 - Math.random(), (Math.random() - .5) * 1.4), 2.6, .13, .13, pick(['#e0458f', '#2fc4e8', '#f2b33d', '#4ade9b', '#9d6bd6', '#ffffff']), 1);
+    }
+    if (live && Math.random() < dt * 2.2) { // music notes floating up
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: noteTex, transparent: true, depthWrite: false, color: new THREE.Color().setHSL(Math.random(), .8, .65) }));
+      sp.position.copy(mg.localToWorld(tmp.set((Math.random() - .5) * 4, 2.6, -8.2 + (Math.random() - .5) * 3))); sp.scale.set(1.1, 1.1, 1); scene.add(sp); notes.push({ sp, t: 0, sway: Math.random() * 6 });
+    }
+    for (let i = notes.length - 1; i >= 0; i--) { const n = notes[i]; n.t += dt; n.sp.position.y += dt * 1.5; n.sp.position.x += Math.sin(n.t * 3 + n.sway) * dt * .6; n.sp.material.opacity = Math.max(0, 1 - n.t / 2.6); if (n.t > 2.6) { scene.remove(n.sp); n.sp.material.dispose(); notes.splice(i, 1); } }
+  }
   const bbo = stations.media.grp.getObjectByName('billboard'); if (bbo) bbo.rotation.y = az - stations.media.grp.rotation.y;
   const astro = stations.you.grp.getObjectByName('astronaut');
   if (astro && !reduced) { astro.position.y = Math.abs(Math.sin(t * 2.2)) * .25; astro.rotation.y = Math.sin(t * .5) * .5; }
@@ -1439,12 +1470,12 @@ function renderStation() {
   const offDuty = sel === 'lounge' && me.mode === 'lounge', racing = sel === 'f1' && Date.now() - f1At < 90e3, talking = sel === 'chat' && chatNow.active, working = (sel === 'claude' && claudeNow.active) || talking, shooting = sel === 'media' && mediaBusy();
   const sessList = sel === 'claude' && sessions.size ? `<div class="sec">Active sessions <span>${sessions.size}</span></div><ul class="mini">${[...sessions.entries()].sort((a, b) => b[1].last - a[1].last).map(([k, v]) => `<li><span class="box" style="background:${v.done ? 'rgba(255,255,255,.1)' : 'rgba(74,222,155,.18)'}"><i style="width:8px;height:8px;border-radius:50%;background:${v.done ? 'rgba(236,234,228,.45)' : '#4ade9b'}"></i></span><span><div class="t">${esc(prettyRepo(k))}</div><div class="w">${esc(v.done ? 'Finished' : v.title || 'Working')}</div></span><span class="w">${esc(ago(new Date(v.last).toISOString()))}</span></li>`).join('')}</ul>` : '';
   const acts = ACTIONS[sel] ? `<div class="sec">Send a test crate</div><div class="btns">${ACTIONS[sel].map(([t, l]) => `<button data-type="${t}"><i style="background:${EV_COLOR[t]}"></i>${l}</button>`).join('')}</div>` : '';
-  const status = s.site ? '<span class="pill grey">Available</span>' : shooting ? '<span class="pill warn">Shooting</span>' : offDuty ? '<span class="pill blue">Off duty</span>' : racing ? '<span class="pill red">Car out</span>' : talking ? '<span class="pill blue">In conversation</span>' : working ? '<span class="pill warn">Working</span>' : inbound ? '<span class="pill blue">Receiving</span>' : '<span class="pill">Operational</span>';
+  const status = s.site ? '<span class="pill grey">Available</span>' : shooting ? '<span class="pill warn">Party!</span>' : offDuty ? '<span class="pill blue">Off duty</span>' : racing ? '<span class="pill red">Car out</span>' : talking ? '<span class="pill blue">In conversation</span>' : working ? '<span class="pill warn">Working</span>' : inbound ? '<span class="pill blue">Receiving</span>' : '<span class="pill">Operational</span>';
   setHTML('station', `
     <div class="st-head"><span class="st-icon" style="background:${s.css}">${stationIcon(sel)}</span>
       <div><div class="eyebrow">${esc(s.eyebrow)}</div><h2>${esc(s.name)}</h2><p>${esc(s.sub)}</p></div></div>
     ${s.link ? `<a class="st-link" href="${s.link[0]}" target="_blank" rel="noopener">${esc(s.link[1])}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></a>` : ''}
-    <div class="st-status">${status}<span>${s.site ? 'Pick what to build here next' : shooting ? `Photo shoot for ${esc(lastSkill || 'a skill')}` : offDuty ? `Yajie is ${me.label}` : sel === 'lounge' ? (me.travel ? 'Yajie is on the way' : 'Empty: Yajie is at work') : racing ? 'Car out on the apron · running the race model' : talking ? 'In conversation' : working ? `${esc(claudeNow.title)} · ${claudeNow.tools} tool${claudeNow.tools === 1 ? '' : 's'} so far · ${esc(claudeNow.repo)}` : `${inbound} inbound · ${rel.length} handled`}</span></div>
+    <div class="st-status">${status}<span>${s.site ? 'Pick what to build here next' : shooting ? `Party for ${esc(lastSkill || 'a skill')}` : offDuty ? `Yajie is ${me.label}` : sel === 'lounge' ? (me.travel ? 'Yajie is on the way' : 'Empty: Yajie is at work') : racing ? 'Car out on the apron · running the race model' : talking ? 'In conversation' : working ? `${esc(claudeNow.title)} · ${claudeNow.tools} tool${claudeNow.tools === 1 ? '' : 's'} so far · ${esc(claudeNow.repo)}` : `${inbound} inbound · ${rel.length} handled`}</span></div>
     ${s.site ? `<p class="muted" style="margin:0;line-height:1.55">This pad is ready for a new station, such as Vercel deploys, a Slack relay or a Linear tracker. Each new service gets its own warehouse and road.</p>` : `
     <div class="tiles">
       ${cap ? `<div class="tile"><div class="k">Crates on site</div><div class="v">${stored} <small class="muted" style="font-size:12px">/ ${cap}</small></div><div class="bar"><i style="width:${Math.round(stored / cap * 100)}%"></i></div></div>` : `<div class="tile"><div class="k">Crates built</div><div class="v">${rel.length}</div></div>`}
@@ -1587,7 +1618,7 @@ function stationStatus(id) {
     case 'github': return into ? ['Receiving', true] : ['Operational', false];
     case 'claude': return claudeNow.active ? ['Working', true] : ['Idle', false];
     case 'chat': return chatNow.active ? ['In conversation', true] : ['Quiet', false];
-    case 'media': return mediaBusy() ? ['Shooting', true] : ['Ready', false];
+    case 'media': return mediaBusy() ? ['Party!', true] : ['Ready', false];
     case 'f1': return Date.now() - f1At < 90e3 ? ['Car out', true] : ['In the garage', false];
     case 'launch': { const st = stations.launch.grp.userData.state; return st === 'ignite' || st === 'lift' ? ['Launching!', true] : st === 'ready' ? ['Ready on the pad', false] : ['Refuelling', false]; }
     case 'lounge': return me.mode === 'lounge' && !me.travel ? ['Yajie is here', true] : ['Empty', false];
