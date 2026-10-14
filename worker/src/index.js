@@ -46,6 +46,8 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: {} } },
   { name: 'moonbase_chat_finished', description: "Tell Yajie's Moonbase that the chat's task is done, so a crate rolls from the Chat Tower to the Habitat. Call it once, when you give the final answer to the task. It takes no arguments.",
     inputSchema: { type: 'object', properties: {} } },
+  { name: 'moonbase_skill_used', description: "Tell Yajie's Moonbase that a skill is being used, so a crate goes to its Creative Media Factory (or the Formula 1 Garage for the F1 skill). Call it once each time you start using a skill. Only the skill's name is sent.",
+    inputSchema: { type: 'object', properties: { skill: { type: 'string', description: 'The skill name, e.g. "pptx" or "f1-gp-update"' } }, required: ['skill'] } },
 ];
 async function mcp(req, hub) {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } });
@@ -57,15 +59,20 @@ async function mcp(req, hub) {
   switch (msg.method) {
     case 'initialize':
       return ok({ protocolVersion: msg.params?.protocolVersion || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: 'moonbase', version: '1.0.0' },
-        instructions: "Moonbase is Yajie's live dev-activity scene. Call moonbase_chat_started near the start of a chat and moonbase_chat_finished when the task is done. Neither takes arguments; no chat content is shared." });
+        instructions: "Moonbase is Yajie's live dev-activity scene. Call moonbase_chat_started near the start of a chat, moonbase_skill_used whenever you use a skill, and moonbase_chat_finished when the task is done. Neither takes arguments; no chat content is shared." });
     case 'ping': return ok({});
     case 'tools/list': return ok({ tools: TOOLS });
     case 'tools/call': {
       const name = msg.params?.name; // chat content never leaves claude.ai: only "a chat is going on" and "it finished"
       if (name === 'moonbase_chat_started') await emit(hub, clean({ type: 'chat_start', title: 'Chat in progress', repo: 'claude.ai' }));
       else if (name === 'moonbase_chat_finished') await emit(hub, clean({ type: 'chat', title: 'Chat finished', repo: 'claude.ai' }));
+      else if (name === 'moonbase_skill_used') {
+        const skill = String(msg.params?.arguments?.skill || 'a skill').replace(/[^\w .:-]/g, '').slice(0, 60) || 'a skill';
+        if (/f1-gp-update$/.test(skill)) await emit(hub, clean({ type: 'f1', title: 'F1 prediction updated', repo: 'claude.ai', branch: 'f1-gp-update' }));
+        else await emit(hub, clean({ type: 'skill', title: 'Skill · ' + skill, skill, repo: 'claude.ai' }));
+      }
       else return fail(-32602, 'Unknown tool: ' + name);
-      return ok({ content: [{ type: 'text', text: name === 'moonbase_chat_started' ? 'The Chat Tower on Moonbase is lit up.' : 'A crate is on its way to the Habitat on Moonbase.' }] });
+      return ok({ content: [{ type: 'text', text: name === 'moonbase_skill_used' ? 'A crate is on its way to Moonbase for that skill.' : name === 'moonbase_chat_started' ? 'The Chat Tower on Moonbase is lit up.' : 'A crate is on its way to the Habitat on Moonbase.' }] });
     }
     default: return fail(-32601, 'Method not found: ' + msg.method);
   }

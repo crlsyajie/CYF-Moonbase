@@ -31,7 +31,7 @@ Privacy: the bridge never forwards prompt text or full commands, only the event 
 
 - `POST /github` takes GitHub webhooks (pushes, pull requests, workflow runs), checked against `GITHUB_SECRET`.
 - `POST /hook` takes events from `bridge.py`, which forwards everything when `~/.config/moonbase/upstream.json` exists. It needs `INGEST_TOKEN`.
-- `POST /mcp/<MCP_KEY>` is a tiny MCP server, added to claude.ai as a custom connector, so Claude Chat can report chats (`moonbase_chat_started`, `moonbase_chat_finished`). The key in the address keeps it private.
+- `POST /mcp/<MCP_KEY>` is a tiny MCP server, added to claude.ai as a custom connector, so Claude Chat can report chats (`moonbase_chat_started`, `moonbase_skill_used`, `moonbase_chat_finished`); skills used in a chat go to the Creative Media Factory, or the F1 Garage for `f1-gp-update`. The key in the address keeps it private.
 - `GET /ws` is the page's live connection. The hub also counts open pages and sends a live "N watching" count; each viewer appears as a visitor astronaut on the base.
 
 Opened from the bridge (127.0.0.1) the page uses the local stream; anywhere else, such as GitHub Pages, it uses the hub. Set `PUBLIC_DETAILS = "false"` in `worker/wrangler.toml` to hide commit messages and chat topics from viewers.
