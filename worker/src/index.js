@@ -69,7 +69,7 @@ async function mcp(req, hub) {
       else if (name === 'moonbase_skill_used') {
         const skill = String(msg.params?.arguments?.skill || 'a skill').replace(/[^\w .:-]/g, '').slice(0, 60) || 'a skill';
         if (/f1-gp-update$/.test(skill)) await emit(hub, clean({ type: 'f1', title: 'F1 prediction updated', repo: 'claude.ai', branch: 'f1-gp-update' }));
-        else await emit(hub, clean({ type: 'skill', title: 'Skill · ' + skill, skill, repo: 'claude.ai' }));
+        else await emit(hub, clean({ type: 'skill', title: 'Skill · ' + skill.split(':').pop(), skill, repo: 'claude.ai' }));
       }
       else return fail(-32602, 'Unknown tool: ' + name);
       return ok({ content: [{ type: 'text', text: name === 'moonbase_skill_used' ? 'A crate is on its way to Moonbase for that skill.' : name === 'moonbase_chat_started' ? 'The Chat Tower on Moonbase is lit up.' : 'A crate is on its way to the Habitat on Moonbase.' }] });

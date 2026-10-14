@@ -133,7 +133,17 @@ def translate(h):
 
     if name == "UserPromptSubmit":
         tool_counts[sid] = 0
-        return [{"type": "claude_start", "title": "Reading your prompt", "repo": repo}]
+        out = [{"type": "claude_start", "title": "Reading your prompt", "repo": repo}]
+        # A skill run as a slash command ("/anthropic-skills:cinematic-street-style ...") loads without a tool call,
+        # so look at the first word only; nothing else from the prompt is read or sent.
+        m = re.match(r"\s*/([A-Za-z0-9_.-]+(?::[A-Za-z0-9_.-]+)?)", str(h.get("prompt") or ""))
+        if m and m.group(1) not in ("clear", "compact", "help", "model", "config", "cost", "exit", "resume", "init", "mcp", "memory", "login", "logout", "status", "permissions", "hooks", "agents", "doctor", "review", "rc"):
+            skill = m.group(1)
+            if skill.endswith("f1-gp-update"):
+                out.append({"type": "f1", "title": "F1 prediction updated", "repo": "F1 GP Predictor", "branch": "f1-gp-update"})
+            else:
+                out.append({"type": "skill", "title": "Skill · " + skill.split(":")[-1], "skill": skill, "repo": repo, "branch": "claude/session"})
+        return out
 
     if name == "PreToolUse":
         tool_counts[sid] = tool_counts.get(sid, 0) + 1
@@ -146,7 +156,7 @@ def translate(h):
             if skill.endswith("f1-gp-update"):  # the F1 GP Predictor gets its own hexagon
                 out.append({"type": "f1", "title": "F1 prediction updated", "repo": "F1 GP Predictor", "branch": "f1-gp-update"})
             else:
-                out.append({"type": "skill", "title": "Skill · " + skill, "skill": skill, "repo": repo, "branch": "claude/session"})
+                out.append({"type": "skill", "title": "Skill · " + skill.split(":")[-1], "skill": skill, "repo": repo, "branch": "claude/session"})
         return out
 
     if name == "PostToolUse" and tool == "Bash":

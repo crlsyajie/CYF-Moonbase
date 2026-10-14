@@ -1293,7 +1293,7 @@ function buildPath(route) {
 }
 function ship(ev) {
   if (ev.type === 'f1') f1At = Date.now();
-  if (ev.type === 'skill') { const k = ev.skill || String(ev.title).replace(/^Skill · /, ''); lastSkill = k; lastSkillAt = Date.now(); billboard.draw('NOW USING SKILL', k); stations.media.tag.lastChild.textContent = 'Creative Media · ' + k; }
+  if (ev.type === 'skill') { const k = (ev.skill || String(ev.title).replace(/^Skill · /, '')).split(':').pop(); /* drop plugin prefixes like anthropic-skills: */ lastSkill = k; lastSkillAt = Date.now(); billboard.draw('NOW USING SKILL', k); stations.media.tag.lastChild.textContent = 'Creative Media · ' + k; }
   if (!renderer) return;
   const route = routeOf(ev), path = buildPath(route), g = rover(), p = pin(EV_COLOR[ev.type] || EV_COLOR.commit);
   g.add(at(p, 0, 4.2, 0)); g.position.copy(path.pts[0]); g.scale.setScalar(.01); scene.add(g);
