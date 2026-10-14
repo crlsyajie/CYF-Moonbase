@@ -38,14 +38,24 @@ outbox = queue.Queue()
 
 
 def forwarder():
+    """Send events to the hub in order. If the network is down (sleep, Wi-Fi change), keep the event and retry
+    with growing pauses instead of dropping it; live "working" pulses older than 2 minutes are skipped as stale."""
     while True:
         ev = outbox.get()
-        try:
-            req = urllib.request.Request(UPSTREAM[0], data=json.dumps(ev).encode(), method="POST",
-                                         headers={"Content-Type": "application/json", "Authorization": "Bearer " + UPSTREAM[1], "User-Agent": "moonbase-bridge"})
-            urllib.request.urlopen(req, timeout=5).read()
-        except Exception as e:
-            print("hub forward failed:", e)
+        delay = 2
+        while True:
+            if ev["type"].startswith("claude_") and time.time() - ev.get("_t", time.time()) > 120:
+                break
+            try:
+                body = {k: v for k, v in ev.items() if k != "_t"}
+                req = urllib.request.Request(UPSTREAM[0], data=json.dumps(body).encode(), method="POST",
+                                             headers={"Content-Type": "application/json", "Authorization": "Bearer " + UPSTREAM[1], "User-Agent": "moonbase-bridge"})
+                urllib.request.urlopen(req, timeout=8).read()
+                break
+            except Exception as e:
+                print("hub forward failed, retrying in", delay, "s:", e)
+                time.sleep(delay)
+                delay = min(delay * 2, 60)
 
 history = []          # recent crate events, replayed to new viewers
 clients = []          # one queue per open page
@@ -74,7 +84,7 @@ def emit(ev):
         for q in list(clients):
             q.put(ev)
     if UPSTREAM:
-        outbox.put(ev)
+        outbox.put({**ev, "_t": time.time()})
 
 
 def git(cwd, *args):
