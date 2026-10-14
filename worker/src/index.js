@@ -42,11 +42,11 @@ export default {
 
 // ---- Claude Chat connector: a minimal MCP server (Streamable HTTP, stateless JSON responses) ----
 const TOOLS = [
-  { name: 'moonbase_chat_started', description: "Tell Yajie's Moonbase that a chat is in progress, so its Claude Chat Tower lights up. Call it once near the start of a conversation. It takes no arguments: nothing about the chat's content is sent.",
+  { name: 'moonbase_chat_started', description: "Call this once at the very start of every chat, before anything else, so the Claude Chat Tower on Yajie's Moonbase lights up. If the first message is a slash command or loads a skill, call moonbase_skill_used right after this. No arguments; nothing about the chat is sent.",
     inputSchema: { type: 'object', properties: {} } },
-  { name: 'moonbase_chat_finished', description: "Tell Yajie's Moonbase that the chat's task is done, so a crate rolls from the Chat Tower to the Habitat. Call it once, when you give the final answer to the task. It takes no arguments.",
+  { name: 'moonbase_chat_finished', description: "Call this once when you give the final answer or result of the task (for a skill, when its output is delivered), so a crate rolls from the Chat Tower to the Habitat. No arguments.",
     inputSchema: { type: 'object', properties: {} } },
-  { name: 'moonbase_skill_used', description: "Tell Yajie's Moonbase that a skill is being used, so a crate goes to its Creative Media Factory (or the Formula 1 Garage for the F1 skill). Call it once each time you start using a skill. Only the skill's name is sent.",
+  { name: 'moonbase_skill_used', description: "Call this FIRST, before following any skill: whenever a skill is loaded or used in this chat, including a skill the user started with a slash command such as /anthropic-skills:teal-shadow-warm-highlight-grade or /pptx. Pass the skill's name. It lights up the Creative Media Factory on Yajie's Moonbase (or the Formula 1 Garage for f1-gp-update). Only the skill's name is sent. Call it once per skill.",
     inputSchema: { type: 'object', properties: { skill: { type: 'string', description: 'The skill name, e.g. "pptx" or "f1-gp-update"' } }, required: ['skill'] } },
 ];
 async function mcp(req, hub) {
@@ -59,7 +59,7 @@ async function mcp(req, hub) {
   switch (msg.method) {
     case 'initialize':
       return ok({ protocolVersion: msg.params?.protocolVersion || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: 'moonbase', version: '1.0.0' },
-        instructions: "Moonbase is Yajie's live dev-activity scene. Call moonbase_chat_started near the start of a chat, moonbase_skill_used whenever you use a skill, and moonbase_chat_finished when the task is done. Neither takes arguments; no chat content is shared." });
+        instructions: "Moonbase is Yajie's live dev-activity scene. In every chat: call moonbase_chat_started first; whenever a skill is loaded or used (including a slash-command skill like /anthropic-skills:...), call moonbase_skill_used with its name before following the skill; call moonbase_chat_finished when the result is delivered. No chat content is shared, only skill names." });
     case 'ping': return ok({});
     case 'tools/list': return ok({ tools: TOOLS });
     case 'tools/call': {
