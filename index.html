@@ -11,7 +11,7 @@
    in the style of a logistics control room. Phones: the scene on top, the cards flow below it. */
 :root {
   color-scheme: light;
-  --space: #060709;
+  --space: #05060a;
   --card: #ffffff;
   --ink: #141a2e;
   --muted: #6b7390;
@@ -422,6 +422,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ---------- live feed config ----------
 // Set FEED_URL to the backend's Server-Sent Events stream once it exists.
@@ -561,7 +562,7 @@ let renderer;
 try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
 catch (e) { sceneEl.innerHTML = '<div class="nogl">This browser could not start 3D graphics, so the moon base can\'t be drawn. The cargo log still works.</div>'; }
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x060709);
+scene.background = new THREE.Color(0x05060a);
 const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 2000);
 const VIEW = 86;
 const HOME = { az: Math.PI / 4, pol: .98 };
@@ -587,8 +588,8 @@ if (renderer) {
 function setCam(az, pol, tgt = new THREE.Vector3()) { const r = 300; cam.position.set(tgt.x + r * Math.sin(pol) * Math.sin(az), tgt.y + r * Math.cos(pol), tgt.z + r * Math.sin(pol) * Math.cos(az)); cam.lookAt(tgt); }
 
 // ---------- lights ----------
-scene.add(new THREE.HemisphereLight(0xffffff, 0x9c9a94, .9));
-const sun = new THREE.DirectionalLight(0xfff6ea, 1.9);
+scene.add(new THREE.HemisphereLight(0xffe4d2, 0x8a3c26, .9));
+const sun = new THREE.DirectionalLight(0xffe2c6, 1.9);
 sun.position.set(-45, 85, 55); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -72, right: 72, top: 72, bottom: -72, near: 1, far: 260 });
 sun.shadow.bias = -.0004; sun.shadow.normalBias = .04; sun.shadow.radius = 4;
@@ -604,13 +605,17 @@ const at = (o, x, y, z) => { o.position.set(x, y, z); return o; };
 const mesh = (g, m) => shadowed(new THREE.Mesh(g, m));
 const rbox = (w, h, d, m, r = .25) => mesh(new RoundedBoxGeometry(w, h, d, 3, Math.min(r, w / 2 - .01, h / 2 - .01, d / 2 - .01)), m);
 function canvasTex(w, h, draw, repeat) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); } return t; }
+const marsCopies = []; // copies share the image but each needs its own upload once it arrives
+const marsTex = new THREE.TextureLoader().load('models/mars_ground.jpg', () => { for (const t of marsCopies) t.needsUpdate = true; });
+Object.assign(marsTex, { colorSpace: THREE.SRGBColorSpace, wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping, anisotropy: 4 });
+const mars = (rx, ox = 0, oz = 0) => { const t = marsTex.clone(); t.repeat.set(rx, rx); t.offset.set(ox, oz); marsCopies.push(t); if (marsTex.image) t.needsUpdate = true; return t; };
 const corrugated = (hex, rep = [4, 1]) => canvasTex(64, 8, (x, w, h) => { x.fillStyle = hex; x.fillRect(0, 0, w, h); x.fillStyle = 'rgba(255,255,255,.2)'; x.fillRect(0, 0, 18, h); x.fillStyle = 'rgba(0,0,0,.14)'; x.fillRect(36, 0, 12, h); }, rep);
 const boxTex = canvasTex(64, 64, (x) => { x.fillStyle = '#d4a26b'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#e9c792'; x.fillRect(26, 0, 12, 64); x.strokeStyle = 'rgba(90,55,20,.35)'; x.lineWidth = 3; x.strokeRect(1.5, 1.5, 61, 61); });
 const M = {
   white: mat(0xf4f4f1), grey: mat(0xa3a3a0), dark: mat(0x55565a), glass: mat(0x3e4a55),
   blue: mat(0xd6ad55), slate: mat(0x8f8f8b), sand: mat(0xe4e4de), stone: mat(0xc8c8c3), tire: mat(0x262b40, { roughness: .8 }), pallet: mat(0xb08355, { roughness: .8 }),
   box: toon({ map: boxTex, roughness: .8 }), cone: mat(0xff7a2e), yellow: mat(0xf2f1ec),
-  rock: toon({ color: 0x9a9db0, roughness: 1, flatShading: true }),
+  rock: toon({ color: 0x8a4a35, roughness: 1, flatShading: true }),
 };
 
 // ---------- island ----------
@@ -620,11 +625,11 @@ const M = {
   for (const id in ST) {
     const s = ST[id], pieceH = 3.2;
     // a clean hexagon piece: flat top, smooth side, colored rim band
-    const top = mesh(new THREE.CylinderGeometry(TILE, TILE, pieceH, 6), [mat(0xcfcfcc), mat(0xe9e9e6), mat(0xababa7)]);
+    const top = mesh(new THREE.CylinderGeometry(TILE, TILE, pieceH, 6), [mat(0xa64e33), toon({ map: mars(.75, hash(s.x, 1), hash(s.z, 2)) }), mat(0x7e3a26)]);
     top.position.set(s.x, -pieceH / 2, s.z); scene.add(top);
     const lip = mesh(new THREE.CylinderGeometry(TILE + .05, TILE + .05, .38, 6, 1, true), mat(s.site ? 0xc3c8d8 : s.color, { side: THREE.DoubleSide }));
     lip.position.set(s.x, -2.15, s.z); scene.add(lip);
-    const foot = mesh(new THREE.CylinderGeometry(TILE * .96, TILE * .9, 1.2, 6), mat(0x8a8a86)); foot.position.set(s.x, -pieceH - .6, s.z); scene.add(foot);
+    const foot = mesh(new THREE.CylinderGeometry(TILE * .96, TILE * .9, 1.2, 6), mat(0x6e3020)); foot.position.set(s.x, -pieceH - .6, s.z); scene.add(foot);
   }
   // stone-block border around every piece (like the base of a game asset), with gaps where roads cross
   for (const id in ST) {
@@ -634,25 +639,33 @@ const M = {
       for (let b = 0; b < 5; b++) {
         const t = (b + .5) / 5, cx = x1 + (x2 - x1) * t, cz = z1 + (z2 - z1) * t;
         if (ROAD_SEGS.some(g => segDist(cx, cz, ...g) < 3.6)) continue;
-        const blk = at(rbox(R / 5 - .22, .85, 1.35, b % 2 ? mat(0xdfdfdb) : mat(0xf3f3f0), .32), cx, .42, cz); blk.rotation.y = -Math.atan2(z2 - z1, x2 - x1); scene.add(blk);
+        const blk = at(rbox(R / 5 - .22, .85, 1.35, b % 2 ? mat(0xc98466) : mat(0xdc9c7c), .32), cx, .42, cz); blk.rotation.y = -Math.atan2(z2 - z1, x2 - x1); scene.add(blk);
       }
     }
   }
   // craters as flat graphic shapes: a soft ring and a darker floor
   for (const c of craters) {
-    const ring = new THREE.Mesh(new THREE.RingGeometry(c.r * .82, c.r, 40), mat(0xf3f3f0)); ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, .015, c.z); scene.add(ring);
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(c.r * .82, 40), mat(0xd4d4cf)); floor.rotation.x = -Math.PI / 2; floor.position.set(c.x, .01, c.z); floor.receiveShadow = true; scene.add(floor);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(c.r * .82, c.r, 40), mat(0xe58a64)); ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, .015, c.z); scene.add(ring);
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(c.r * .82, 40), mat(0xa9472f)); floor.rotation.x = -Math.PI / 2; floor.position.set(c.x, .01, c.z); floor.receiveShadow = true; scene.add(floor);
   }
   // empty slots on the outer ring: dashed outlines where future pieces can snap in
-  const ghostMat = new THREE.LineDashedMaterial({ color: 0x8d96c9, dashSize: 1.4, gapSize: .9, transparent: true, opacity: .55 });
+  const ghostMat = new THREE.LineDashedMaterial({ color: 0xffd6bf, dashSize: 1.4, gapSize: .9, transparent: true, opacity: .55 });
   for (let k = 0; k < 6; k++) {
     const d = 30 + k * 60, cx = 2 * SPACING * Math.sin(d * Math.PI / 180), cz = 2 * SPACING * Math.cos(d * Math.PI / 180);
     if (Object.values(ST).some(t => Math.hypot(t.x - cx, t.z - cz) < 2)) continue;
     const pts = Array.from({ length: 7 }, (_, i) => new THREE.Vector3(cx + TILE * Math.sin(i * Math.PI / 3), -.4, cz + TILE * Math.cos(i * Math.PI / 3)));
     const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ghostMat); ln.computeLineDistances(); scene.add(ln);
   }
-  // roads with dashed centre lines
-  const dashes = [], KIND = { main: [4.6, 0xa6a6a2], spoke: [3.6, 0xbdbdb8], site: [3.6, 0xcecec9] };
+  // roads drawn as trodden dust paths: soft edges that fade into the ground, faint tread ruts, scattered grit
+  const pathTex = (base, a) => canvasTex(64, 128, (x, w, h) => {
+    const r = rng(11), edge = x.createLinearGradient(0, 0, w, 0);
+    for (const [t, o] of [[0, 0], [.2, a * .55], [.34, a], [.66, a], [.8, a * .55], [1, 0]]) edge.addColorStop(t, `rgba(${base},${o})`);
+    x.fillStyle = edge; x.fillRect(0, 0, w, h);
+    x.fillStyle = `rgba(${base},${a * .5})`; for (const u of [.36, .64]) x.fillRect(u * w - 2, 0, 4, h); // tread ruts
+    for (let i = 0; i < 70; i++) { const u = .2 + r() * .6; x.fillStyle = `rgba(70,22,12,${.12 + r() * .2})`; x.beginPath(); x.arc(u * w, r() * h, .6 + r() * 1.4, 0, TAU); x.fill(); }
+  });
+  const KIND = { main: [4.6, pathTex('112,42,24', .5)], spoke: [3.6, pathTex('118,46,27', .45)], site: [3.6, pathTex('128,52,32', .3)] };
+  for (const [, t] of Object.values(KIND)) t.wrapT = THREE.RepeatWrapping;
   const roundCorners = (pts, closed) => { // two Chaikin passes: soft corners, same course
     let p = pts;
     for (let it = 0; it < 2; it++) {
@@ -665,7 +678,8 @@ const M = {
   for (const ch of CHAINS) {
     const [w, col] = KIND[ch.kind], y = ch.kind === 'main' ? .07 : .05, line = ch.dense ? ch.nodes.map(n => NODES[n]) : ch.kind === 'main' || ch.nodes.length > 2 ? roundCorners(ch.nodes.map(n => NODES[n]), ch.closed) : ch.nodes.map(n => NODES[n]);
     for (let i = line.length - 1; i > 0; i--) if (Math.hypot(line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]) < .12) line.splice(i - (i === line.length - 1 ? 1 : 0), 1); // drop stubs that would fold the strip
-    const N = line.length, pos = [], idx = [], at2 = i => line[(i + N) % N];
+    const N = line.length, pos = [], uv = [], idx = [], at2 = i => line[(i + N) % N];
+    let run = 0;
     for (let i = 0; i < N; i++) {
       const q = line[i], pr = i > 0 || ch.closed ? at2(i - 1) : null, nx = i < N - 1 || ch.closed ? at2(i + 1) : null;
       const nrm = (u, v) => { const L = Math.hypot(v[0] - u[0], v[1] - u[1]) || 1; return [-(v[1] - u[1]) / L, (v[0] - u[0]) / L]; };
@@ -673,31 +687,39 @@ const M = {
       let mx, mz, k = 1;
       if (n1 && n2) { mx = n1[0] + n2[0]; mz = n1[1] + n2[1]; const L = Math.hypot(mx, mz) || 1; mx /= L; mz /= L; k = 1 / Math.max(.5, mx * n1[0] + mz * n1[1]); } else [mx, mz] = n1 || n2;
       pos.push(q[0] + mx * w / 2 * k, y, q[1] + mz * w / 2 * k, q[0] - mx * w / 2 * k, y, q[1] - mz * w / 2 * k);
+      if (pr) run += Math.hypot(q[0] - pr[0], q[1] - pr[1]);
+      uv.push(0, run / 7, 1, run / 7);
     }
     const segs = ch.closed ? N : N - 1;
     for (let i = 0; i < segs; i++) { const a2 = i * 2, b2 = ((i + 1) % N) * 2; idx.push(a2, b2, a2 + 1, a2 + 1, b2, b2 + 1); }
-    const gq = new THREE.BufferGeometry(); gq.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); gq.setIndex(idx); gq.computeVertexNormals();
-    const road = new THREE.Mesh(gq, mat(col, { side: THREE.DoubleSide })); road.receiveShadow = true; scene.add(road);
-    if (ch.kind === 'site') continue;
-    let carry = 1.2; // dashes every 3.4 units along the curve
-    for (let i = 0; i < segs; i++) {
-      const [ax, az] = at2(i), [bx, bz] = at2(i + 1), L = Math.hypot(bx - ax, bz - az), ang = Math.atan2(bz - az, bx - ax);
-      let d = carry; for (; d < L; d += 3.4) {
-        const x = ax + (bx - ax) * d / L, z = az + (bz - az) * d / L;
-        if (ch.kind === 'main') { for (const off of [-.22, .22]) dashes.push([x - Math.sin(ang) * off, z + Math.cos(ang) * off, ang]); } else dashes.push([x, z, ang]);
-      }
-      carry = d - L;
-    }
+    const gq = new THREE.BufferGeometry(); gq.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); gq.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); gq.setIndex(idx); gq.computeVertexNormals();
+    const road = new THREE.Mesh(gq, toon({ map: col, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 })); road.receiveShadow = true; road.renderOrder = 1; scene.add(road);
   }
   for (const [mx, mz, d] of SEAMS) { // bridges over the seams between pieces
     const ang = (90 - d) * Math.PI / 180, deck = at(rbox(4.2, .5, 5, M.grey, .1), mx, -.22, mz); deck.rotation.y = -ang; scene.add(deck);
     for (const sd of [-2.6, 2.6]) { const rail = at(rbox(4.6, .55, .28, M.blue, .08), mx - Math.sin(ang) * sd, .35, mz + Math.cos(ang) * sd); rail.rotation.y = -ang; scene.add(rail); }
   }
   { const sign = document.createElement('div'); sign.className = 'tag'; sign.innerHTML = '<i style="background:#d6ad55"></i>Main Road'; const lab = new CSS2DObject(sign); lab.position.set(...[NODES.c3[0], 1.5, NODES.c3[1]]); scene.add(lab); }
-  const dm = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7, .06, .28), M.yellow, dashes.length), o = new THREE.Object3D();
-  dashes.forEach(([x, z, a], i) => { o.position.set(x, .1, z); o.rotation.set(0, -a, 0); o.updateMatrix(); dm.setMatrixAt(i, o.matrix); });
-  scene.add(dm);
 }
+
+// ---------- galaxy backdrop ----------
+{ // a painted Milky Way behind everything: a dusty band of nebula glow with dark lanes, and stars thickest along it
+  const W = 1600, H = 900, r = rng(21), band = t => [t * W, H * .78 - t * H * .6]; // the band runs bottom left to top right
+  scene.background = canvasTex(W, H, (x) => {
+    x.fillStyle = '#05060a'; x.fillRect(0, 0, W, H);
+    const blob = (cx, cy, rad, col) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, rad); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(cx - rad, cy - rad, rad * 2, rad * 2); };
+    for (let i = 0; i < 260; i++) {
+      const [bx, by] = band(r()), off = (r() + r() + r() - 1.5) * 150;
+      blob(bx + off * .5, by + off, 60 + r() * 140, pick3(r, ['rgba(120,92,200,.08)', 'rgba(232,140,104,.07)', 'rgba(86,140,222,.065)', 'rgba(250,226,200,.055)']));
+    }
+    for (let i = 0; i < 90; i++) { const [bx, by] = band(r()); blob(bx + (r() - .5) * 60, by + 18 + (r() - .5) * 50, 30 + r() * 70, 'rgba(4,5,9,.3)'); } // dust lanes
+    for (let i = 0; i < 2400; i++) {
+      const near = r() < .55, [bx, by] = band(r()), px = near ? bx + (r() + r() - 1) * 120 : r() * W, py = near ? by + (r() + r() + r() - 1.5) * 170 : r() * H;
+      x.fillStyle = `rgba(255,${235 + r() * 20 | 0},${215 + r() * 40 | 0},${.25 + r() * .7})`; x.fillRect(px, py, r() < .06 ? 2 : 1, r() < .06 ? 2 : 1);
+    }
+  });
+}
+function pick3(r, a) { return a[Math.floor(r() * a.length)]; }
 
 // ---------- stars & earth ----------
 {
@@ -717,18 +739,35 @@ const M = {
 
 // ---------- station models ----------
 function stack(n) { // a pallet with up to 8 cardboard boxes
-  const g = new THREE.Group(); g.add(at(rbox(2.8, .3, 2.8, M.pallet, .05), 0, .15, 0));
+  const g = new THREE.Group(); g.name = 'stack'; g.add(at(rbox(2.8, .3, 2.8, M.pallet, .05), 0, .15, 0));
   g.userData.add = () => { const i = g.userData.n || 0; if (i >= 8) return false; const b = rbox(1.25, 1.1, 1.25, M.box, .08); at(b, (i % 2 - .5) * 1.32, .86 + Math.floor(i / 4) * 1.12, ((i >> 1) % 2 - .5) * 1.32); b.rotation.y = (hash(i, n) - .5) * .12; g.add(b); g.userData.n = i + 1; return b; };
   for (let i = 0; i < n; i++) g.userData.add(); return g;
 }
-function astronaut(visor = 0xf29b38) {
+// Blender figures (models/astronaut.glb, pup.glb, rover.glb) replace the procedural ones once loaded.
+const GLB = { astronaut: null, pup: null, rover: null, waiting: [] };
+const accentMats = new Map();
+function dressAstronaut(g) {
+  for (const c of g.children.filter(c => c.userData.proc)) g.remove(c);
+  const m = GLB.astronaut.clone(), hex = g.userData.accent;
+  if (hex !== 0xf29b38) m.traverse(o => {
+    if (!o.isMesh || o.material.name !== 'accent_red') return;
+    if (!accentMats.has(hex)) { const a = o.material.clone(); a.color.setHex(hex); accentMats.set(hex, a); }
+    o.material = accentMats.get(hex);
+  });
+  g.add(m);
+  if (g.userData.pup && GLB.pup) g.add(at(GLB.pup.clone(), .95, 0, .35));
+}
+function astronaut(visor = 0xf29b38, pup = false) {
   const g = new THREE.Group(), suit = mat(0xf7f7fb, { roughness: .6 });
+  g.userData.accent = visor; g.userData.pup = pup;
   g.add(at(mesh(new THREE.CapsuleGeometry(.42, .7, 6, 16), suit), 0, 1.15, 0));
   g.add(at(rbox(.75, .85, .4, mat(0xd6d9e4), .1), 0, 1.3, -.42));
   g.add(at(mesh(new THREE.SphereGeometry(.42, 24, 16), suit), 0, 1.95, 0));
   g.add(at(mesh(new THREE.SphereGeometry(.33, 24, 16, Math.PI * .2, Math.PI * .6, Math.PI * .28, Math.PI * .38), mat(visor, { roughness: .15, metalness: .6 })), 0, 1.95, .14));
   for (const s of [-1, 1]) { g.add(at(mesh(new THREE.CapsuleGeometry(.15, .5, 4, 8), suit), s * .2, .4, 0)); const arm = at(mesh(new THREE.CapsuleGeometry(.13, .55, 4, 8), suit), s * .55, 1.2, .05); arm.rotation.z = s * .25; g.add(arm); }
   g.add(at(mesh(new THREE.BoxGeometry(.3, .14, .04), M.blue), .18, 1.42, .4));
+  for (const c of g.children) c.userData.proc = true;
+  if (GLB.astronaut) dressAstronaut(g); else GLB.waiting.push(g);
   return g;
 }
 // ---- shared kit pieces, in the style of the asset sheet: white walls, navy doors, hazard ramps, plants ----
@@ -784,7 +823,7 @@ function habitat() {
   g.add(ramp(D / 2 + .25, 2.8, 2.6, GOLD));
   g.add(plant(-W / 2 - .1, D / 2 + 1.1), plant(W / 2 + .1, D / 2 + 1.1));
   g.add(at(rbox(1.3, 1, 1, mat(0x8f949e), .15), W / 2 - 1.8, .5, D / 2 + 2.2), at(rbox(.5, .5, .06, mat(0x5d626c), .1), W / 2 - 1.8, .55, D / 2 + 2.71));
-  const you = at(astronaut(), 3.4, 0, D / 2 + 3.6); you.name = 'astronaut'; g.add(you);
+  const you = at(astronaut(0xf29b38, true), 3.4, 0, D / 2 + 3.6); you.name = 'astronaut'; g.add(you);
   g.userData.stacks = [at(stack(2), -3.2, 0, D / 2 + 1.8)]; g.userData.stacks[0].scale.setScalar(.75); g.add(...g.userData.stacks);
   return g;
 }
@@ -896,7 +935,7 @@ function mediaStudio() {
   cam3.add(at(rbox(1.1, .8, 1.5, M.dark, .12), 0, 2.4, 0));
   const lens = at(mesh(new THREE.CylinderGeometry(.32, .38, .7, 20), M.glass), 0, 2.4, .95); lens.rotation.x = Math.PI / 2; cam3.add(lens);
   // photo shoot: backdrop, model, photographer behind the camera, and two softboxes that flash
-  const shoot = new THREE.Group(), paper = mat(0xfbe3ef, { roughness: .8 });
+  const shoot = new THREE.Group(); shoot.name = 'shoot'; const paper = mat(0xfbe3ef, { roughness: .8 });
   shoot.add(at(rbox(7, 4.4, .3, paper, .1), 0, 2.2, -5.1), at(rbox(7, .12, 2.8, paper, .05), 0, .06, -6.5));
   const model = at(astronaut(0xe0458f), 0, .12, -6.6); model.rotation.y = Math.PI; model.name = 'model'; shoot.add(model);
   shoot.add(at(cam3, 0, 0, -9.6));
@@ -937,6 +976,11 @@ function buildSite() {
 }
 function rover() {
   const g = new THREE.Group();
+  if (GLB.rover) {
+    const m = GLB.rover.clone(); g.add(m);
+    g.userData.wheels = [0, 1, 2, 3].map(i => m.getObjectByName(`wheel_${i}`)).filter(Boolean);
+    return g;
+  }
   g.add(at(rbox(2.7, .7, 4.8, M.white, .2), 0, 1.05, 0));
   g.add(at(rbox(2.5, 1.5, 1.7, M.blue, .35), 0, 2.0, 1.4));
   g.add(at(rbox(2.2, .65, .12, M.glass, .05), 0, 2.25, 2.24));
@@ -947,6 +991,7 @@ function rover() {
   for (const x of [-1.45, 1.45]) for (const z of [-1.55, 0, 1.55]) { const w = at(mesh(new THREE.CylinderGeometry(.58, .58, .5, 20), M.tire), x, .58, z); w.rotation.z = Math.PI / 2; g.add(w); g.userData.wheels.push(w); }
   return g;
 }
+const PIN_Y = 5.6;
 function pin(hex) {
   const g = new THREE.Group(), m = mat(new THREE.Color(hex), { roughness: .3 });
   g.add(at(mesh(new THREE.SphereGeometry(1, 28, 18), m), 0, 2.3, 0));
@@ -1087,7 +1132,7 @@ function chatTower() {
   g.add(at(mesh(new THREE.CylinderGeometry(.22, .32, 1.1, 14), M.white), C[0], 1.45, C[1]), at(mesh(new THREE.SphereGeometry(1.3, 28, 12, 0, TAU, 0, Math.PI / 2), M.white), C[0], 1.95, C[1]));
   for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + .3; g.add(at(rbox(.6, .55, .6, M.white, .18), C[0] + Math.sin(a) * 2.4, 1.2, C[1] + Math.cos(a) * 2.4)); }
   const talkers = [];
-  for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + .9, p = at(astronaut(0x2fc4e8), C[0] + Math.sin(a) * 1.9, .9, C[1] + Math.cos(a) * 1.9); p.scale.setScalar(.62); p.rotation.y = a + Math.PI; g.add(p); talkers.push(p); }
+  for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + .9, p = at(astronaut(0x2fc4e8), C[0] + Math.sin(a) * 1.9, .9, C[1] + Math.cos(a) * 1.9); p.scale.setScalar(.62); p.rotation.y = a + Math.PI; p.name = 'talker'; g.add(p); talkers.push(p); }
   const pr = ramp(7.6, 2.8, 2.6, CYAN); pr.position.x = C[0]; g.add(pr);
   // the tower
   const T = [3.8, -3.4];
@@ -1170,7 +1215,7 @@ function updateMe(dt, t) {
   const want = Date.now() - me.last > IDLE_MS ? 'lounge' : 'work';
   if (!me.travel && want !== me.mode) { // set off along the roads
     const P = buildPath(want === 'lounge' ? ['you', 'factory', 'lounge'] : ['lounge', 'factory', 'you']);
-    if (!me.fig) { me.fig = astronaut(); scene.add(me.fig); }
+    if (!me.fig) { me.fig = astronaut(0xf29b38, true); scene.add(me.fig); }
     if (home) home.visible = false;
     me.travel = { P, s: 0, to: want }; me.label = want === 'lounge' ? 'heading to the lounge' : 'heading back to work';
   }
@@ -1310,7 +1355,7 @@ function ship(ev) {
   if (ev.type === 'skill') { const k = (ev.skill || String(ev.title).replace(/^Skill · /, '')).split(':').pop(); /* drop plugin prefixes like anthropic-skills: */ lastSkill = k; lastSkillAt = Date.now(); billboard.draw('NOW USING SKILL', k); stations.media.tag.lastChild.textContent = 'Creative Media · ' + k; }
   if (!renderer) return;
   const route = routeOf(ev), path = buildPath(route), g = rover(), p = pin(EV_COLOR[ev.type] || EV_COLOR.commit);
-  g.add(at(p, 0, 4.2, 0)); g.position.copy(path.pts[0]); g.scale.setScalar(.01); scene.add(g);
+  g.add(at(p, 0, PIN_Y, 0)); g.position.copy(path.pts[0]); g.scale.setScalar(.01); scene.add(g);
   const r = { ev, route, path, g, pin: p, s: 0, idx: 0, leg: 0, wait: 0, t0: performance.now(), done: false, fade: 0, legTimes: [Date.now()] };
   rovers.push(r); tracked = r; return r;
 }
@@ -1385,6 +1430,32 @@ if (renderer) {
   renderer.domElement.addEventListener('pointermove', e => { if (e.buttons) return; renderer.domElement.style.cursor = pick(e) ? 'pointer' : 'grab'; });
 }
 
+// ---------- Blender buildings: swap each station's building for its model from models/*.glb ----------
+// Built by blender/build_moonbase.py. Animated parts (astronauts, crate piles, the dish, the party) stay; if a model
+// can't load, the station simply keeps its current building.
+if (renderer) {
+  const MODELS = { you: 'habitat', factory: 'factory', github: 'github', claude: 'claude', chat: 'chat', media: 'media' };
+  const KEEP = new Set(['astronaut', 'stack', 'dish', 'talker', 'shoot', 'party']);
+  const loader = new GLTFLoader();
+  const load = (id, file, tries = 0) => {
+    loader.load(`models/${file}.glb`, gltf => {
+      const g = stations[id].grp, model = gltf.scene;
+      model.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; o.userData.station = id; if (o.material) o.material.envMapIntensity = .55; } });
+      for (const c of g.children) if (!KEEP.has(c.name)) c.visible = false;
+      g.add(model);
+      const smoke = id === 'factory' && model.getObjectByName('smoke');
+      if (smoke) { g.updateMatrixWorld(true); g.userData.stack = smoke.getWorldPosition(new THREE.Vector3()).sub(g.position); }
+    }, undefined, () => { if (tries < 3) setTimeout(() => load(id, file, tries + 1), 800 * (tries + 1)); /* else keep the built-in building */ });
+  };
+  for (const [id, file] of Object.entries(MODELS)) load(id, file);
+  const figure = (file, done, tries = 0) => loader.load(`models/${file}.glb`, gltf => {
+    gltf.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; if (o.material) o.material.envMapIntensity = .55; } });
+    done(gltf.scene);
+  }, undefined, () => { if (tries < 3) setTimeout(() => figure(file, done, tries + 1), 800 * (tries + 1)); });
+  figure('rover', m => { GLB.rover = m; });
+  figure('pup', p => { GLB.pup = p; figure('astronaut', m => { GLB.astronaut = m; for (const g of GLB.waiting.splice(0)) dressAstronaut(g); }); });
+}
+
 // ---------- render loop ----------
 const clock = new THREE.Clock();
 function frame() {
@@ -1393,7 +1464,7 @@ function frame() {
   updateRovers(dt, t); updatePuffs(dt);
   for (let i = popIns.length - 1; i >= 0; i--) { const b = popIns[i], s = Math.min(1, b.scale.x + dt * 3); b.scale.setScalar(s); if (s >= 1) popIns.splice(i, 1); }
   const az = curAz();
-  for (const r of rovers) { r.pin.rotation.y = az - r.g.rotation.y; r.pin.position.y = 4.2 + (reduced ? 0 : Math.sin(t * 3) * .25); }
+  for (const r of rovers) { r.pin.rotation.y = az - r.g.rotation.y; r.pin.position.y = PIN_Y + (reduced ? 0 : Math.sin(t * 3) * .25); }
   for (const id in stations) {
     const s = stations[id];
     if (s.pulse > 0) {

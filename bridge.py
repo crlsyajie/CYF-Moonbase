@@ -222,6 +222,13 @@ class Handler(BaseHTTPRequestHandler):
             body = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html"), "rb").read()
             self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Cache-Control", "no-cache")
             self.end_headers(); self.wfile.write(body); return
+        kind = {".glb": "model/gltf-binary", ".jpg": "image/jpeg"}.get(os.path.splitext(self.path)[1])
+        if self.path.startswith("/models/") and kind:  # the Blender buildings and the Mars ground
+            f = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", os.path.basename(self.path))
+            if os.path.isfile(f):
+                data = open(f, "rb").read()
+                self.send_response(200); self.send_header("Content-Type", kind); self.send_header("Cache-Control", "no-cache"); self.end_headers(); self.wfile.write(data); return
+            self.send_response(404); self.end_headers(); return
         if self.path != "/events":
             self.send_response(404); self.end_headers(); return
         self.send_response(200)
