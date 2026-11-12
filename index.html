@@ -381,6 +381,7 @@ body { color: var(--ink); }
 .acts button, .acts a { font: 600 11px var(--font-ui); color: var(--ink); text-decoration: none; border-radius: 999px; padding: 4px 10px; cursor: pointer; border: 1px solid var(--line); background: rgba(255, 255, 255, .1); }
 .acts button:hover, .acts a:hover { background: rgba(255, 255, 255, .22); } .acts button:disabled { opacity: .6; cursor: default; }
 .banner { font-size: 11.5px; line-height: 1.45; border-radius: 12px; padding: 8px 10px; background: var(--warn-bg); color: var(--warn); overflow-wrap: anywhere; }
+.bubble { font: 600 11px var(--font-ui); background: #fffffff2; color: #1a1c22; padding: 5px 10px; border-radius: 12px 12px 12px 3px; box-shadow: 0 6px 16px rgba(0, 0, 0, .35); max-width: 190px; white-space: normal; line-height: 1.3; pointer-events: none; }
 .floors { position: absolute; left: 14px; bottom: 14px; z-index: 5; padding: 6px; display: grid; gap: 4px; border-radius: 16px; }
 .floors button { display: flex; align-items: center; gap: 9px; font: 600 12px var(--font-ui); color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 11px; padding: 6px 12px 6px 7px; cursor: pointer; text-align: left; }
 .floors button b { width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center; background: rgba(255, 255, 255, .12); font-size: 13px; }
@@ -1531,8 +1532,14 @@ const ROOMS = {
   training: { label: 'TRAINING ROOM', floor: 2, path: [[.15, -1.5], [.15, 3.2]] },
   study: { label: "YAJIE'S STUDY", floor: 2, path: [[8.85, -1.5], [8.85, 3.2]] },
   dev: { label: 'DEV ROOM · GITHUB', floor: 2, path: [[17.3, -1.5], [17.3, 3.2]] },
+  lounge: { label: 'LOUNGE', floor: 1, path: [[0, -1.5], [0, 3]] },
 };
 const LIFT = [[14.5, -1.5], [14.5, -7.2]], FLOOR_NAME = { 1: 'Front office', 2: 'Workshop' };
+// Office life: who walks over to whom (the real hand-offs in the pipeline), and where they take a break.
+const PARTNERS = { sorter_personal: ['analyst_personal'], sorter_work: ['analyst_work'], analyst_personal: ['writer', 'calendar_personal'], analyst_work: ['writer', 'followup'], calendar_personal: ['prep'], calendar_work: ['prep'],
+  writer: ['analyst_personal', 'twin'], scout: ['twin', 'coach'], followup: ['analyst_work', 'deadlines'], prep: ['calendar_work', 'chief'], deadlines: ['chief', 'followup'], keymaster: ['github'], coach: ['sorter_personal', 'analyst_work', 'scout'], twin: ['writer', 'scout', 'chief'], github: ['coach', 'keymaster'] };
+const BREAKS = [['lounge', -4.4, 6, 'Coffee time'], ['lounge', -1, 10.6, 'Five minutes on the sofa'], ['lounge', 2, 4.2, 'Stretching my legs'], ['open', 4.2, -7, 'Quick stand-up at the table']];
+const REPLIES = ['Got it.', 'Thanks, on it.', 'Noted.', 'Nice work.', 'Leave it with me.', 'Good to know.'], SMALL = [['Busy day?', 'Always.'], ['Coffee later?', 'Count me in.'], ['How is your queue?', 'Under control.'], ['Seen the Chief?', 'Doing the rounds.']];
 const NO_MAIL = new Set(['scout', 'github', 'keymaster', 'twin', 'coach']); // desks that do not depend on the mailboxes
 const OFF = { scene: new THREE.Scene(), cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 800), desks: {}, state: null, sel: 'chief', floor: 1, private: !LOCAL, err: '', built: false, moving: false, n: 0, twinReply: null };
 let inside = false;
@@ -1678,10 +1685,12 @@ function buildOffice() {
     for (const o of [d, who, pad]) o.userData.agent = a.id;
     const tag = document.createElement('div'); tag.className = 'tag atag';
     const lab = new CSS2DObject(tag); lab.position.set(a.x, .1, a.z + 3.4);   // a nameplate on the floor in front of the desk, clear of the screen
-    G.add(d, ring, pad, lab); (a.id === 'chief' ? S : G).add(who); OFF.picks[a.floor].push(d, who, pad);
-    OFF.desks[a.id] = { a, d, who, tag, lab, cv, tex, light, ring, home, key: '', visit: new THREE.Vector3(a.x + 1.5, 0, a.z + 4.3) };
+    const bub = document.createElement('div'); bub.className = 'bubble'; bub.hidden = true;
+    const say = new CSS2DObject(bub); say.position.set(home.x, 3.4, home.z);
+    G.add(d, pad, lab); S.add(who, ring, say); OFF.picks[a.floor].push(d, pad);
+    OFF.desks[a.id] = { a, d, who, tag, lab, cv, tex, light, ring, home, bub, say, key: '', visit: new THREE.Vector3(a.x + 1.5, 0, a.z + 4.3),
+      w: { pos: home.clone(), floor: a.floor, room: a.room, queue: [], mode: 'desk', until: 4 + Math.random() * 20, line: '', lineUntil: 0, guest: null } };
   }
-  OFF.desks.chief.ring.removeFromParent(); S.add(OFF.desks.chief.ring);     // the Chief walks between floors, so the Chief and the ring belong to neither
   OFF.chief = { pos: OFF.desks.chief.home.clone(), floor: 1, room: 'chief', queue: [], goal: 'chief', face: null };
   // camera, labels and controls for the inside
   OFF.labels = new CSS2DRenderer(); OFF.labels.domElement.className = 'labels'; OFF.labels.domElement.hidden = true; sceneEl.appendChild(OFF.labels.domElement);
@@ -1697,7 +1706,7 @@ function buildOffice() {
   new ResizeObserver(fit).observe(sceneEl); fit();
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
   const agentAt = e => { const r = renderer.domElement.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, OFF.cam);
-    let o = (ray.intersectObjects(OFF.picks[OFF.floor], true)[0] || {}).object; while (o && !o.userData.agent) o = o.parent; return o ? o.userData.agent : null; };
+    let o = (ray.intersectObjects([...OFF.picks[OFF.floor], ...Object.values(OFF.desks).filter(k => k.who.visible).map(k => k.who)], true)[0] || {}).object; while (o && !o.userData.agent) o = o.parent; return o ? o.userData.agent : null; };
   let down = null;
   renderer.domElement.addEventListener('pointerdown', e => { if (inside) down = [e.clientX, e.clientY]; });
   renderer.domElement.addEventListener('pointerup', e => { if (inside && down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5) { const id = agentAt(e); if (id) selectAgent(id); } down = null; });
@@ -1839,6 +1848,7 @@ function renderAgent(force) {
       : a.id === 'github' ? 'Checks GitHub every 10 minutes while Moonbase is up.'
       : a.id === 'keymaster' ? 'Keys stay in the macOS Keychain. An agent is given a key only if that key names it, every request is written down, and no key is ever shown here or sent to the writing model.'
       : a.id === 'twin' ? 'Everything you tell me stays in a file on this Mac. I pass your writing style to the Reply Writer and your interests to the News Scout.' : 'Plain rules, no model needed.';
+    if (a.id === 'chief' && S.notify && S.notify.topic) body += `<div class="sec">Phone notifications</div><div class="oi"><p>${S.notify.on ? 'On.' : 'Off.'} I send your phone a short line of counts after a briefing, and when a project is waiting to be pushed. Nothing from your mail is ever in it.</p><details><summary>Set up your phone</summary><p>1. Install the free <b>ntfy</b> app. 2. Tap + and subscribe to this topic, exactly as written. Keep it to yourself: anyone who knows it can see the counts.</p><pre>${esc(S.notify.topic)}</pre><div class="acts"><button data-copy>Copy topic</button><button data-office="notify-test">Send a test</button></div></details></div>`;
     body += `<button class="st-link obtn" data-office="run"${S.running ? ' disabled' : ''}>${S.running ? 'The team is working…' : 'Run the team now'}</button><p class="muted" style="margin:0;font-size:11px;line-height:1.5">${esc(foot)}${S.last_run ? ' Last full run ' + esc(ago(S.last_run)) + '.' : ''}</p>`;
   }
   setHTML('station', head + body);
@@ -1846,6 +1856,7 @@ function renderAgent(force) {
 $('station').addEventListener('click', e => {
   const b = e.target.closest('[data-office],[data-agent],[data-fb],[data-copy],[data-answer]'); if (!b) return;
   if (b.dataset.office === 'enter') return enterOffice();
+  if (b.dataset.office === 'notify-test') { b.disabled = true; b.textContent = 'Sent, check your phone'; return officeSend('/office/notify_test', {}); }
   if (b.dataset.office === 'run') return officeSend('/office/run', { fresh_news: OFF.sel === 'scout' });
   if (b.dataset.agent) return selectAgent(b.dataset.agent);
   if (b.dataset.fb) { const [kind, id, label] = b.dataset.fb.split('|'); b.disabled = true; b.textContent = 'Learning…'; return officeSend('/office/feedback', { kind, id, label }); }
@@ -1860,11 +1871,47 @@ $('station').addEventListener('submit', async e => {
     renderAgent(true); }
 });
 function updateOffice(dt, t) {
+  // Office life. Between jobs the agents get up: they walk to the colleague they hand work to and tell them where things
+  // stand (their real headline), or take a break in the lounge. When the team is called to work they walk back to their desks.
+  const V2 = p => new THREE.Vector3(p[0], 0, p[1]), headline = id => agentLine(id)[1];
+  const routeTo = (w, floor, room, end) => { const q = [], out = r => ROOMS[r].path.slice().reverse().map(V2), into = r => ROOMS[r].path.map(V2);
+    if (floor !== w.floor) q.push(...out(w.room), ...LIFT.map(V2), { floor }, V2(LIFT[0]), ...into(room)); else if (room !== w.room) q.push(...out(w.room), ...into(room));
+    q.push(end.clone()); w.queue = q; w.room = room; };
+  const speak = (k, text, secs = 4.5) => { k.w.line = text; k.w.lineUntil = t + secs; };
   for (const id in OFF.desks) {
     const k = OFF.desks[id]; if (id === 'chief') continue;
-    const busy = k.status === 'working', turn = busy || k.status === 'queued' ? Math.PI : Math.PI / 4; // at work they face the screen, otherwise they turn round to the room
-    let d = turn - k.who.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); k.who.rotation.y += d * Math.min(1, dt * 6);
-    k.who.position.y = busy && !reduced ? Math.abs(Math.sin(t * 9 + k.a.x)) * .09 : 0;
+    const w = k.w, called = k.status === 'working' || k.status === 'queued';
+    if (called && w.mode !== 'desk' && w.mode !== 'home') { if (w.guest) { w.guest.w.guest = null; w.guest = null; } routeToSafe(); }
+    function routeToSafe() { if (!w.queue.length || w.queue[0].isVector3) { routeTo(w, k.a.floor, k.a.room, k.home); w.mode = 'home'; } }
+    if (!reduced && !called && w.mode === 'desk' && t > w.until && !w.guest) {
+      const roll = Math.random();
+      if (roll < .55) { const other = OFF.desks[pick(PARTNERS[id] || [])];
+        if (other && other.w.mode === 'desk' && !other.w.guest && other.a.id !== 'chief' && other.status !== 'working') { other.w.guest = k; w.guest = other; routeTo(w, other.a.floor, other.a.room, other.visit); w.mode = 'visit'; }
+        else w.until = t + 5 + Math.random() * 10; }
+      else if (roll < .8) { const [room, x, z, line] = pick(BREAKS); routeTo(w, ROOMS[room].floor, room, new THREE.Vector3(x + (Math.random() - .5) * 1.6, 0, z + (Math.random() - .5) * 1.2)); w.mode = 'break'; w.breakLine = line; speak(k, line, 3); }
+      else w.until = t + 8 + Math.random() * 16;
+    }
+    let face = called ? Math.PI : Math.PI / 4, walking = false;
+    if (w.queue.length) {
+      const next = w.queue[0];
+      if (!next.isVector3) { w.floor = next.floor; w.queue.shift(); }
+      else { const gap = next.clone().sub(w.pos), dist = gap.length(), step = 6.5 * dt;
+        if (dist <= step) { w.pos.copy(next); w.queue.shift(); } else { w.pos.add(gap.multiplyScalar(step / dist)); face = Math.atan2(gap.x, gap.z); walking = true; } }
+      if (!w.queue.length) { // arrived
+        if (w.mode === 'visit' && w.guest) { const o = w.guest, small = OFF.private || !agentState(id) ? pick(SMALL) : null;
+          speak(k, small ? small[0] : headline(id)); setTimeout(() => { if (w.guest === o) speak(o, small ? small[1] : pick(REPLIES) + (Math.random() < .5 ? ' Mine: ' + headline(o.a.id) : '')); }, 1600);
+          w.mode = 'talk'; w.until = t + 6.5; }
+        else if (w.mode === 'break') { w.mode = 'rest'; w.until = t + 5 + Math.random() * 6; }
+        else { w.mode = 'desk'; w.until = t + 10 + Math.random() * 25; }
+      }
+    } else if ((w.mode === 'talk' || w.mode === 'rest') && t > w.until) { if (w.guest) { w.guest.w.guest = null; w.guest = null; } routeTo(w, k.a.floor, k.a.room, k.home); w.mode = 'home'; }
+    if (w.mode === 'talk' && w.guest) face = Math.atan2(w.guest.w.pos.x - w.pos.x, w.guest.w.pos.z - w.pos.z);
+    if (w.mode === 'desk' && w.guest && w.guest.w.mode === 'talk') face = Math.atan2(w.guest.w.pos.x - w.pos.x, w.guest.w.pos.z - w.pos.z);
+    let d = face - k.who.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); k.who.rotation.y += d * Math.min(1, dt * 7);
+    const bob = walking ? Math.abs(Math.sin(t * 10 + k.a.x)) * .12 : k.status === 'working' && w.mode === 'desk' && !reduced ? Math.abs(Math.sin(t * 9 + k.a.x)) * .09 : 0;
+    k.who.position.set(w.pos.x, bob, w.pos.z); k.ring.position.set(w.pos.x, .14, w.pos.z); k.say.position.set(w.pos.x, 3.4, w.pos.z);
+    const here = w.floor === OFF.floor; k.who.visible = here; k.ring.visible = here && OFF.sel === id;
+    const talking = here && t < w.lineUntil; if (k.bub.hidden === talking) k.bub.hidden = !talking; if (talking && k.bub.textContent !== w.line) k.bub.textContent = w.line; k.say.visible = talking;
   }
   // The Chief walks to whoever is working: out of one room, along the corridor, into the next, and by lift between floors.
   const c = OFF.chief, me = OFF.desks.chief, V = p => new THREE.Vector3(p[0], 0, p[1]);
@@ -1887,7 +1934,7 @@ function updateOffice(dt, t) {
   }
   let d = face - me.who.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); me.who.rotation.y += d * Math.min(1, dt * 9);
   me.who.position.set(c.pos.x, walking && !reduced ? Math.abs(Math.sin(t * 10)) * .12 : 0, c.pos.z); me.ring.position.set(c.pos.x, .14, c.pos.z);
-  me.who.visible = c.floor === OFF.floor; me.ring.visible = me.who.visible && OFF.sel === 'chief';
+  me.who.visible = c.floor === OFF.floor; me.ring.visible = me.who.visible && OFF.sel === 'chief'; me.say.visible = false;
   const run = OFF.state && OFF.state.running;
   OFF.leds.forEach((l, i) => { l.material.color.setHex(run && Math.sin(t * 9 + i * 2.3) > 0 ? 0xffc95c : hash(i, Math.floor(t * 1.5)) > .82 ? 0x1f6f52 : 0x4ade9b); });
 }

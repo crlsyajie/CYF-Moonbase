@@ -20,6 +20,7 @@ import json
 import math
 import os
 import re
+import secrets
 import subprocess
 import sys
 import threading
@@ -37,6 +38,8 @@ DEFAULT_CONFIG = {
     "owner": "Yajie",
     "writer": {"kind": "ollama", "url": "http://127.0.0.1:11434", "model": "llama3.2:3b"},
     "run_at": "07:30",                    # daily run while the bridge is up; "" turns it off
+    # Phone notifications through ntfy: counts only, never anything from a message. The topic is a private channel name.
+    "notify": {"on": True, "server": "https://ntfy.sh", "topic": ""},
     "github_user": "crlsyajie",           # whose pushes the GitHub Watcher follows
     # Key slots: the only secrets an agent may ask the Keymaster for, and which agent may ask. Values live in the macOS Keychain.
     "keys": {"github_token": {"for": ["github"], "what": "A read-only GitHub token, so the GitHub Watcher can also see pushes to private repos. Optional."}},
@@ -1276,6 +1279,7 @@ class Chief(Agent):
         if ctx.get("coach", (0, 0))[1]:
             lines.append("The Coach has %d question%s for you" % (ctx["coach"][1], "" if ctx["coach"][1] == 1 else "s"))
         failed = [a.name for a in A.values() if a.status == "error"]
+        self.o.notify("Briefing ready", "; ".join(lines), key="briefing")     # every line is a count built here, never mail text
         return {
             "headline": lines[0] + ", " + lines[1],
             "briefing": lines,
@@ -1319,6 +1323,13 @@ class Office:
         self.twin = read_json(os.path.join(DATA, "twin.json"), {}) or {}           # everything Yajie has told the twin
         self.github_checked = 0
         self.waiting = read_json(os.path.join(DATA, "pushable.json"), {}) or {}    # projects with work GitHub does not have yet
+        self.notified = read_json(os.path.join(DATA, "notified.json"), {}) or {}   # what was last sent to the phone, per kind
+        n = dict(DEFAULT_CONFIG["notify"], **(self.cfg.get("notify") or {}))
+        if not n.get("topic"):                     # a long random channel name: only someone who knows it can listen
+            n["topic"] = "moonbase-" + secrets.token_urlsafe(18)
+            self.cfg["notify"] = n
+            write_json(cfg_path, self.cfg)
+        self.cfg["notify"] = n
         made = [Sorter(self, "personal"), Analyst(self, "personal"), Scheduler(self, "personal"),
                 Sorter(self, "work"), Analyst(self, "work"), Scheduler(self, "work"),
                 ReplyWriter(self), NewsScout(self), FollowUps(self), MeetingPrep(self), Deadlines(self),
@@ -1362,12 +1373,33 @@ class Office:
         write_json(path, {"at": now().isoformat(), "items": items})
         return len(items)
 
+    def notify(self, title, text, key="", force=False):
+        """Send a short push to the phone. Only fixed words and numbers go out: callers must never pass mail, calendar or
+        answer text. The same text is not sent twice in a row, and a kind is not sent more than once every 20 minutes."""
+        n = self.cfg.get("notify") or {}
+        if not (n.get("on") and n.get("topic") and str(n.get("server", "")).startswith("https://")):
+            return False
+        last = self.notified.get(key or title, {})
+        if not force and (last.get("text") == text or time.time() - last.get("at", 0) < 20 * 60):
+            return False
+        try:
+            req = urllib.request.Request(n["server"].rstrip("/") + "/" + urllib.parse.quote(n["topic"]), data=text.encode("utf-8"),
+                                         headers={"Title": "Moonbase: " + title, "Tags": "office", "User-Agent": "moonbase-office"})
+            urllib.request.urlopen(req, timeout=8).read()
+        except Exception:
+            return False
+        self.notified[key or title] = {"text": text, "at": time.time()}
+        write_json(os.path.join(DATA, "notified.json"), self.notified)
+        return True
+
     def pushable(self, info):
         """From the Stop hook: how much of a project is not on GitHub yet. Zero clears it."""
         repo = clean(info.get("repo"), 80)
         if not repo:
             return
         ahead, dirty = int(info.get("ahead") or 0), int(info.get("dirty") or 0)
+        if (ahead or dirty) and repo not in self.waiting:
+            self.notify("Work waiting to be pushed", "A project has work that is not on GitHub yet.", key="push")
         if ahead or dirty:
             self.waiting[repo] = {"branch": clean(info.get("branch"), 80), "ahead": ahead, "dirty": dirty, "subject": clean(info.get("subject"), 140), "at": now().isoformat()}
         else:
@@ -1593,6 +1625,7 @@ class Office:
         return {
             "ok": True, "running": self.running, "last_run": self.last_run, "demo": self.demo,
             "writer": {"online": self.writer.online, "model": self.writer.model, "note": self.writer.note},
+            "notify": {k: (self.cfg.get("notify") or {}).get(k) for k in ("on", "server", "topic")},
             "models": self.models.summary(), "wings": WINGS, "run_at": self.cfg.get("run_at", ""),
             "agents": [self.agents[i].public() for i in ["chief"] + [a for a in self.agents if a != "chief"]],
         }

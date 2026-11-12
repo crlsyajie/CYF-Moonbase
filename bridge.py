@@ -240,6 +240,9 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/office/feedback":
                 OFFICE.feedback(str(body.get("kind")), str(body.get("id")), str(body.get("label")))
                 return self.send_json(200, {"ok": True})
+            if self.path == "/office/notify_test":     # a test push to the phone
+                sent = OFFICE.notify("Test", "Phone notifications are working.", key="test", force=True)
+                return self.send_json(200, {"ok": sent, "error": "" if sent else "The push service did not accept it."})
             if self.path == "/office/pushable":        # the Stop hook reports work in a project that GitHub does not have yet
                 OFFICE.pushable(body)
                 return self.send_json(200, {"ok": True})
