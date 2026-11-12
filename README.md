@@ -9,7 +9,7 @@ A live view of my dev work as a lunar base. Each push to GitHub, and each Claude
 - **Creative Media Factory**: where Claude's skills run; a party starts there (dance floor, disco ball, dancers, confetti) while a skill runs
 - **Formula 1 Garage**: the F1 GP Predictor; runs of the `f1-gp-update` skill send a crate here and the car rolls out onto the apron
 - **Launch Pad**: behind the Habitat; every successful deploy (GitHub Pages builds, deployment statuses, or `wrangler`/`vercel`/`netlify`/`firebase` deploys run from Claude Code) launches the rocket
-- **Agent Office**: click it to walk inside. Sixteen agents work on two floors on my mail, calendars, AI news and code (see below)
+- **Agent Office**: click it to walk inside. Eighteen agents work on three floors on my mail, calendars, AI news, LinkedIn, social media and code; floor 3 is their meeting room (see below)
 - **Off-Duty Lounge**: after 10 minutes with no activity I walk here and watch a movie, read or paint; any activity sends me back to work
 
 ## Live Claude Code activity (local)

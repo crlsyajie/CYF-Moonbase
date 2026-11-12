@@ -421,7 +421,7 @@ body { color: var(--ink); }
     </header>
 
     <button class="overview" id="overviewBtn" hidden title="Back to the whole base (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>Whole base</button>
-    <div class="card floors" id="floors" hidden role="group" aria-label="Office floors"><button data-floor="2" aria-pressed="false" title="Floor 2 (press 2)"><b>2</b><span>Workshop</span></button><button data-floor="1" aria-pressed="true" title="Floor 1 (press 1)"><b>1</b><span>Front office</span></button></div>
+    <div class="card floors" id="floors" hidden role="group" aria-label="Office floors"><button data-floor="3" aria-pressed="false" title="Floor 3 (press 3)"><b>3</b><span>Meeting floor</span></button><button data-floor="2" aria-pressed="false" title="Floor 2 (press 2)"><b>2</b><span>Workshop</span></button><button data-floor="1" aria-pressed="true" title="Floor 1 (press 1)"><b>1</b><span>Front office</span></button></div>
     <nav class="card buildings" id="buildings" hidden aria-label="Buildings"><div class="bl-head"><b>Buildings</b><span id="blCount"></span></div><ul id="blList"></ul></nav>
 
     <section class="kpis">
@@ -467,6 +467,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
 // ---------- live feed config ----------
 // Set FEED_URL to the backend's Server-Sent Events stream once it exists.
@@ -498,6 +499,8 @@ const ST = {
   f1:      { ...slot(330), r: 10, color: 0xe10600, css: '#e10600', eyebrow: 'RACING · F1-01',    name: 'Formula 1 Garage', sub: 'F1 GP Predictor: race data and predictions' },
   office:  { x: +(slot(330).x + slot(30).x).toFixed(2), z: +(slot(330).z + slot(30).z).toFixed(2), r: 10, color: 0x14b8a6, css: '#14b8a6', eyebrow: 'OPERATIONS · AO-01', name: 'Agent Office', sub: 'My team of agents: mail, calendars and AI news' },
 };
+// Neon look: every station glows in its own colour (the same list as NEON in blender/build_moonbase.py).
+const NEON = { you: 0x3d7bff, factory: 0xffb020, github: 0xe6ecff, claude: 0xff7a4d, chat: 0x2ec5ff, launch: 0xff7a1a, media: 0xff3d9a, lounge: 0xb06bff, f1: 0xff2a1f, office: 0x14f1d0 };
 // Road network. Stops are gates in front of each building; the factory is ringed by the Main Road,
 // so traffic drives around it instead of through it. Chat's road curls round Claude Code to join its spoke.
 const RING = 10.6, polar = (cx, cz, deg, r) => [cx + r * Math.sin(deg * Math.PI / 180), cz + r * Math.cos(deg * Math.PI / 180)];
@@ -633,8 +636,8 @@ if (renderer) {
 function setCam(az, pol, tgt = new THREE.Vector3()) { const r = 300; cam.position.set(tgt.x + r * Math.sin(pol) * Math.sin(az), tgt.y + r * Math.cos(pol), tgt.z + r * Math.sin(pol) * Math.cos(az)); cam.lookAt(tgt); }
 
 // ---------- lights ----------
-scene.add(new THREE.HemisphereLight(0xffe4d2, 0x8a3c26, .9));
-const sun = new THREE.DirectionalLight(0xffe2c6, 1.9);
+scene.add(new THREE.HemisphereLight(0xb4c0ff, 0x1b1d2e, .75)); // cool, low light so the neon reads
+const sun = new THREE.DirectionalLight(0xdfe6ff, 1.5);
 sun.position.set(-45, 85, 55); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -72, right: 72, top: 72, bottom: -72, near: 1, far: 260 });
 sun.shadow.bias = -.0004; sun.shadow.normalBias = .04; sun.shadow.radius = 4;
@@ -645,36 +648,42 @@ scene.add(sun);
 const TONES = (() => { const t = new THREE.DataTexture(new Uint8Array([150, 150, 150, 255, 212, 212, 212, 255, 255, 255, 255, 255]), 3, 1); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 function toon(o = {}) { const { roughness, metalness, gradientMap, ...rest } = o; return new THREE.MeshStandardMaterial({ roughness: .78, metalness: 0, envMapIntensity: .55, ...rest }); }
 const mat = (color, o = {}) => toon({ color, ...o });
+const neon = (color, k = 1, o = {}) => toon({ color, emissive: color, emissiveIntensity: k, ...o }); // a glowing tube or panel; cheap, no post-processing
 const shadowed = m => { m.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); return m; };
 const at = (o, x, y, z) => { o.position.set(x, y, z); return o; };
 const mesh = (g, m) => shadowed(new THREE.Mesh(g, m));
 const rbox = (w, h, d, m, r = .25) => mesh(new RoundedBoxGeometry(w, h, d, 3, Math.min(r, w / 2 - .01, h / 2 - .01, d / 2 - .01)), m);
 function canvasTex(w, h, draw, repeat) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); } return t; }
 const marsCopies = []; // copies share the image but each needs its own upload once it arrives
-const marsTex = new THREE.TextureLoader().load('models/mars_ground.jpg', () => { for (const t of marsCopies) t.needsUpdate = true; });
+const marsTex = new THREE.TextureLoader().load('models/moon_ground.jpg', () => { for (const t of marsCopies) t.needsUpdate = true; });
 Object.assign(marsTex, { colorSpace: THREE.SRGBColorSpace, wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping, anisotropy: 4 });
 const mars = (rx, ox = 0, oz = 0) => { const t = marsTex.clone(); t.repeat.set(rx, rx); t.offset.set(ox, oz); marsCopies.push(t); if (marsTex.image) t.needsUpdate = true; return t; };
 const corrugated = (hex, rep = [4, 1]) => canvasTex(64, 8, (x, w, h) => { x.fillStyle = hex; x.fillRect(0, 0, w, h); x.fillStyle = 'rgba(255,255,255,.2)'; x.fillRect(0, 0, 18, h); x.fillStyle = 'rgba(0,0,0,.14)'; x.fillRect(36, 0, 12, h); }, rep);
-const boxTex = canvasTex(64, 64, (x) => { x.fillStyle = '#d4a26b'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#e9c792'; x.fillRect(26, 0, 12, 64); x.strokeStyle = 'rgba(90,55,20,.35)'; x.lineWidth = 3; x.strokeRect(1.5, 1.5, 61, 61); });
+const boxTex = canvasTex(64, 64, (x) => { x.fillStyle = '#232a45'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#19e3ff'; x.fillRect(28, 0, 8, 64); x.strokeStyle = '#3a4466'; x.lineWidth = 3; x.strokeRect(1.5, 1.5, 61, 61); });
+const boxGlow = canvasTex(64, 64, (x) => { x.fillStyle = '#000'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#19e3ff'; x.fillRect(28, 0, 8, 64); }); // cargo crates: dark cases with a glowing band
 const M = {
-  white: mat(0xf4f4f1), grey: mat(0xa3a3a0), dark: mat(0x55565a), glass: mat(0x3e4a55),
-  blue: mat(0xd6ad55), slate: mat(0x8f8f8b), sand: mat(0xe4e4de), stone: mat(0xc8c8c3), tire: mat(0x262b40, { roughness: .8 }), pallet: mat(0xb08355, { roughness: .8 }),
-  box: toon({ map: boxTex, roughness: .8 }), cone: mat(0xff7a2e), yellow: mat(0xf2f1ec),
-  rock: toon({ color: 0x8a4a35, roughness: 1, flatShading: true }),
+  white: mat(0xcfd6ea), grey: mat(0x5b6178), dark: mat(0x1a1f33), glass: mat(0x0b0d14),
+  blue: neon(0x19e3ff, .9), slate: mat(0x3a4055), sand: mat(0x4a5066), stone: mat(0x3a4055), tire: mat(0x0b0d14, { roughness: .8 }), pallet: mat(0x3a4055, { roughness: .8 }),
+  box: toon({ map: boxTex, emissiveMap: boxGlow, emissive: 0xffffff, emissiveIntensity: .9, roughness: .8 }), cone: neon(0xff7a2e, .7), yellow: neon(0x19e3ff, .7),
+  rock: toon({ color: 0x55585f, roughness: 1, flatShading: true }),
 };
 
 // ---------- island ----------
 {
-  const base = new THREE.Color(0xdcdee7), dark = new THREE.Color(0xb3b7c8), lite = new THREE.Color(0xf2f3f8), c = new THREE.Color();
+  const spillTex = canvasTex(128, 128, (x) => { const g = x.createRadialGradient(64, 64, 6, 64, 64, 64); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.55, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); });
+  const kerb = [mat(0x2a3044), mat(0x343b52)];
   const dirs = [30, 90, 150].map(d => [Math.sin(d * Math.PI / 180), Math.cos(d * Math.PI / 180)]);
   for (const id in ST) {
     const s = ST[id], pieceH = 3.2;
     // a clean hexagon piece: flat top, smooth side, colored rim band
-    const top = mesh(new THREE.CylinderGeometry(TILE, TILE, pieceH, 6), [mat(0xa64e33), toon({ map: mars(.75, hash(s.x, 1), hash(s.z, 2)) }), mat(0x7e3a26)]);
+    const top = mesh(new THREE.CylinderGeometry(TILE, TILE, pieceH, 6), [mat(0x2a2d38), toon({ map: mars(.75, hash(s.x, 1), hash(s.z, 2)) }), mat(0x1c1e27)]);
     top.position.set(s.x, -pieceH / 2, s.z); scene.add(top);
-    const lip = mesh(new THREE.CylinderGeometry(TILE + .05, TILE + .05, .38, 6, 1, true), mat(s.site ? 0xc3c8d8 : s.color, { side: THREE.DoubleSide }));
+    const lip = mesh(new THREE.CylinderGeometry(TILE + .05, TILE + .05, .38, 6, 1, true), neon(s.site ? 0xc3c8d8 : NEON[id], 1, { side: THREE.DoubleSide }));
     lip.position.set(s.x, -2.15, s.z); scene.add(lip);
-    const foot = mesh(new THREE.CylinderGeometry(TILE * .96, TILE * .9, 1.2, 6), mat(0x6e3020)); foot.position.set(s.x, -pieceH - .6, s.z); scene.add(foot);
+    const foot = mesh(new THREE.CylinderGeometry(TILE * .96, TILE * .9, 1.2, 6), mat(0x14161d)); foot.position.set(s.x, -pieceH - .6, s.z); scene.add(foot);
+    // light spilling from the building onto the regolith: one soft additive disc per station
+    const spill = new THREE.Mesh(new THREE.CircleGeometry(TILE * .86, 48), new THREE.MeshBasicMaterial({ map: spillTex, color: NEON[id], transparent: true, opacity: .34, blending: THREE.AdditiveBlending, depthWrite: false }));
+    spill.rotation.x = -Math.PI / 2; spill.position.set(s.x, .03, s.z); scene.add(spill);
   }
   // stone-block border around every piece (like the base of a game asset), with gaps where roads cross
   for (const id in ST) {
@@ -684,33 +693,33 @@ const M = {
       for (let b = 0; b < 5; b++) {
         const t = (b + .5) / 5, cx = x1 + (x2 - x1) * t, cz = z1 + (z2 - z1) * t;
         if (ROAD_SEGS.some(g => segDist(cx, cz, ...g) < 3.6)) continue;
-        const blk = at(rbox(R / 5 - .22, .85, 1.35, b % 2 ? mat(0xc98466) : mat(0xdc9c7c), .32), cx, .42, cz); blk.rotation.y = -Math.atan2(z2 - z1, x2 - x1); scene.add(blk);
+        const blk = at(rbox(R / 5 - .22, .85, 1.35, kerb[b % 2], .32), cx, .42, cz); blk.rotation.y = -Math.atan2(z2 - z1, x2 - x1); scene.add(blk);
       }
     }
   }
   // craters as flat graphic shapes: a soft ring and a darker floor
   for (const c of craters) {
-    const ring = new THREE.Mesh(new THREE.RingGeometry(c.r * .82, c.r, 40), mat(0xe58a64)); ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, .015, c.z); scene.add(ring);
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(c.r * .82, 40), mat(0xa9472f)); floor.rotation.x = -Math.PI / 2; floor.position.set(c.x, .01, c.z); floor.receiveShadow = true; scene.add(floor);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(c.r * .82, c.r, 40), mat(0x8b8e96)); ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, .015, c.z); scene.add(ring);
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(c.r * .82, 40), mat(0x3b3d45)); floor.rotation.x = -Math.PI / 2; floor.position.set(c.x, .01, c.z); floor.receiveShadow = true; scene.add(floor);
   }
   // empty slots on the outer ring: dashed outlines where future pieces can snap in
-  const ghostMat = new THREE.LineDashedMaterial({ color: 0xffd6bf, dashSize: 1.4, gapSize: .9, transparent: true, opacity: .55 });
+  const ghostMat = new THREE.LineDashedMaterial({ color: 0x19e3ff, dashSize: 1.4, gapSize: .9, transparent: true, opacity: .55 });
   for (let k = 0; k < 6; k++) {
     const d = 30 + k * 60, cx = 2 * SPACING * Math.sin(d * Math.PI / 180), cz = 2 * SPACING * Math.cos(d * Math.PI / 180);
     if (Object.values(ST).some(t => Math.hypot(t.x - cx, t.z - cz) < 2)) continue;
     const pts = Array.from({ length: 7 }, (_, i) => new THREE.Vector3(cx + TILE * Math.sin(i * Math.PI / 3), -.4, cz + TILE * Math.cos(i * Math.PI / 3)));
     const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ghostMat); ln.computeLineDistances(); scene.add(ln);
   }
-  // roads drawn as trodden dust paths: soft edges that fade into the ground, faint tread ruts, scattered grit
-  const pathTex = (base, a) => canvasTex(64, 128, (x, w, h) => {
+  // roads: dark packed regolith lanes with a glowing neon line down each edge and faint centre dashes
+  const pathTex = (a) => canvasTex(64, 128, (x, w, h) => {
     const r = rng(11), edge = x.createLinearGradient(0, 0, w, 0);
-    for (const [t, o] of [[0, 0], [.2, a * .55], [.34, a], [.66, a], [.8, a * .55], [1, 0]]) edge.addColorStop(t, `rgba(${base},${o})`);
+    for (const [t, o] of [[0, 0], [.08, a * .6], [.14, a], [.86, a], [.92, a * .6], [1, 0]]) edge.addColorStop(t, `rgba(16,18,28,${o})`);
     x.fillStyle = edge; x.fillRect(0, 0, w, h);
-    x.fillStyle = `rgba(${base},${a * .5})`; for (const u of [.36, .64]) x.fillRect(u * w - 2, 0, 4, h); // tread ruts
-    for (let i = 0; i < 70; i++) { const u = .2 + r() * .6; x.fillStyle = `rgba(70,22,12,${.12 + r() * .2})`; x.beginPath(); x.arc(u * w, r() * h, .6 + r() * 1.4, 0, TAU); x.fill(); }
+    for (let i = 0; i < 60; i++) { const u = .16 + r() * .68; x.fillStyle = `rgba(120,126,150,${.08 + r() * .12})`; x.beginPath(); x.arc(u * w, r() * h, .5 + r() * 1.1, 0, TAU); x.fill(); }
   });
-  const KIND = { main: [4.6, pathTex('112,42,24', .5)], spoke: [3.6, pathTex('118,46,27', .45)], site: [3.6, pathTex('128,52,32', .3)] };
-  for (const [, t] of Object.values(KIND)) t.wrapT = THREE.RepeatWrapping;
+  const lineTex = (col, mid) => canvasTex(64, 128, (x, w, h) => { x.fillStyle = '#000'; x.fillRect(0, 0, w, h); x.fillStyle = col; x.fillRect(w * .13, 0, 2.5, h); x.fillRect(w * .87 - 2.5, 0, 2.5, h); x.fillStyle = mid; for (let y = 0; y < h; y += 32) x.fillRect(w / 2 - 1, y, 2, 14); });
+  const KIND = { main: [4.6, pathTex(.85), lineTex('#19e3ff', '#7a5cff')], spoke: [3.6, pathTex(.8), lineTex('#19e3ff', '#2a5a78')], site: [3.6, pathTex(.5), lineTex('#19e3ff', '#000')] };
+  for (const [, t, l] of Object.values(KIND)) t.wrapT = l.wrapT = THREE.RepeatWrapping;
   const roundCorners = (pts, closed) => { // two Chaikin passes: soft corners, same course
     let p = pts;
     for (let it = 0; it < 2; it++) {
@@ -721,7 +730,7 @@ const M = {
     return p;
   };
   for (const ch of CHAINS) {
-    const [w, col] = KIND[ch.kind], y = ch.kind === 'main' ? .07 : .05, line = ch.dense ? ch.nodes.map(n => NODES[n]) : ch.kind === 'main' || ch.nodes.length > 2 ? roundCorners(ch.nodes.map(n => NODES[n]), ch.closed) : ch.nodes.map(n => NODES[n]);
+    const [w, col, glowLine] = KIND[ch.kind], y = ch.kind === 'main' ? .07 : .05, line = ch.dense ? ch.nodes.map(n => NODES[n]) : ch.kind === 'main' || ch.nodes.length > 2 ? roundCorners(ch.nodes.map(n => NODES[n]), ch.closed) : ch.nodes.map(n => NODES[n]);
     for (let i = line.length - 1; i > 0; i--) if (Math.hypot(line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]) < .12) line.splice(i - (i === line.length - 1 ? 1 : 0), 1); // drop stubs that would fold the strip
     const N = line.length, pos = [], uv = [], idx = [], at2 = i => line[(i + N) % N];
     let run = 0;
@@ -738,13 +747,13 @@ const M = {
     const segs = ch.closed ? N : N - 1;
     for (let i = 0; i < segs; i++) { const a2 = i * 2, b2 = ((i + 1) % N) * 2; idx.push(a2, b2, a2 + 1, a2 + 1, b2, b2 + 1); }
     const gq = new THREE.BufferGeometry(); gq.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); gq.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); gq.setIndex(idx); gq.computeVertexNormals();
-    const road = new THREE.Mesh(gq, toon({ map: col, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 })); road.receiveShadow = true; road.renderOrder = 1; scene.add(road);
+    const road = new THREE.Mesh(gq, toon({ map: col, emissiveMap: glowLine, emissive: 0xffffff, emissiveIntensity: 1, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 })); road.receiveShadow = true; road.renderOrder = 1; scene.add(road);
   }
   for (const [mx, mz, d] of SEAMS) { // bridges over the seams between pieces
     const ang = (90 - d) * Math.PI / 180, deck = at(rbox(4.2, .5, 5, M.grey, .1), mx, -.22, mz); deck.rotation.y = -ang; scene.add(deck);
     for (const sd of [-2.6, 2.6]) { const rail = at(rbox(4.6, .55, .28, M.blue, .08), mx - Math.sin(ang) * sd, .35, mz + Math.cos(ang) * sd); rail.rotation.y = -ang; scene.add(rail); }
   }
-  { const sign = document.createElement('div'); sign.className = 'tag'; sign.innerHTML = '<i style="background:#d6ad55"></i>Main Road'; const lab = new CSS2DObject(sign); lab.position.set(...[NODES.c3[0], 1.5, NODES.c3[1]]); scene.add(lab); }
+  { const sign = document.createElement('div'); sign.className = 'tag'; sign.innerHTML = '<i style="background:#19e3ff"></i>Main Road'; const lab = new CSS2DObject(sign); lab.position.set(...[NODES.c3[0], 1.5, NODES.c3[1]]); scene.add(lab); }
 }
 
 // ---------- galaxy backdrop ----------
@@ -791,16 +800,42 @@ function stack(n) { // a pallet with up to 8 cardboard boxes
 // Blender figures (models/astronaut.glb, pup.glb, rover.glb) replace the procedural ones once loaded.
 const GLB = { astronaut: null, pup: null, rover: null, waiting: [] };
 const accentMats = new Map();
+const FIGS = []; // every rigged astronaut on the page; updateFigures() plays idle, walk or typing on each
 function dressAstronaut(g) {
   for (const c of g.children.filter(c => c.userData.proc)) g.remove(c);
-  const m = GLB.astronaut.clone(), hex = g.userData.accent;
-  if (hex !== 0xf29b38) m.traverse(o => {
-    if (!o.isMesh || o.material.name !== 'accent_red') return;
-    if (!accentMats.has(hex)) { const a = o.material.clone(); a.color.setHex(hex); accentMats.set(hex, a); }
-    o.material = accentMats.get(hex);
+  const m = SkeletonUtils.clone(GLB.astronaut), hex = g.userData.accent; // a plain clone would share one skeleton between all figures
+  m.traverse(o => {
+    if (!o.isMesh) return;
+    o.raycast = () => {}; o.frustumCulled = false; // clicks land on the simple proxy instead of thousands of skinned triangles
+    const n = o.material.name; if (n !== 'accent_red' && n !== 'accent_visor') return;
+    const key = n + hex; if (!accentMats.has(key)) { const a = o.material.clone(); a.color.setHex(hex); a.emissive.setHex(hex); accentMats.set(key, a); }
+    o.material = accentMats.get(key);
   });
   g.add(m);
+  if (GLB.clips && GLB.clips.length) {
+    const mixer = new THREE.AnimationMixer(m), acts = {};
+    for (const c of GLB.clips) acts[c.name] = mixer.clipAction(c);
+    if (acts.idle) { acts.idle.play(); mixer.setTime(Math.random() * 4); }
+    g.userData.fig = { mixer, acts, cur: 'idle', last: null }; FIGS.push(g);
+  }
   if (g.userData.pup && GLB.pup) g.add(at(GLB.pup.clone(), .95, 0, .35));
+}
+// Legs and arms move when a figure is actually travelling; at an office desk it types; otherwise it idles.
+const figPos = new THREE.Vector3();
+function updateFigures(dt, live) {
+  for (let i = FIGS.length - 1; i >= 0; i--) {
+    const g = FIGS[i], f = g.userData.fig; let root = g, shown = g.visible; while (root.parent) { root = root.parent; shown = shown && root.visible; }
+    if (root !== live || !shown) { f.last = null; continue; }
+    g.getWorldPosition(figPos);
+    const speed = f.last && dt > 0 ? Math.hypot(figPos.x - f.last.x, figPos.z - f.last.z) / dt : 0; (f.last || (f.last = new THREE.Vector3())).copy(figPos);
+    f.speed = (f.speed || 0) + (Math.min(speed, 14) - (f.speed || 0)) * Math.min(1, dt * 10); // smoothed, so a one-frame jump is not a step
+    const k = g.userData.deskOf && OFF.desks[g.userData.deskOf], atDesk = k && (k.a.id === 'chief' ? !OFF.chief.queue.length && OFF.chief.goal === 'chief' : k.w.mode === 'desk' && !(k.w.guest && k.w.guest.w.mode === 'talk'));
+    const want = reduced ? (atDesk ? 'type' : 'idle') : f.speed > .5 ? 'walk' : atDesk ? 'type' : 'idle';
+    if (want !== f.cur && f.acts[want]) { f.acts[want].reset().play(); if (f.acts[f.cur]) f.acts[f.cur].crossFadeTo(f.acts[want], .22, false); f.cur = want; if (reduced) f.mixer.update(0); }
+    if (reduced) continue; // reduced motion: figures hold a pose and never cycle
+    f.mixer.timeScale = f.cur === 'walk' ? Math.min(2.3, Math.max(.9, f.speed / (2.6 * g.scale.x))) : f.cur === 'type' ? (k && k.status === 'working' ? 1.5 : .7) : 1;
+    f.mixer.update(dt);
+  }
 }
 function astronaut(visor = 0xf29b38, pup = false) {
   const g = new THREE.Group(), suit = mat(0xf7f7fb, { roughness: .6 });
@@ -812,37 +847,39 @@ function astronaut(visor = 0xf29b38, pup = false) {
   for (const s of [-1, 1]) { g.add(at(mesh(new THREE.CapsuleGeometry(.15, .5, 4, 8), suit), s * .2, .4, 0)); const arm = at(mesh(new THREE.CapsuleGeometry(.13, .55, 4, 8), suit), s * .55, 1.2, .05); arm.rotation.z = s * .25; g.add(arm); }
   g.add(at(mesh(new THREE.BoxGeometry(.3, .14, .04), M.blue), .18, 1.42, .4));
   for (const c of g.children) c.userData.proc = true;
+  g.add(at(new THREE.Mesh(new THREE.CylinderGeometry(.62, .5, 2.4, 8), new THREE.MeshBasicMaterial({ visible: false })), 0, 1.2, 0)); // click proxy
   if (GLB.astronaut) dressAstronaut(g); else GLB.waiting.push(g);
   return g;
 }
 // ---- shared kit pieces, in the style of the asset sheet: white walls, navy doors, hazard ramps, plants ----
-const NAVY = mat(0x24305e), GOLD = mat(0xf2b33d), CYAN = mat(0x2fc4e8);
-const hazardTex = canvasTex(64, 16, (x) => { x.fillStyle = '#f2c14e'; x.fillRect(0, 0, 64, 16); x.fillStyle = '#2b2b30'; for (let i = -16; i < 64; i += 16) { x.beginPath(); x.moveTo(i, 16); x.lineTo(i + 8, 0); x.lineTo(i + 16, 0); x.lineTo(i + 8, 16); x.fill(); } }, [3, 1]);
-const HAZARD = toon({ map: hazardTex });
+const NAVY = mat(0x0b0d14), GOLD = neon(0x19e3ff, .9), CYAN = neon(0x19e3ff, 1); // names kept from the old kit: NAVY is the dark panel, GOLD the neon trim
+const hazardTex = canvasTex(64, 16, (x) => { x.fillStyle = '#ffd23d'; x.fillRect(0, 0, 64, 16); x.fillStyle = '#0b0d14'; for (let i = -16; i < 64; i += 16) { x.beginPath(); x.moveTo(i, 16); x.lineTo(i + 8, 0); x.lineTo(i + 16, 0); x.lineTo(i + 8, 16); x.fill(); } }, [3, 1]);
+const HAZARD = toon({ map: hazardTex, emissiveMap: hazardTex, emissive: 0xffffff, emissiveIntensity: .7 });
 function door(x, y, z, w, h, frame) {
   const g = new THREE.Group(); g.add(at(rbox(w + .5, h + .3, .4, frame, .1), 0, 0, 0), at(rbox(w, h, .45, NAVY, .05), 0, -.1, .05));
-  for (let i = 1; i < 4; i++) g.add(at(rbox(w - .1, .06, .48, mat(0x34407a), .02), 0, -h / 2 + i * h / 4, .06));
+  for (let i = 1; i < 4; i++) g.add(at(rbox(w - .1, .06, .48, CYAN, .02), 0, -h / 2 + i * h / 4, .06));
   return at(g, x, y, z);
 }
 function ramp(z0, w = 3.6, len = 3, edge = HAZARD) {
-  const g = new THREE.Group(), r = at(rbox(w, .35, len, mat(0xc9ccd4), .08), 0, .17, z0 + len / 2); r.rotation.x = .06; g.add(r);
+  const g = new THREE.Group(), r = at(rbox(w, .35, len, mat(0x3a4055), .08), 0, .17, z0 + len / 2); r.rotation.x = .06; g.add(r);
   if (edge) for (const sx of [-1, 1]) g.add(at(rbox(.35, .38, len, edge, .04), sx * (w / 2 - .18), .2, z0 + len / 2));
   return g;
 }
+const LEAF = neon(0x3dff9e, .45, { flatShading: true }); // glowing hydroponic plants
 function plant(x, z) {
-  const g = new THREE.Group(); g.add(at(rbox(.9, .7, .9, mat(0xd9d9d3), .12), 0, .35, 0));
-  for (const [a, b, c] of [[0, 1.15, 0], [.28, .95, .2], [-.26, .98, -.16]]) g.add(at(mesh(new THREE.IcosahedronGeometry(.45, 0), mat(0x5fae6a)), a, b, c));
+  const g = new THREE.Group(); g.add(at(rbox(.9, .7, .9, mat(0x2b3148), .12), 0, .35, 0), at(rbox(.94, .08, .94, CYAN, .03), 0, .62, 0));
+  for (const [a, b, c] of [[0, 1.15, 0], [.28, .95, .2], [-.26, .98, -.16]]) g.add(at(mesh(new THREE.IcosahedronGeometry(.45, 0), LEAF), a, b, c));
   return at(g, x, 0, z);
 }
 function tree(x, z, cone) {
   const g = new THREE.Group(); g.add(at(mesh(new THREE.CylinderGeometry(.12, .16, 1.2, 8), mat(0x8a6a4a)), 0, .6, 0));
-  g.add(cone ? at(mesh(new THREE.ConeGeometry(.9, 2.3, 8), mat(0x4fa35c)), 0, 2.1, 0) : at(mesh(new THREE.IcosahedronGeometry(1.05, 0), mat(0x5fae6a)), 0, 1.9, 0));
+  g.add(cone ? at(mesh(new THREE.ConeGeometry(.9, 2.3, 8), LEAF), 0, 2.1, 0) : at(mesh(new THREE.IcosahedronGeometry(1.05, 0), LEAF), 0, 1.9, 0));
   return at(g, x, 0, z);
 }
 const roundBadge = draw => canvasTex(128, 128, (x) => { x.fillStyle = '#fff'; x.beginPath(); x.arc(64, 64, 62, 0, TAU); x.fill(); draw(x); });
 // White wall panels with faint seams, used by every building in the kit.
-const wallTex = (rep = [3, 1]) => canvasTex(64, 64, (x) => { x.fillStyle = '#f6f6f3'; x.fillRect(0, 0, 64, 64); x.fillStyle = 'rgba(40,48,80,.07)'; x.fillRect(0, 0, 2, 64); x.fillRect(0, 62, 64, 2); }, rep);
-const WALL = toon({ map: wallTex([4, 2]) }), FOOT = mat(0xc9ccd4);
+const wallTex = (rep = [3, 1]) => canvasTex(64, 64, (x) => { x.fillStyle = '#1a1f33'; x.fillRect(0, 0, 64, 64); x.fillStyle = 'rgba(120,150,255,.16)'; x.fillRect(0, 0, 2, 64); x.fillRect(0, 62, 64, 2); }, rep);
+const WALL = toon({ map: wallTex([4, 2]) }), FOOT = mat(0x2b3148);
 function corners(g, W, D, h, y, m, t = .34) { for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(at(rbox(t, h, t, m, .08), sx * (W / 2 - t / 2 + .04), y, sz * (D / 2 - t / 2 + .04))); }
 function gableRoof(g, W, D, y, rise, tex, ridgeCol) {
   const ang = Math.atan2(rise, D / 2), slope = Math.hypot(rise, D / 2);
@@ -1064,12 +1101,12 @@ let f1At = 0;
 function paddock() {
   // Asset sheet: a white garage on a grey band, a thick red band with a white pinstripe under a dark parapet roof with AC fans and vents,
   // a ribbed grey roller door in a red frame (it rolls up when the car comes out), a side door, the F1 logo, tires, a tool chest and barriers.
-  const g = new THREE.Group(), red = mat(0xe10600), W = 11, D = 8, Hh = 4.6, y0 = .4;
+  const g = new THREE.Group(), red = neon(0xff2a1f, .85), W = 11, D = 8, Hh = 4.6, y0 = .4;
   g.add(at(rbox(W - .6, .12, 6.6, mat(0x5a5e66), .05), 0, .06, D / 2 + 3.1));                                  // apron
   for (const x of [-3.4, 3.4]) g.add(at(rbox(.2, .04, 6, red, .02), x, .14, D / 2 + 3.1));
   g.add(at(rbox(W + .4, y0, D + .4, FOOT, .12), 0, y0 / 2, 0));
   g.add(at(rbox(W, Hh, D, WALL, .3), 0, y0 + Hh / 2, 0));
-  g.add(at(rbox(W + .06, .9, D + .06, mat(0x9aa0aa), .1), 0, y0 + .45, 0));                                     // grey lower band
+  g.add(at(rbox(W + .06, .9, D + .06, mat(0x2b3148), .1), 0, y0 + .45, 0));                                     // grey lower band
   g.add(at(rbox(W + .3, 1, D + .3, red, .14), 0, y0 + Hh - .45, 0), at(rbox(W + .32, .12, D + .32, M.white, .03), 0, y0 + Hh - .7, 0));
   // roof: dark slab with a raised parapet, two AC units with fans, vents
   g.add(at(rbox(W + .3, .35, D + .3, mat(0x4a4d55), .1), 0, y0 + Hh + .15, 0));
@@ -1080,16 +1117,28 @@ function paddock() {
   const doorW = 6.2, doorH = 3.6, doorY = y0 + doorH / 2;
   g.add(at(rbox(doorW + .9, doorH + .5, .4, red, .12), 0, doorY + .2, D / 2 + .05));
   g.add(at(rbox(doorW, doorH, .3, mat(0x22252b), .05), 0, doorY, D / 2 + .1));
-  const ribTex = canvasTex(32, 64, (x) => { x.fillStyle = '#9ca1aa'; x.fillRect(0, 0, 32, 64); x.fillStyle = '#7f848d'; for (let i = 0; i < 64; i += 8) x.fillRect(0, i, 32, 2); }, [1, 4]);
+  const ribTex = canvasTex(32, 64, (x) => { x.fillStyle = '#2b3148'; x.fillRect(0, 0, 32, 64); x.fillStyle = '#19e3ff'; for (let i = 0; i < 64; i += 8) x.fillRect(0, i, 32, 2); }, [1, 4]);
   const shutter = at(rbox(doorW - .1, doorH, .2, toon({ map: ribTex }), .04), 0, doorY, D / 2 + .3); g.add(shutter);
   g.add(door(W / 2 - 1.15, y0 + 1.3, D / 2 + .05, 1.1, 2.3, red));
-  g.add(at(new THREE.Mesh(new THREE.PlaneGeometry(2.8, 1.1), new THREE.MeshBasicMaterial({ map: canvasTex(192, 80, (x) => { x.fillStyle = '#f6f6f3'; x.fillRect(0, 0, 192, 80); x.fillStyle = '#e10600'; x.font = 'italic 900 58px "Plus Jakarta Sans", sans-serif'; x.textAlign = 'center'; x.fillText('F1', 96, 62); }) })), W / 2 + .03, y0 + 2.4, 0).rotateY(Math.PI / 2));
+  g.add(at(new THREE.Mesh(new THREE.PlaneGeometry(2.8, 1.1), new THREE.MeshBasicMaterial({ map: canvasTex(192, 80, (x) => { x.fillStyle = '#0b0d14'; x.fillRect(0, 0, 192, 80); x.strokeStyle = '#ff2a1f'; x.lineWidth = 5; x.strokeRect(3, 3, 186, 74); x.fillStyle = '#ff4a3f'; x.font = 'italic 900 58px "Plus Jakarta Sans", sans-serif'; x.textAlign = 'center'; x.fillText('F1', 96, 62); }) })), W / 2 + .03, y0 + 2.4, 0).rotateY(Math.PI / 2));
   // inside: tool cabinet and tires; outside: tire stacks, a red tool chest and barrier stands
   g.add(at(rbox(1.6, 1.6, .9, red, .1), -2.4, .8, -2.4));
   const tire = (x, z, n) => { for (let i = 0; i < n; i++) { g.add(at(mesh(new THREE.CylinderGeometry(.55, .55, .38, 20), M.tire), x, .2 + i * .4, z)); g.add(at(mesh(new THREE.TorusGeometry(.45, .05, 6, 20).rotateX(Math.PI / 2), i % 2 ? red : M.white), x, .4 + i * .4, z)); } };
   tire(2.6, -2.4, 3); tire(W / 2 + 1.4, D / 2 + 1.6, 3); tire(W / 2 + 1.6, D / 2 + .3, 2);
   g.add(at(rbox(1.4, 1.6, .9, red, .12), -W / 2 - 1.2, .8, D / 2 + 1), at(rbox(1.42, .1, .92, M.white, .02), -W / 2 - 1.2, 1.2, D / 2 + 1), at(rbox(1.42, .1, .92, M.white, .02), -W / 2 - 1.2, .7, D / 2 + 1));
   for (const x of [-4.8, 4.8]) g.add(at(rbox(.35, .9, .35, red, .08), x, .45, D / 2 + 6), at(rbox(.37, .14, .37, M.white, .02), x, .7, D / 2 + 6));
+  // detail: wall seams, pit-lane lights, a timing tower with a lit board, an antenna, roof strips and a start gantry
+  for (let i = 1; i < 7; i++) for (const sz of [-1, 1]) g.add(at(rbox(.05, Hh - 1.6, .05, NAVY, .01), -W / 2 + i * W / 7, y0 + Hh / 2 - .3, sz * (D / 2 + .01)));
+  for (let i = 1; i < 5; i++) for (const sx of [-1, 1]) g.add(at(rbox(.05, Hh - 1.6, .05, NAVY, .01), sx * (W / 2 + .01), y0 + Hh / 2 - .3, -D / 2 + i * D / 5));
+  for (let i = 0; i < 7; i++) for (const x of [-3.4, 3.4]) g.add(at(mesh(new THREE.CylinderGeometry(.1, .1, .08, 10), CYAN), x + (x < 0 ? -.4 : .4), .1, D / 2 + .5 + i * .9));
+  for (const sx of [-1, 1]) { g.add(at(rbox(.22, 4.4, .22, M.slate, .05), sx * 3.9, 2.2, D / 2 + 6)); }
+  g.add(at(rbox(8.2, .5, .3, M.dark, .08), 0, 4.3, D / 2 + 6));
+  for (let i = 0; i < 5; i++) g.add(at(mesh(new THREE.SphereGeometry(.17, 12, 8), red), -1.6 + i * .8, 4.3, D / 2 + 6.18));
+  g.add(at(rbox(1.6, 3.2, 1.6, WALL, .12), -W / 2 - 1.3, 1.6, -2), at(rbox(1.7, .16, 1.7, red, .05), -W / 2 - 1.3, 3.25, -2), at(rbox(1.3, .9, .08, NAVY, .04), -W / 2 - 1.3, 2.3, -1.17));
+  for (let i = 0; i < 4; i++) g.add(at(rbox(1.05 - (i % 2) * .3, .08, .1, i % 2 ? CYAN : red, .02), -W / 2 - 1.3 - (i % 2) * .15, 2.6 - i * .2, -1.12));
+  g.add(at(mesh(new THREE.CylinderGeometry(.04, .04, 2.4, 6), M.grey), -W / 2 - 1.3, 4.5, -2), at(mesh(new THREE.SphereGeometry(.1, 10, 8), red), -W / 2 - 1.3, 5.75, -2));
+  for (const z of [-2.6, 2.6]) g.add(at(rbox(W - 1, .08, .1, CYAN, .02), 0, y0 + Hh + .36, z));
+  for (let i = 0; i < 6; i++) g.add(at(rbox(.5, .5, .06, i % 2 ? NAVY : M.white, .02), -1.25 + i * .5, y0 + doorH + .62, D / 2 + .28)); // chequered strip over the door
   g.userData.shutter = shutter; g.userData.shutterBase = doorY; g.userData.doorH = doorH;
   // the car, on a stand inside the bay
   const car = new THREE.Group(), body = mat(0xe10600);
@@ -1119,7 +1168,7 @@ function updateF1(dt, t) {
 
 // ---------- Launch Pad: a rocket that lifts off after every successful deploy ----------
 function launchPad() {
-  const g = new THREE.Group(), orange = mat(0xf97316), steel = mat(0x8f949e), P = [0, -1];
+  const g = new THREE.Group(), orange = neon(0xff7a1a, .85), steel = mat(0x5b6178), P = [0, -1];
   g.add(at(mesh(new THREE.CylinderGeometry(5.4, 5.8, .8, 8), FOOT), P[0], .4, P[1]), at(mesh(new THREE.CylinderGeometry(4.6, 4.6, .1, 8), mat(0x6b6e76)), P[0], .85, P[1]));
   g.add(at(new THREE.Mesh(new THREE.TorusGeometry(4.6, .16, 8, 8).rotateX(Math.PI / 2).rotateY(Math.PI / 8), orange), P[0], .9, P[1]));
   g.add(at(rbox(2.8, .1, 2.8, mat(0x2b2d33), .05), P[0], .92, P[1]));
@@ -1131,7 +1180,7 @@ function launchPad() {
   tw.add(at(rbox(2.2, .3, .3, orange, .06), -1.6, 8.6, 0), at(rbox(1.8, .5, 1.8, M.white, .1), 0, 11.7, 0), at(mesh(new THREE.SphereGeometry(.2, 10, 8), toon({ color: 0xff5a3c, emissive: 0xff3b1f, emissiveIntensity: 1 })), 0, 12.15, 0));
   tw.position.set(P[0] + 3.4, .9, P[1]); g.add(tw);
   // the rocket
-  const rocket = new THREE.Group(), white = mat(0xf6f6f3);
+  const rocket = new THREE.Group(), white = mat(0xdfe6ff);
   rocket.add(at(mesh(new THREE.CylinderGeometry(.95, 1, 6.4, 24), white), 0, 4.1, 0), at(mesh(new THREE.ConeGeometry(.95, 2.3, 24), orange), 0, 8.45, 0));
   rocket.add(at(mesh(new THREE.CylinderGeometry(.97, .97, .4, 24), GOLD), 0, 6.6, 0), at(mesh(new THREE.CylinderGeometry(1.01, 1.01, .3, 24), orange), 0, 1.4, 0));
   for (const y of [5.4, 4.2]) rocket.add(at(mesh(new THREE.CylinderGeometry(.3, .3, .1, 18).rotateX(Math.PI / 2), NAVY), 0, y, .96));
@@ -1144,6 +1193,16 @@ function launchPad() {
   for (const [x, z] of [[-3.9, -3.6], [-5.2, -1.8]]) { g.add(at(mesh(new THREE.SphereGeometry(1, 20, 14), white), x, 1.9, z)); for (const dx of [-.5, .5]) g.add(at(rbox(.15, 1, .15, steel, .03), x + dx, .5, z)); }
   g.add(at(rbox(3, 1.8, 2.2, M.white, .4), -4.4, .9, 3.6), at(rbox(1.8, .5, .14, NAVY, .1), -4.4, 1.2, 4.72), at(rbox(3.1, .2, 2.3, orange, .06), -4.4, 1.85, 3.6));
   g.add(ramp(4.8, 3, 2.4, HAZARD));
+  // detail: pad lights, flame trench, gantry stairs and cross-braces, fuel hoses, floodlight masts, bunker windows and antenna
+  for (let k = 0; k < 16; k++) { const a = k / 16 * TAU; g.add(at(mesh(new THREE.CylinderGeometry(.12, .12, .1, 10), k % 2 ? CYAN : orange), P[0] + Math.sin(a) * 5.1, .86, P[1] + Math.cos(a) * 5.1)); }
+  g.add(at(rbox(1.2, .5, 4.2, NAVY, .08), P[0], .5, P[1] - 3.6), at(rbox(1.3, .08, 4.2, orange, .02), P[0], .78, P[1] - 3.6));
+  for (let y = 2; y < 11; y += 1.6) for (const sz of [-1, 1]) { const br = at(rbox(.08, 2.1, .08, steel, .02), P[0] + 3.4, .9 + y, P[1] + sz * .72); br.rotation.z = (Math.round(y / 1.6) % 2 ? 1 : -1) * .72; g.add(br); }
+  for (let k = 0; k < 9; k++) g.add(at(rbox(.7, .08, .3, M.slate, .02), P[0] + 4.5, 1 + k * .5, P[1] - .9 + k * .2));
+  g.add(at(rbox(1.2, .1, 1.2, M.slate, .03), P[0] + 2.3, 9.4, P[1]), at(rbox(1.2, .06, .06, CYAN, .01), P[0] + 2.3, 9.95, P[1] + .6), at(rbox(1.2, .06, .06, CYAN, .01), P[0] + 2.3, 9.95, P[1] - .6));
+  for (const [x, z] of [[-3.9, -3.6], [-5.2, -1.8]]) { g.add(at(mesh(new THREE.TorusGeometry(1.01, .05, 6, 28).rotateX(Math.PI / 2), orange), x, 1.9, z), at(mesh(new THREE.CylinderGeometry(.08, .08, 2.6, 8).rotateZ(Math.PI / 2), M.grey), x + 1.6, .25, z + .6)); }
+  for (const [x, z] of [[5.2, 3.6], [-1.6, -6.2]]) { g.add(at(mesh(new THREE.CylinderGeometry(.08, .12, 6, 8), steel), x, 3, z), at(rbox(1.2, .6, .3, NAVY, .06), x, 6.2, z), at(rbox(1, .42, .08, neon(0xdfe6ff, 1), .02), x, 6.2, z + (z > 0 ? -.17 : .17))); }
+  for (let i = 0; i < 3; i++) g.add(at(rbox(.5, .4, .06, i === 1 ? orange : CYAN, .02), -5.2 + i * .8, 1.2, 4.74));
+  g.add(at(mesh(new THREE.CylinderGeometry(.04, .04, 2, 6), M.grey), -5.4, 2.9, 3), at(mesh(new THREE.SphereGeometry(.1, 10, 8), orange), -5.4, 3.95, 3));
   g.userData = { rocket, flame, base: rocket.position.y, state: 'ready', t: 0, v: 0, queue: 0 };
   return g;
 }
@@ -1216,18 +1275,18 @@ function updateChat(dt, t) {
 
 // ---------- Off-Duty Lounge: a deck with a movie corner, a reading nook and a painting easel ----------
 function lounge() {
-  const g = new THREE.Group(), wood = mat(0xcfb08a), cushion = mat(0x9d6bd6), D = {};
-  const planks = toon({ map: canvasTex(128, 128, (x) => { x.fillStyle = '#d9a35f'; x.fillRect(0, 0, 128, 128); x.fillStyle = 'rgba(120,70,20,.25)'; for (let i = 0; i < 128; i += 16) x.fillRect(0, i, 128, 2); for (let i = 0; i < 8; i++) x.fillRect((i * 37) % 128, i * 16, 2, 16); }) });
-  g.add(at(mesh(new THREE.CylinderGeometry(7.6, 7.9, .5, 48), [mat(0xc58a46), planks, mat(0xc58a46)]), 0, .25, 0));
-  for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + .5; g.add(at(mesh(new THREE.CylinderGeometry(.18, .22, .9, 10), M.white), Math.sin(a) * 8.6, .45, Math.cos(a) * 8.6), at(mesh(new THREE.SphereGeometry(.2, 10, 8), toon({ color: 0xfff1c8, emissive: 0xffd27a, emissiveIntensity: .4 })), Math.sin(a) * 8.6, .95, Math.cos(a) * 8.6)); }
-  g.add(at(mesh(new THREE.TorusGeometry(7.6, .14, 8, 64).rotateX(Math.PI / 2), M.blue), 0, .5, 0));
+  const g = new THREE.Group(), wood = mat(0x3a4055), cushion = neon(0xb06bff, .45), D = {};
+  const planks = toon({ map: canvasTex(128, 128, (x) => { x.fillStyle = '#1c2135'; x.fillRect(0, 0, 128, 128); x.fillStyle = 'rgba(176,107,255,.35)'; for (let i = 0; i < 128; i += 16) x.fillRect(0, i, 128, 2); for (let i = 0; i < 8; i++) x.fillRect((i * 37) % 128, i * 16, 2, 16); }) });
+  g.add(at(mesh(new THREE.CylinderGeometry(7.6, 7.9, .5, 48), [mat(0x141829), planks, mat(0x141829)]), 0, .25, 0));
+  for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + .5; g.add(at(mesh(new THREE.CylinderGeometry(.18, .22, .9, 10), M.white), Math.sin(a) * 8.6, .45, Math.cos(a) * 8.6), at(mesh(new THREE.SphereGeometry(.2, 10, 8), toon({ color: 0xfff1c8, emissive: 0xb06bff, emissiveIntensity: 1 })), Math.sin(a) * 8.6, .95, Math.cos(a) * 8.6)); }
+  g.add(at(mesh(new THREE.TorusGeometry(7.6, .14, 8, 64).rotateX(Math.PI / 2), neon(0xb06bff, 1)), 0, .5, 0));
   // movie corner: screen and sofa
   const screenMat = new THREE.MeshBasicMaterial({ color: 0x202024 });
   g.add(at(rbox(4.6, 2.8, .3, M.dark, .1), -3.6, 2.4, -4.4), at(new THREE.Mesh(new THREE.PlaneGeometry(4.2, 2.4), screenMat), -3.6, 2.4, -4.24));
   for (const x of [-5.2, -2]) g.add(at(mesh(new THREE.CylinderGeometry(.08, .08, 1.2), M.grey), x, .9, -4.4));
   g.add(at(rbox(3.4, .7, 1.3, cushion, .3), -3.6, .85, -.6), at(rbox(3.4, 1.1, .4, cushion, .2), -3.6, 1.25, .05));
   // reading nook: armchair, bookshelf, floor lamp
-  g.add(at(rbox(1.6, .7, 1.5, mat(0xd6ad55), .3), 3.8, .85, -1.2), at(rbox(1.6, 1.2, .4, mat(0xd6ad55), .2), 3.8, 1.3, -1.9));
+  g.add(at(rbox(1.6, .7, 1.5, neon(0x19e3ff, .3), .3), 3.8, .85, -1.2), at(rbox(1.6, 1.2, .4, neon(0x19e3ff, .3), .2), 3.8, 1.3, -1.9));
   g.add(at(rbox(2.4, 3, .7, wood, .1), 4.4, 2, -4.6));
   ['#e5484d', '#3fb39a', '#d6ad55', '#9d6bd6', '#f4f4f1', '#e10600'].forEach((c, i) => g.add(at(rbox(.3, .8 + (i % 3) * .15, .5, mat(new THREE.Color(c)), .04), 3.5 + i * .34, 1.0 + .4 + (i % 3) * .07, -4.3), at(rbox(.3, .7, .5, mat(new THREE.Color(c)), .04), 3.6 + i * .3, 2.35, -4.3)));
   const lampMat = toon({ color: 0xfff1c8, emissive: 0xffd27a, emissiveIntensity: .1 });
@@ -1243,11 +1302,22 @@ function lounge() {
   easel.position.set(.4, .5, 3.6); easel.rotation.y = Math.PI; g.add(easel);
   g.add(at(mesh(new THREE.CylinderGeometry(.35, .35, .7, 16), wood), .4, .85, 5.1));
   // potted plants for a cozy feel
-  for (const [x, z] of [[-6.2, 2.8], [6.2, 2.6], [0, -6.4]]) g.add(at(mesh(new THREE.CylinderGeometry(.45, .35, .7, 14), mat(0xd9d9d3)), x, .85, z), at(mesh(new THREE.IcosahedronGeometry(.75, 1), mat(0x6fae7c)), x, 1.7, z));
+  for (const [x, z] of [[-6.2, 2.8], [6.2, 2.6], [0, -6.4]]) g.add(at(mesh(new THREE.CylinderGeometry(.45, .35, .7, 14), mat(0x2b3148)), x, .85, z), at(mesh(new THREE.IcosahedronGeometry(.75, 1), LEAF), x, 1.7, z));
   g.add(tree(-6.4, -2, true), tree(6.6, -3.2, false), tree(-2.6, -6.8, true));
   g.add(at(mesh(new THREE.CylinderGeometry(.9, .9, .1, 20), M.white), 5.4, 1.3, 3.2), at(mesh(new THREE.CylinderGeometry(.08, .08, 1.6), M.grey), 5.4, 1.4, 3.2), at(mesh(new THREE.ConeGeometry(1.6, .8, 12), mat(0xf4f4f1)), 5.4, 2.6, 3.2));
   for (const a of [0, Math.PI]) g.add(at(rbox(.6, .5, .6, mat(0xf4f4f1), .1), 5.4 + Math.cos(a) * 1.3, .75, 3.2 + Math.sin(a) * 1.3));
   { const vm = at(rbox(1.3, 2.4, 1, mat(0xe5484d), .15), 1.8, 1.7, -6.5); vm.add(at(rbox(.8, 1.2, .1, mat(0xdff3ff), .05), 0, .3, .52)); g.add(vm); }
+  // detail: a string of lights overhead, a neon bar with stools, floor cushions, a rug, a telescope and a record player
+  for (let k = 0; k < 14; k++) { const a = k / 14 * TAU, r2 = 7.2; g.add(at(mesh(new THREE.SphereGeometry(.13, 8, 6), neon([0xb06bff, 0x19e3ff, 0xff3d9a][k % 3], 1)), Math.sin(a) * r2, 3.6 + Math.sin(k * 1.7) * .15, Math.cos(a) * r2)); if (k % 2 === 0) g.add(at(mesh(new THREE.CylinderGeometry(.05, .07, 3.6, 6), M.slate), Math.sin(a) * r2, 2.1, Math.cos(a) * r2)); }
+  g.add(at(mesh(new THREE.TorusGeometry(7.2, .025, 4, 64).rotateX(Math.PI / 2), M.grey), 0, 3.62, 0));
+  g.add(at(rbox(3.6, 1.1, .9, NAVY, .1), -4.6, 1.05, 3.6), at(rbox(3.8, .1, 1.1, cushion, .04), -4.6, 1.62, 3.6), at(rbox(3.62, .08, .06, CYAN, .02), -4.6, .7, 4.07));
+  for (let k = 0; k < 3; k++) g.add(at(mesh(new THREE.CylinderGeometry(.32, .26, .12, 14), cushion), -5.7 + k * 1.1, 1.3, 4.9), at(mesh(new THREE.CylinderGeometry(.05, .05, .8, 6), M.grey), -5.7 + k * 1.1, .9, 4.9));
+  for (let k = 0; k < 5; k++) g.add(at(mesh(new THREE.CylinderGeometry(.09, .09, .34, 8), neon([0x19e3ff, 0xff3d9a, 0x3dff9e, 0xffb020, 0xb06bff][k], .9)), -5.8 + k * .55, 1.84, 3.4));
+  g.add(at(mesh(new THREE.CylinderGeometry(2.3, 2.3, .04, 40), mat(0x241a36)), -3.6, .52, -1.6), at(mesh(new THREE.TorusGeometry(2.3, .04, 6, 48).rotateX(Math.PI / 2), cushion), -3.6, .54, -1.6));
+  for (const [x, z, c] of [[-1.2, -2.6, 0x19e3ff], [-5.9, -2.4, 0xff3d9a]]) g.add(at(mesh(new THREE.SphereGeometry(.5, 14, 10), neon(c, .35)), x, .72, z).translateY(0));
+  { const sc = new THREE.Group(); for (let k = 0; k < 3; k++) { const leg = at(mesh(new THREE.CylinderGeometry(.04, .04, 1.6, 6), M.grey), Math.cos(k * 2.1) * .35, .8, Math.sin(k * 2.1) * .35); leg.rotation.set(Math.sin(k * 2.1) * .25, 0, -Math.cos(k * 2.1) * .25); sc.add(leg); }
+    const tube = at(mesh(new THREE.CylinderGeometry(.16, .2, 1.5, 14), M.white), 0, 1.9, 0); tube.rotation.x = -.9; sc.add(tube, at(mesh(new THREE.TorusGeometry(.2, .03, 6, 16), CYAN), 0, 2.36, -.58)); sc.children.at(-1).rotation.x = -.9 + Math.PI / 2; sc.position.set(-.6, .5, -5.6); g.add(sc); }
+  g.add(at(rbox(1.1, .8, .8, NAVY, .08), 6, .9, .6), at(mesh(new THREE.CylinderGeometry(.36, .36, .04, 24), mat(0x0b0d14)), 6, 1.33, .6), at(mesh(new THREE.CylinderGeometry(.1, .1, .05, 12), cushion), 6, 1.35, .6));
   // where I sit or stand for each activity (local position + facing)
   D.spots = { movie: [-3.6, .8, -.4, Math.PI], reading: [3.8, .8, -1.1, Math.PI], painting: [.4, .5, 5.0, Math.PI] };
   Object.assign(g.userData, D, { screenMat, lampMat, art, cx });
@@ -1482,10 +1552,12 @@ if (renderer) {
   const MODELS = { you: 'habitat', factory: 'factory', github: 'github', claude: 'claude', chat: 'chat', media: 'media' };
   const KEEP = new Set(['astronaut', 'stack', 'dish', 'talker', 'shoot', 'party']);
   const loader = new GLTFLoader();
+  // Blender exports strong emission; without tone mapping anything over ~1.2 washes out to white, so cap it to keep the hue.
+  const tune = m => { if (!m) return; m.envMapIntensity = .55; if (m.emissiveIntensity > 1.15) m.emissiveIntensity = 1.15; };
   const load = (id, file, tries = 0) => {
     loader.load(`models/${file}.glb`, gltf => {
       const g = stations[id].grp, model = gltf.scene;
-      model.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; o.userData.station = id; if (o.material) o.material.envMapIntensity = .55; } });
+      model.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; o.userData.station = id; tune(o.material); } });
       for (const c of g.children) if (!KEEP.has(c.name)) c.visible = false;
       g.add(model);
       const smoke = id === 'factory' && model.getObjectByName('smoke');
@@ -1494,14 +1566,14 @@ if (renderer) {
   };
   for (const [id, file] of Object.entries(MODELS)) load(id, file);
   const figure = (file, done, tries = 0) => loader.load(`models/${file}.glb`, gltf => {
-    gltf.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; if (o.material) o.material.envMapIntensity = .55; } });
-    done(gltf.scene);
+    gltf.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; tune(o.material); } });
+    done(gltf.scene, gltf.animations);
   }, undefined, () => { if (tries < 3) setTimeout(() => figure(file, done, tries + 1), 800 * (tries + 1)); });
   figure('rover', m => { GLB.rover = m; });
-  figure('pup', p => { GLB.pup = p; figure('astronaut', m => { GLB.astronaut = m; for (const g of GLB.waiting.splice(0)) dressAstronaut(g); }); });
+  figure('pup', p => { GLB.pup = p; figure('astronaut', (m, clips) => { GLB.astronaut = m; GLB.clips = clips; for (const g of GLB.waiting.splice(0)) dressAstronaut(g); }); });
 }
 
-// ---------- Agent Office: a building you can walk into. Sixteen agents work on two floors on mail, calendars, news and code. ----------
+// ---------- Agent Office: a building you can walk into. Eighteen agents work on three floors on mail, calendars, news, social and code. ----------
 // Their reports are private. They come from the local bridge (office.py) and only when this page is opened on Yajie's own Mac;
 // anywhere else the office is drawn, but no report is ever loaded.
 const AGENTS = [ // id, name, role, wing, colour, floor, desk x, desk z, room
@@ -1521,6 +1593,8 @@ const AGENTS = [ // id, name, role, wing, colour, floor, desk x, desk z, room
   ['coach', 'Coach', 'Keeps training the other agents', 'shared', 0xf97316, 2, -6.4, 2.3, 'training'],
   ['twin', "Yajie's Twin", 'Asks you questions and learns to think like you', 'shared', 0x3461f5, 2, 5, 2.3, 'study'],
   ['github', 'GitHub Watcher', 'Checks your GitHub for new pushes', 'shared', 0x8b949e, 2, 13.6, 2.3, 'dev'],
+  ['linkedin', 'LinkedIn Agent', 'Tracks your LinkedIn: invitations, messages, matching jobs and post ideas', 'shared', 0x0a66c2, 1, 11.6, 3.4, 'media'],
+  ['social', 'Social Media Agent', 'Watches your social accounts and drafts posts from your real work', 'shared', 0xe1306c, 1, 16.2, 3.4, 'media'],
 ].map(([id, name, role, wing, color, floor, x, z, room]) => ({ id, name, role, wing, color, floor, x, z, room, css: '#' + color.toString(16).padStart(6, '0') }));
 // Rooms: the sign on the floor, and the way in from the corridor (a corridor point, then a point just inside the door).
 const ROOMS = {
@@ -1533,12 +1607,16 @@ const ROOMS = {
   study: { label: "YAJIE'S STUDY", floor: 2, path: [[8.85, -1.5], [8.85, 3.2]] },
   dev: { label: 'DEV ROOM · GITHUB', floor: 2, path: [[17.3, -1.5], [17.3, 3.2]] },
   lounge: { label: 'LOUNGE', floor: 1, path: [[0, -1.5], [0, 3]] },
+  media: { label: 'SOCIAL STUDIO', floor: 1, path: [[13.9, -1.5], [13.9, 6.4]] },   // east end of the lounge; the way in runs between the two desks
+  meeting: { label: 'MEETING ROOM', floor: 3, path: [[-5, -1.5], [-5, -5.6]] },
+  deck: { label: 'OBSERVATION DECK', floor: 3, path: [[0, -1.5], [0, 3]] },
 };
-const LIFT = [[14.5, -1.5], [14.5, -7.2]], FLOOR_NAME = { 1: 'Front office', 2: 'Workshop' };
+const LIFT = [[14.5, -1.5], [14.5, -7.2]], FLOOR_NAME = { 1: 'Front office', 2: 'Workshop', 3: 'Meeting floor' };
 // Office life: who walks over to whom (the real hand-offs in the pipeline), and where they take a break.
-const PARTNERS = { sorter_personal: ['analyst_personal'], sorter_work: ['analyst_work'], analyst_personal: ['writer', 'calendar_personal'], analyst_work: ['writer', 'followup'], calendar_personal: ['prep'], calendar_work: ['prep'],
+const PARTNERS = { linkedin: ['social', 'writer'], social: ['linkedin', 'scout'], sorter_personal: ['analyst_personal'], sorter_work: ['analyst_work'], analyst_personal: ['writer', 'calendar_personal'], analyst_work: ['writer', 'followup'], calendar_personal: ['prep'], calendar_work: ['prep'],
   writer: ['analyst_personal', 'twin'], scout: ['twin', 'coach'], followup: ['analyst_work', 'deadlines'], prep: ['calendar_work', 'chief'], deadlines: ['chief', 'followup'], keymaster: ['github'], coach: ['sorter_personal', 'analyst_work', 'scout'], twin: ['writer', 'scout', 'chief'], github: ['coach', 'keymaster'] };
-const BREAKS = [['lounge', -4.4, 6, 'Coffee time'], ['lounge', -1, 10.6, 'Five minutes on the sofa'], ['lounge', 2, 4.2, 'Stretching my legs'], ['open', 4.2, -7, 'Quick stand-up at the table']];
+const BREAKS = [['lounge', -4.4, 6, 'Coffee time'], ['lounge', -1, 10.6, 'Five minutes on the sofa'], ['lounge', 2, 4.2, 'Stretching my legs'], ['open', 4.2, -7, 'Quick stand-up at the table'],
+  ['meeting', -9, -6.8, 'Team sync in the meeting room'], ['meeting', -6.2, -6.8, 'Going over the plan'], ['meeting', -3.4, -6.8, 'Sharing my numbers'], ['meeting', -.8, -6.8, 'Listening in on the sync'], ['deck', -3, 7, 'Looking at Earth for a minute'], ['deck', 6, 6, 'Fresh air on the deck']];
 const REPLIES = ['Got it.', 'Thanks, on it.', 'Noted.', 'Nice work.', 'Leave it with me.', 'Good to know.'], SMALL = [['Busy day?', 'Always.'], ['Coffee later?', 'Count me in.'], ['How is your queue?', 'Under control.'], ['Seen the Chief?', 'Doing the rounds.']];
 const NO_MAIL = new Set(['scout', 'github', 'keymaster', 'twin', 'coach']); // desks that do not depend on the mailboxes
 const OFF = { scene: new THREE.Scene(), cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 800), desks: {}, state: null, sel: 'chief', floor: 1, private: !LOCAL, err: '', built: false, moving: false, n: 0, twinReply: null };
@@ -1546,7 +1624,7 @@ let inside = false;
 
 // The building on the base: a two-storey office with a canopy door, a roof sign and windows that glow while the team is working.
 function officeBuilding() {
-  const g = new THREE.Group(), teal = mat(0x14b8a6), W = 12, D = 8.4, Hh = 6.6, y0 = .4;
+  const g = new THREE.Group(), teal = neon(0x14f1d0, .9), W = 12, D = 8.4, Hh = 6.6, y0 = .4;
   g.add(at(rbox(W + .5, y0, D + .5, FOOT, .12), 0, y0 / 2, 0));
   g.add(at(rbox(W, Hh, D, WALL, .3), 0, y0 + Hh / 2, 0));
   g.add(at(rbox(W + .3, .5, D + .3, teal, .14), 0, y0 + 3.45, 0));                    // band between the two floors
@@ -1561,12 +1639,24 @@ function officeBuilding() {
   g.add(at(rbox(4.2, .25, 1.7, teal, .1), 0, y0 + 2.95, D / 2 + .8));
   for (const sx of [-1, 1]) g.add(at(rbox(.16, 2.9, .16, FOOT, .05), sx * 1.9, y0 + 1.45, D / 2 + 1.5));
   g.add(ramp(D / 2 + .2, 3, 2.4, null), plant(-3.4, D / 2 + 1.1), plant(3.4, D / 2 + 1.1));
-  const sign = canvasTex(512, 112, (x) => { x.fillStyle = '#24305e'; x.fillRect(0, 0, 512, 112); x.fillStyle = '#14b8a6'; x.fillRect(0, 100, 512, 12); x.fillStyle = '#fff'; x.font = '800 58px "Plus Jakarta Sans", -apple-system, sans-serif'; x.textAlign = 'center'; x.fillText('AGENT OFFICE', 256, 74); });
+  const sign = canvasTex(512, 112, (x) => { x.fillStyle = '#0b0d14'; x.fillRect(0, 0, 512, 112); x.fillStyle = '#14f1d0'; x.fillRect(0, 100, 512, 12); x.fillRect(0, 0, 512, 6); x.shadowColor = '#14f1d0'; x.shadowBlur = 14; x.fillStyle = '#b8fff3'; x.font = '800 58px "Plus Jakarta Sans", -apple-system, sans-serif'; x.textAlign = 'center'; x.fillText('AGENT OFFICE', 256, 74); });
   g.add(at(rbox(6.6, 1.5, .3, NAVY, .1), 0, y0 + Hh + 1.2, D / 2 - .6));
   g.add(at(new THREE.Mesh(new THREE.PlaneGeometry(6.3, 1.38), new THREE.MeshBasicMaterial({ map: sign })), 0, y0 + Hh + 1.2, D / 2 - .44));
   for (const [x, z] of [[-3.6, -1.8], [3.2, -2.2]]) { g.add(at(rbox(2, .9, 1.5, mat(0x6b6e76), .15), x, y0 + Hh + .85, z)); g.add(at(mesh(new THREE.CylinderGeometry(.4, .4, .06, 18), mat(0x2b2d33)), x, y0 + Hh + 1.33, z)); }
   g.add(at(mesh(new THREE.CylinderGeometry(.06, .06, 3.2, 8), M.grey), 4.8, y0 + Hh + 2, -3));
-  const beacon = at(new THREE.Mesh(new THREE.SphereGeometry(.2, 14, 10), new THREE.MeshBasicMaterial({ color: 0x14b8a6 })), 4.8, y0 + Hh + 3.7, -3); g.add(beacon);
+  const beacon = at(new THREE.Mesh(new THREE.SphereGeometry(.2, 14, 10), new THREE.MeshBasicMaterial({ color: 0x14f1d0 })), 4.8, y0 + Hh + 3.7, -3); g.add(beacon);
+  // detail: mullions, wall seams, corner tubes, a roof rail, a satellite dish, a side stair and data cables
+  for (const yy of [y0 + 1.9, y0 + 5]) for (let i = 0; i < 4; i++) { if (yy < 3 && (i === 1 || i === 2)) continue; g.add(at(rbox(.06, 1.5, .24, NAVY, .01), -4.2 + i * 2.8, yy, D / 2 + .02), at(rbox(1.9, .06, .24, NAVY, .01), -4.2 + i * 2.8, yy, D / 2 + .02), at(rbox(2.1, .07, .1, teal, .02), -4.2 + i * 2.8, yy - .85, D / 2 + .1)); }
+  for (let i = 0; i < 5; i++) g.add(at(rbox(1.5, 1.2, .2, i % 2 ? win : NAVY, .06), -4.4 + i * 2.2, y0 + 5, -D / 2 - .02), at(rbox(1.5, 1.2, .2, i % 2 ? NAVY : win, .06), -4.4 + i * 2.2, y0 + 1.9, -D / 2 - .02));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(at(rbox(.12, Hh - .4, .12, CYAN, .03), sx * (W / 2 + .05), y0 + Hh / 2, sz * (D / 2 + .05)));
+  for (let i = 1; i < 8; i++) for (const sz of [-1, 1]) g.add(at(rbox(.04, Hh - .8, .04, NAVY, .01), -W / 2 + i * W / 8, y0 + Hh / 2, sz * (D / 2 + .01)));
+  for (let i = 0; i <= 8; i++) for (const sz of [-1, 1]) g.add(at(mesh(new THREE.CylinderGeometry(.04, .04, .7, 6), M.grey), -W / 2 + i * W / 8, y0 + Hh + .75, sz * (D / 2 + .1)));
+  for (const sz of [-1, 1]) g.add(at(rbox(W + .2, .06, .06, teal, .02), 0, y0 + Hh + 1.1, sz * (D / 2 + .1)));
+  { const ds = new THREE.Group(), bw = at(mesh(new THREE.SphereGeometry(1, 20, 10, 0, TAU, 0, 1), mat(0xcfd6ea, { side: THREE.DoubleSide })), 0, 1.3, 0); bw.rotation.x = -2; ds.add(bw, at(mesh(new THREE.CylinderGeometry(.08, .12, 1.2, 8), M.grey), 0, .6, 0), at(mesh(new THREE.SphereGeometry(.1, 8, 6), teal), 0, 1.75, .75)); ds.position.set(-4.6, y0 + Hh + .4, -2.6); g.add(ds); }
+  for (let k = 0; k < 8; k++) g.add(at(rbox(1.1, .1, .42, M.slate, .02), W / 2 + .7, .3 + k * .42, -3.4 + k * .46));
+  g.add(at(rbox(1.2, .1, 1.4, M.slate, .03), W / 2 + .7, y0 + 3.3, .9), at(rbox(.06, 1, 1.4, teal, .02), W / 2 + 1.28, y0 + 3.85, .9), door(W / 2 + .06, y0 + 4.5, .9, 1, 2, teal).rotateY(Math.PI / 2));
+  for (const x of [-5.2, -4.9]) g.add(at(mesh(new THREE.CylinderGeometry(.05, .05, Hh, 6), x < -5 ? M.grey : teal), x, y0 + Hh / 2, -D / 2 - .1));
+  for (const x of [-2.4, 2.4]) for (const z of [1.2, 2.6]) g.add(at(mesh(new THREE.CylinderGeometry(.12, .12, .1, 10), teal), x, .06, D / 2 + z));
   Object.assign(g.userData, { win, beacon });
   return g;
 }
@@ -1576,39 +1666,43 @@ function officeBuilding() {
 function buildOffice() {
   if (OFF.built) return; OFF.built = true;
   const S = OFF.scene; S.background = new THREE.Color(0x0b0d14); S.environment = scene.environment;
-  S.add(new THREE.HemisphereLight(0xfff4e6, 0x8a8fa8, 1.05));
-  const sunIn = new THREE.DirectionalLight(0xfff0dd, 1.5); sunIn.position.set(16, 34, 22); sunIn.castShadow = true; sunIn.shadow.mapSize.set(2048, 2048);
+  S.add(new THREE.HemisphereLight(0xb8c4ff, 0x1a1c2a, .85));
+  const sunIn = new THREE.DirectionalLight(0xdfe6ff, 1.15); sunIn.position.set(16, 34, 22); sunIn.castShadow = true; sunIn.shadow.mapSize.set(2048, 2048);
   Object.assign(sunIn.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 120 }); sunIn.shadow.bias = -.0004; sunIn.shadow.normalBias = .04; sunIn.shadow.radius = 4; S.add(sunIn);
-  const F = { 1: new THREE.Group(), 2: new THREE.Group() }; OFF.floors = F; OFF.picks = { 1: [], 2: [] }; S.add(F[1], F[2]);
-  const H = 2.8, HP = 3.5, wallM = mat(0xf4f2ee), darkM = mat(0x3a3f4b), white = mat(0xfaf9f6);
-  const glassM = new THREE.MeshStandardMaterial({ color: 0x9fd3ff, transparent: true, opacity: .16, roughness: .1, depthWrite: false });
-  const wood = toon({ map: canvasTex(128, 128, (x) => { x.fillStyle = '#c99a68'; x.fillRect(0, 0, 128, 128); for (let i = 0; i < 4; i++) { x.fillStyle = ['#c4925f', '#d0a373', '#c99a68', '#bd8a58'][i]; x.fillRect(0, i * 32, 128, 31); x.fillStyle = 'rgba(70,40,15,.25)'; x.fillRect((i * 53) % 128, i * 32, 2, 31); } }, [5, 3]) });
-  const woodBox = mat(0xa9764a);
+  const F = { 1: new THREE.Group(), 2: new THREE.Group(), 3: new THREE.Group() }; OFF.floors = F; OFF.picks = { 1: [], 2: [], 3: [] }; S.add(F[1], F[2], F[3]);
+  const H = 2.8, HP = 3.5, wallM = toon({ map: wallTex([3, 1]) }), darkM = mat(0x10131f), white = mat(0x343c5c), DARKC = new THREE.Color(0x0d1020);
+  const glassM = new THREE.MeshStandardMaterial({ color: 0x19e3ff, emissive: 0x19e3ff, emissiveIntensity: .25, transparent: true, opacity: .13, roughness: .1, depthWrite: false });
+  const wood = toon({ map: canvasTex(128, 128, (x) => { x.fillStyle = '#0d1020'; x.fillRect(0, 0, 128, 128); for (let i = 0; i < 4; i++) { x.fillStyle = ['#171b2c', '#1b2034', '#181c2e', '#151929'][i]; x.fillRect(0, i * 32, 128, 31); x.fillStyle = 'rgba(25,227,255,.35)'; x.fillRect((i * 53) % 128, i * 32, 2, 31); } }, [5, 3]) });
+  const woodBox = mat(0x2b3148);
   const put = (G, o, x, y, z) => { G.add(at(o, x, y, z)); return o; };
-  const wallX = (G, x1, x2, z, gaps = [], h = H) => { let a = x1; for (const [g1, g2] of [...gaps, [x2, x2]]) { if (g1 - a > .05) put(G, rbox(g1 - a, h, .35, wallM, .05), (a + g1) / 2, h / 2, z); a = g2; } };
-  const wallZ = (G, z1, z2, x, gaps = [], h = H) => { let a = z1; for (const [g1, g2] of [...gaps, [z2, z2]]) { if (g1 - a > .05) put(G, rbox(.35, h, g1 - a, wallM, .05), x, h / 2, (a + g1) / 2); a = g2; } };
+  const wallX = (G, x1, x2, z, gaps = [], h = H) => { let a = x1; for (const [g1, g2] of [...gaps, [x2, x2]]) { if (g1 - a > .05) { put(G, rbox(g1 - a, h, .35, wallM, .05), (a + g1) / 2, h / 2, z); put(G, rbox(g1 - a, .07, .4, CYAN, .02), (a + g1) / 2, h + .02, z); put(G, rbox(g1 - a, .12, .42, darkM, .03), (a + g1) / 2, .06, z); } a = g2; } };
+  const wallZ = (G, z1, z2, x, gaps = [], h = H) => { let a = z1; for (const [g1, g2] of [...gaps, [z2, z2]]) { if (g1 - a > .05) { put(G, rbox(.35, h, g1 - a, wallM, .05), x, h / 2, (a + g1) / 2); put(G, rbox(.4, .07, g1 - a, CYAN, .02), x, h + .02, (a + g1) / 2); put(G, rbox(.42, .12, g1 - a, darkM, .03), x, .06, (a + g1) / 2); } a = g2; } };
   const glass = (G, a1, a2, c, alongX) => { // a glazed wall: sill, top rail, mullions and one long pane
     const len = a2 - a1, mid = (a1 + a2) / 2, n = Math.round(len / 2.4), P = (w, h, d, m, u, y) => put(G, rbox(alongX ? w : d, h, alongX ? d : w, m, .04), alongX ? u : c, y, alongX ? c : u);
-    P(len, .3, .3, darkM, mid, .15); P(len, .16, .22, darkM, mid, H);
+    P(len, .3, .3, darkM, mid, .15); P(len, .16, .22, darkM, mid, H); P(len, .06, .26, CYAN, mid, H + .1);
     for (let k = 0; k <= n; k++) P(.14, H, .18, darkM, a1 + len * k / n, H / 2);
     put(G, new THREE.Mesh(new THREE.BoxGeometry(alongX ? len : .06, H - .4, alongX ? .06 : len), glassM), alongX ? mid : c, H / 2 + .1, alongX ? c : mid);
   };
-  const area = (G, x1, x2, z1, z2, m) => put(G, rbox(x2 - x1, .08, z2 - z1, m, .03), (x1 + x2) / 2, .04, (z1 + z2) / 2);
-  const sign = (G, text, x, z, w = 9, color = 'rgba(36,48,94,.6)') => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w * .125), new THREE.MeshBasicMaterial({ map: canvasTex(640, 80, (c) => { c.fillStyle = color; c.font = '800 48px "Plus Jakarta Sans", -apple-system, sans-serif'; c.textAlign = 'center'; c.fillText(text, 320, 57); }), transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; put(G, m, x, .11, z); };
+  const area = (G, x1, x2, z1, z2, m) => {
+    if (!m.map) { const tube = neon(m.color.getHex(), .9), cx = (x1 + x2) / 2, cz = (z1 + z2) / 2;
+      for (const z of [z1, z2]) put(G, rbox(x2 - x1, .05, .09, tube, .02), cx, .1, z); for (const x of [x1, x2]) put(G, rbox(.09, .05, z2 - z1, tube, .02), x, .1, cz);
+      m = mat(m.color.clone().lerp(DARKC, .74), { roughness: 1 }); }
+    return put(G, rbox(x2 - x1, .08, z2 - z1, m, .03), (x1 + x2) / 2, .04, (z1 + z2) / 2); };
+  const sign = (G, text, x, z, w = 9, color = 'rgba(36,48,94,.6)') => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w * .125), new THREE.MeshBasicMaterial({ map: canvasTex(640, 80, (c) => { const glow = color.replace(/rgba?\((\d+),\s*(\d+),\s*(\d+).*/, (_, r, g2, b) => { const k = 255 / Math.max(r, g2, b, 1); return `rgb(${Math.round(r * k)},${Math.round(g2 * k)},${Math.round(b * k)})`; }); c.font = '800 48px "Plus Jakarta Sans", -apple-system, sans-serif'; c.textAlign = 'center'; c.shadowColor = glow; c.shadowBlur = 16; c.fillStyle = glow; c.fillText(text, 320, 57); c.shadowBlur = 0; c.fillStyle = 'rgba(255,255,255,.75)'; c.fillText(text, 320, 57); }), transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; put(G, m, x, .11, z); };
   const pot = (G, x, z, s = 1.3) => { const p = plant(x, z); p.scale.setScalar(s); G.add(p); };
   const stools = (G, x, z, r, n, cols) => { for (let k = 0; k < n; k++) { const a = k / n * TAU + .4; put(G, mesh(new THREE.CylinderGeometry(.45, .38, .8, 16), mat(cols[k % cols.length])), x + Math.sin(a) * r, .4, z + Math.cos(a) * r); } };
   const roundTable = (G, x, z, r = 1.6) => { put(G, mesh(new THREE.CylinderGeometry(r, r, .16, 36), white), x, 1.2, z); put(G, mesh(new THREE.CylinderGeometry(.25, .7, 1.1, 18), FOOT), x, .55, z); };
   const eastFace = (G, tex, x, y, z, w, h) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); m.rotation.y = Math.PI / 2; put(G, m, x, y, z); return m; }; // a picture or screen on a wall face that looks east
-  for (const n of [1, 2]) { // what both floors share
+  for (const n of [1, 2, 3]) { // what every floor shares
     const G = F[n];
-    put(G, rbox(38.6, .6, 28.6, mat(0x9da1a9, { roughness: 1 }), .2), 0, -.3, 0); put(G, rbox(39.3, 1.1, 29.3, NAVY, .3), 0, -1.1, 0);
+    put(G, rbox(38.6, .6, 28.6, mat(0x12152a, { roughness: 1 }), .2), 0, -.3, 0); put(G, rbox(39, .1, 29, CYAN, .04), 0, -.62, 0); put(G, rbox(39.3, 1.1, 29.3, NAVY, .3), 0, -1.1, 0);
     wallX(G, -19.2, 19.2, -14.15, [], HP); wallZ(G, -14.15, 14.15, -19.15, [], HP);
     glass(G, -19, 19, 14.15, true); glass(G, -14, 14, 19.15, false);
     area(G, -18.9, 18.9, -3.8, .8, wood);                                              // the corridor
     wallZ(G, -14, -4, 10);                                                             // lift and stair core
-    for (let k = 0; k < 7; k++) put(G, rbox(3, .32 + k * .32, .72, mat(0xd9dce3), .04), 12, (.32 + k * .32) / 2, -5 - k * .74);
+    for (let k = 0; k < 7; k++) { put(G, rbox(3, .32 + k * .32, .72, mat(0x2b3148), .04), 12, (.32 + k * .32) / 2, -5 - k * .74); put(G, rbox(3, .04, .06, CYAN, .01), 12, .34 + k * .32, -4.66 - k * .74); }
     put(G, rbox(3.6, 3.2, .5, darkM, .08), 16.6, 1.6, -13.75);
-    for (const dx of [-.76, .76]) put(G, rbox(1.46, 2.6, .12, mat(0xb8bcc6), .03), 16.6 + dx, 1.3, -13.46);
+    for (const dx of [-.76, .76]) put(G, rbox(1.46, 2.6, .12, mat(0x3a4055), .03), 16.6 + dx, 1.3, -13.46);
     put(G, new THREE.Mesh(new THREE.BoxGeometry(.18, .3, .06), new THREE.MeshBasicMaterial({ color: 0x4ade9b })), 14.55, 1.5, -13.9);
     sign(G, 'FLOOR ' + n + ' · ' + FLOOR_NAME[n].toUpperCase(), 14.6, -3, 7.4, 'rgba(60,35,10,.55)');
   }
@@ -1627,14 +1721,14 @@ function buildOffice() {
     eastFace(G, OFF.board.tex, -18.78, 2, 7.6, 4.16, 2.3);
     stools(G, -13.6, 7.2, 1.5, 2, [0xd6ad55, 0x24305e]); pot(G, -17.8, 12.6, 1.5); pot(G, -8.2, 12.8);
     // lounge: sofa, coffee counter, round tables
-    const sofa = mat(0x7c6bd6);
+    const sofa = neon(0x7c6bd6, .35);
     put(G, rbox(5, 1, 1.6, sofa, .3), -2, .55, 12.4); put(G, rbox(5, 1.8, .6, sofa, .25), -2, .95, 13.3); for (const dx of [-2.6, 2.6]) put(G, rbox(.6, 1.4, 1.7, sofa, .25), -2 + dx, .75, 12.4);
     put(G, rbox(1.4, 1.3, 4.6, white, .1), -5.9, .65, 6); put(G, rbox(1.5, .14, 4.7, NAVY, .05), -5.9, 1.37, 6); put(G, rbox(.9, 1, .9, mat(0x2b2d33), .1), -5.9, 1.95, 4.7); put(G, rbox(.5, .5, .5, mat(0xe5484d), .08), -5.9, 1.7, 6.6);
-    roundTable(G, 5, 6.8); stools(G, 5, 6.8, 2.5, 4, [0x4f8cff, 0xf59e0b, 0x22c55e, 0xec4899]); roundTable(G, 12.5, 9.6, 1.4); stools(G, 12.5, 9.6, 2.2, 3, [0xa78bfa, 0x06b6d4, 0xef4444]);
-    pot(G, 17.6, 12.6, 1.6); pot(G, 17.6, 2.4); pot(G, 8.6, 12.8); pot(G, -18, -5.2, 1.1); pot(G, 8.8, -5.2, 1.1);
+    roundTable(G, 5, 6.8); stools(G, 5, 6.8, 2.5, 4, [0x4f8cff, 0xf59e0b, 0x22c55e, 0xec4899]); roundTable(G, 12.5, 10.7, 1.4); stools(G, 12.5, 10.7, 2.2, 3, [0xa78bfa, 0x06b6d4, 0xef4444]);
+    pot(G, 17.6, 12.6, 1.6); pot(G, 8.9, 2.2); sign(G, ROOMS.media.label, 14, 8.6, 6, 'rgba(225,48,108,.8)'); pot(G, 8.6, 12.8); pot(G, -18, -5.2, 1.1); pot(G, 8.8, -5.2, 1.1);
     for (const [z, c] of [[-9, 0x3461f5], [-1.5, 0xe5484d]]) { const d = door(0, 0, 0, 1.9, 2.9, mat(c)); d.rotation.y = Math.PI / 2; put(G, d, -18.9, 1.55, z); }
     // the plaza outside, with hedge planters, only seen from the ground floor
-    put(G, rbox(50, .4, 40, mat(0x596070, { roughness: 1 }), .3), 0, -1.85, 0);
+    put(G, rbox(50, .4, 40, toon({ map: mars(1.6), roughness: 1 }), .3), 0, -1.85, 0);
     for (const [x, z, w, d] of [[-9, 17.6, 16, 2], [9, 17.6, 12, 2], [22.6, 3, 2, 14]]) { put(G, rbox(w, .9, d, mat(0x858a94), .1), x, -1.2, z); const n = Math.round(Math.max(w, d) / 2); for (let k = 0; k < n; k++) put(G, mesh(new THREE.IcosahedronGeometry(.95, 1), mat(k % 2 ? 0x4fa35c : 0x5fae6a)), w > d ? x - w / 2 + 1 + k * 2 : x, -.35, w > d ? z : z - d / 2 + 1 + k * 2); }
   }
   { // Floor 2: the open workspace, the vault, the training room, Yajie's study and the dev room
@@ -1667,19 +1761,107 @@ function buildOffice() {
     eastFace(G, canvasTex(256, 128, (c) => { c.fillStyle = '#0d1117'; c.fillRect(0, 0, 256, 128); for (let i = 0; i < 20; i++) for (let j = 0; j < 7; j++) { c.fillStyle = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'][Math.floor(hash(i, j) * 5)]; c.fillRect(10 + i * 12, 24 + j * 12, 10, 10); } c.fillStyle = '#8b949e'; c.font = '700 13px -apple-system, sans-serif'; c.fillText('pushes', 10, 16); }), 10.72, 1.6, 8, 4.4, 2.2);
     put(G, rbox(1.2, 1.9, 1.2, mat(0x23262e), .1), 17.6, .95, 12.6); pot(G, 11.8, 12.8); pot(G, -10.4, 12.8, 1.1); pot(G, 1.2, 12.9, 1.1);
   }
+  { // Floor 3: the meeting room (a long table under a wall screen) and an open observation deck facing Earth
+    const G = F[3];
+    wallX(G, -19, 10, -4, [[-6.5, -3.5]]);
+    area(G, -18.6, 9.5, -13.6, -4.6, mat(0x14f1d0, { roughness: 1 })); area(G, -18.6, 18.8, 1.3, 13.8, mat(0x7a5cff, { roughness: 1 }));
+    sign(G, ROOMS.meeting.label, -5, -5.3, 8, 'rgba(20,241,208,.85)'); sign(G, ROOMS.deck.label, 0, 12.6, 9, 'rgba(122,92,255,.85)');
+    // the table: a dark slab with a glowing rim and a strip of light down the middle, on two plinths
+    put(G, rbox(12, .2, 2.2, white, .08), -5, 1.3, -9); put(G, rbox(12.1, .06, 2.3, neon(0x14f1d0, .9), .03), -5, 1.21, -9); put(G, rbox(9, .03, .14, CYAN, .01), -5, 1.41, -9);
+    for (const x of [-9, -1]) put(G, rbox(1.6, 1.2, 1.2, FOOT, .1), x, .6, -9);
+    for (let k = 0; k < 6; k++) { put(G, rbox(.5, .03, .7, mat(0x0b0d14), .01), -10 + k * 2, 1.42, -9.6); put(G, rbox(.42, .02, .56, neon([0x4f8cff, 0xf59e0b, 0xa78bfa, 0x22c55e, 0xec4899, 0x06b6d4][k], .6), .01), -10 + k * 2, 1.44, -9.6); }
+    put(G, mesh(new THREE.CylinderGeometry(.5, .6, .1, 24), FOOT), -5, 1.45, -9);                                   // the holo projector in the middle
+    const holo = put(G, new THREE.Mesh(new THREE.IcosahedronGeometry(.55, 1), new THREE.MeshBasicMaterial({ color: 0x14f1d0, wireframe: true })), -5, 2.3, -9); OFF.holo = holo;
+    put(G, new THREE.Mesh(new THREE.ConeGeometry(.55, .8, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0x14f1d0, transparent: true, opacity: .14, side: THREE.DoubleSide, depthWrite: false })).rotateX(Math.PI), -5, 1.85, -9);
+    for (let k = 0; k < 6; k++) put(G, mesh(new THREE.CylinderGeometry(.45, .38, .8, 16), mat([0x4f8cff, 0xf59e0b, 0xa78bfa, 0x22c55e, 0xec4899, 0x06b6d4][k])), -10 + k * 2, .4, -11.1);   // seats on the far side; the team stands on the near side
+    for (const x of [-12.2, 2.2]) put(G, mesh(new THREE.CylinderGeometry(.5, .42, .9, 16), mat(0xd6ad55)), x, .45, -9);
+    // the wall screen: the agenda, drawn once
+    put(G, rbox(9.4, 2.5, .2, mat(0x0b0d14), .06), -5, 2.1, -13.9); put(G, rbox(9.5, .07, .24, CYAN, .02), -5, 3.38, -13.9);
+    put(G, new THREE.Mesh(new THREE.PlaneGeometry(9.1, 2.25), new THREE.MeshBasicMaterial({ map: canvasTex(728, 180, (c) => {
+      c.fillStyle = '#0d1326'; c.fillRect(0, 0, 728, 180); c.fillStyle = '#14f1d0'; c.fillRect(0, 0, 728, 6); c.font = '800 26px "Plus Jakarta Sans", -apple-system, sans-serif'; c.fillText('TEAM SYNC', 22, 44);
+      c.font = '600 17px "Plus Jakarta Sans", -apple-system, sans-serif'; ['Inbox: what needs Yajie today', 'Calendar: clashes and prep', 'News, LinkedIn and social: what is worth a post', 'Follow-ups and deadlines'].forEach((t2, i) => { c.fillStyle = ['#4f8cff', '#f59e0b', '#ec4899', '#ef4444'][i]; c.fillRect(22, 64 + i * 27, 10, 10); c.fillStyle = 'rgba(255,255,255,.85)'; c.fillText(t2, 44, 75 + i * 27); });
+      for (let i = 0; i < 9; i++) { const h = 20 + hash(i, 3) * 90; c.fillStyle = i % 3 ? '#19e3ff' : '#ff3d9a'; c.fillRect(470 + i * 26, 160 - h, 16, h); }
+    }) })), -5, 2.1, -13.78);
+    put(G, rbox(.2, 2.2, 3.4, mat(0xdfe6ff), .05), -18.9, 1.9, -9); for (let k = 0; k < 4; k++) eastFace(G, canvasTex(8, 8, (c) => { c.fillStyle = ['#ff3d9a', '#19e3ff', '#ffb020', '#3dff9e'][k]; c.fillRect(0, 0, 8, 8); }), -18.78, 2.5 - (k % 2) * .9, -9.8 + (k >> 1) * 1.6 , 1.2, .6);   // whiteboard with sticky notes
+    pot(G, -17.8, -5.4, 1.2); pot(G, 8.6, -12.8, 1.2); pot(G, 8.6, -5.4, 1.1);
+    put(G, rbox(2.6, 1.1, .9, woodBox, .1), 6.6, .55, -13.3); for (let k = 0; k < 3; k++) put(G, mesh(new THREE.CylinderGeometry(.13, .11, .26, 14), neon([0x19e3ff, 0xff3d9a, 0xffb020][k], .6)), 5.9 + k * .7, 1.25, -13.3);   // drinks counter
+    // observation deck: a telescope, a holo-globe of Earth, loungers and planters
+    { const sc = new THREE.Group(); for (let k = 0; k < 3; k++) { const leg = at(mesh(new THREE.CylinderGeometry(.06, .06, 2.2, 6), M.grey), Math.cos(k * 2.1) * .5, 1.05, Math.sin(k * 2.1) * .5); leg.rotation.set(Math.sin(k * 2.1) * .28, 0, -Math.cos(k * 2.1) * .28); sc.add(leg); }
+      const tube = at(mesh(new THREE.CylinderGeometry(.24, .3, 2.4, 16), M.white), 0, 2.6, .3); tube.rotation.x = .95; sc.add(tube, at(rbox(.5, .5, .5, FOOT, .1), 0, 2.15, 0)); const lens = at(mesh(new THREE.TorusGeometry(.3, .04, 6, 20), CYAN), 0, 3.3, 1.28); lens.rotation.x = .95 - Math.PI / 2; sc.add(lens); put(G, sc, 12, 0, 10.4); }
+    put(G, mesh(new THREE.CylinderGeometry(1.1, 1.3, .5, 28), FOOT), -3, .25, 9.6); put(G, mesh(new THREE.TorusGeometry(1.15, .05, 6, 40).rotateX(Math.PI / 2), neon(0x7a5cff, 1)), -3, .52, 9.6);
+    const globe = put(G, new THREE.Mesh(new THREE.SphereGeometry(1.1, 20, 14), new THREE.MeshBasicMaterial({ color: 0x4f8cff, wireframe: true })), -3, 2.1, 9.6); OFF.globe = globe;
+    put(G, new THREE.Mesh(new THREE.SphereGeometry(.9, 20, 14), new THREE.MeshBasicMaterial({ color: 0x19e3ff, transparent: true, opacity: .18, depthWrite: false })), -3, 2.1, 9.6);
+    for (const [x, z] of [[-12, 9], [-9.4, 10.6], [3.6, 10.8]]) { const l = rbox(1.3, .35, 3, neon(0x7a5cff, .35), .15); put(G, l, x, .5, z); const b = rbox(1.3, .3, 1.2, neon(0x7a5cff, .35), .12); b.rotation.x = -.6; put(G, b, x, .95, z + 1.6); }
+    for (const [x, z] of [[-16, 3], [-16, 12.4], [16.6, 3], [16.6, 12.4], [8, 3]]) pot(G, x, z, 1.4);
+    for (let k = 0; k < 9; k++) put(G, mesh(new THREE.CylinderGeometry(.14, .14, .1, 10), k % 2 ? CYAN : neon(0x7a5cff, 1)), -16 + k * 4, .1, 13.4);   // landing-style lights along the glass
+  }
+  // Each desk gets the tools of its job: a slim piece standing at the right end of the desk and something small on the desktop.
+  const deskKit = (a, d, w) => {
+    const c = neon(a.color, .9), dk = mat(0x10131f), X = w / 2 + .5, add = (o, x, y, z) => { d.add(at(o, x, y, z)); return o; }, box = (ww, h, dd, m, x, y, z) => add(rbox(ww, h, dd, m, .03), x, y, z);
+    const post = (h = 2.2) => box(.12, h, .12, dk, X, h / 2, -.3), kind = a.id.replace(/_(personal|work)$/, '');
+    if (kind === 'sorter') { // inbox pigeonholes: green for real mail, red for spam; envelopes on the desk
+      box(.7, 2.1, .7, dk, X, 1.05, -.3); for (let k = 0; k < 4; k++) { box(.56, .34, .06, k === 3 ? neon(0xff5a5a, .9) : neon(0x4ade9b, .8), X, .45 + k * .46, .06); box(.4, .03, .3, mat(0xdfe6ff), X, .34 + k * .46, .2); }
+      for (let k = 0; k < 3; k++) box(.42, .03, .3, mat(0xdfe6ff), -w / 2 + .55, 1.44 + k * .035, -.45).rotation.y = k * .25;
+    } else if (kind === 'analyst') { // a bar chart you can walk around, and a magnifier
+      box(.9, .12, .7, dk, X, .06, -.3); [1.0, 1.7, .7, 2.2].forEach((h, k) => box(.16, h, .16, k === 3 ? c : neon(0x19e3ff, .7), X - .3 + k * .2, .12 + h / 2, -.3));
+      add(mesh(new THREE.TorusGeometry(.16, .03, 6, 20).rotateX(Math.PI / 2), c), -w / 2 + .5, 1.45, -.45); box(.05, .03, .26, dk, -w / 2 + .66, 1.44, -.27).rotation.y = -.7;
+    } else if (kind === 'calendar') { // a month board with today lit, and a desk clock
+      post(2.6); box(.9, 1.2, .08, dk, X, 2.1, -.24); for (let r = 0; r < 4; r++) for (let k = 0; k < 5; k++) box(.13, .2, .03, (r * 5 + k) === 7 ? c : (r * 5 + k) % 6 === 2 ? neon(0x19e3ff, .7) : mat(0x2b3148), X - .32 + k * .16, 2.5 - r * .27, -.19);
+      const ck = add(mesh(new THREE.CylinderGeometry(.17, .17, .06, 20).rotateX(Math.PI / 2), mat(0xdfe6ff)), -w / 2 + .5, 1.62, -.45); ck.add(at(rbox(.02, .12, .02, dk, .005), 0, .05, .04), at(rbox(.09, .02, .02, c, .005), .04, 0, .04));
+    } else if (kind === 'chief') { // the base flag, a trophy and a nameplate
+      post(2.9); box(.8, .5, .04, c, X + .42, 2.6, -.3); box(.8, .12, .045, neon(0x19e3ff, .8), X + .42, 2.42, -.3);
+      add(mesh(new THREE.CylinderGeometry(.14, .06, .26, 14), neon(0xffd23d, .6)), -w / 2 + .5, 1.62, -.45); box(.2, .08, .2, dk, -w / 2 + .5, 1.45, -.45); box(.8, .12, .08, neon(0xffd23d, .7), .9, 1.47, .6);
+    } else if (kind === 'writer') { // a shelf of drafts and a pen pot
+      box(.7, 2.3, .6, dk, X, 1.15, -.3); for (let r = 0; r < 3; r++) { box(.6, .04, .5, c, X, .5 + r * .7, -.28); for (let k = 0; k < 3; k++) box(.12, .42 + (k % 2) * .08, .34, mat([0xdfe6ff, 0xa78bfa, 0x4f8cff][(k + r) % 3]), X - .18 + k * .16, .74 + r * .7, -.3); }
+      add(mesh(new THREE.CylinderGeometry(.1, .1, .2, 12), dk), -w / 2 + .5, 1.51, -.45); for (let k = 0; k < 3; k++) box(.025, .3, .025, k ? neon(0x19e3ff, .8) : c, -w / 2 + .46 + k * .04, 1.68, -.45).rotation.z = (k - 1) * .2;
+    } else if (kind === 'scout') { // a listening dish and a stack of papers
+      post(2); const dish = add(mesh(new THREE.SphereGeometry(.5, 18, 8, 0, TAU, 0, 1), mat(0xcfd6ea, { side: THREE.DoubleSide })), X, 2.5, -.3); dish.rotation.x = -2.2; add(mesh(new THREE.SphereGeometry(.07, 8, 6), c), X, 2.4, .1);
+      for (let k = 0; k < 5; k++) box(.5, .04, .36, mat(k % 2 ? 0xdfe6ff : 0xaab3cc), -w / 2 + .55, 1.44 + k * .04, -.45).rotation.y = k * .12;
+    } else if (kind === 'followup') { // an hourglass and a bell
+      box(.6, .08, .6, dk, X, .9, -.3); box(.6, .08, .6, dk, X, 2, -.3); add(mesh(new THREE.ConeGeometry(.26, .52, 16), c), X, 1.7, -.3).rotation.x = Math.PI; add(mesh(new THREE.ConeGeometry(.26, .52, 16), neon(a.color, .4)), X, 1.2, -.3); post(.9);
+      add(mesh(new THREE.SphereGeometry(.14, 14, 8, 0, TAU, 0, Math.PI / 2), neon(0xffd23d, .7)), -w / 2 + .5, 1.42, -.45);
+    } else if (kind === 'prep') { // an easel with the agenda and a row of folders
+      for (const sx of [-1, 1]) box(.06, 2.4, .06, dk, X + sx * .35, 1.2, -.3).rotation.z = -sx * .1; box(.9, 1.2, .06, mat(0xdfe6ff), X, 1.9, -.22); for (let k = 0; k < 4; k++) box(.6 - (k % 2) * .2, .07, .02, k ? dk : c, X - (k % 2) * .1, 2.3 - k * .22, -.18);
+      for (let k = 0; k < 4; k++) box(.06, .32, .4, neon([0x06b6d4, 0xf59e0b, 0x4f8cff, 0xec4899][k], .5), -w / 2 + .4 + k * .08, 1.58, -.45);
+    } else if (kind === 'deadlines') { // a countdown tower and a warning lamp
+      box(.7, 2.4, .5, dk, X, 1.2, -.3); for (let r = 0; r < 3; r++) for (let k = 0; k < 2; k++) box(.22, .36, .04, r === 0 ? c : neon(0xffb020, .7 - r * .15), X - .14 + k * .28, 2 - r * .5, -.03);
+      add(mesh(new THREE.CylinderGeometry(.1, .12, .08, 12), dk), -w / 2 + .5, 1.45, -.45); add(mesh(new THREE.SphereGeometry(.1, 12, 8), c), -w / 2 + .5, 1.56, -.45);
+    } else if (kind === 'keymaster') { // a key cabinet and a padlock
+      box(.8, 1.5, .3, dk, X, 1.75, -.4); post(1.1); for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) { box(.05, .22, .04, neon(0xffd23d, .8), X - .24 + k * .24, 2.2 - r * .45, -.22); add(mesh(new THREE.TorusGeometry(.06, .02, 5, 12), neon(0xffd23d, .8)), X - .24 + k * .24, 2.36 - r * .45, -.22); }
+      box(.26, .22, .12, neon(0xffd23d, .6), -w / 2 + .5, 1.52, -.45); add(mesh(new THREE.TorusGeometry(.09, .025, 6, 14, Math.PI), dk), -w / 2 + .5, 1.63, -.45);
+    } else if (kind === 'coach') { // a weights rack, a cone and a stopwatch
+      post(1.6); for (let r = 0; r < 3; r++) { const bar = add(mesh(new THREE.CylinderGeometry(.04, .04, .7, 8).rotateZ(Math.PI / 2), M.grey), X, .5 + r * .5, -.1); for (const sx of [-1, 1]) bar.add(at(mesh(new THREE.CylinderGeometry(.16 - r * .02, .16 - r * .02, .1, 14).rotateZ(Math.PI / 2), r === 1 ? neon(0x19e3ff, .6) : c), sx * .3, 0, 0)); }
+      add(mesh(new THREE.ConeGeometry(.14, .34, 14), c), -w / 2 + .5, 1.6, -.45); add(mesh(new THREE.CylinderGeometry(.12, .12, .04, 18).rotateX(Math.PI / 2), mat(0xdfe6ff)), .9, 1.56, .55);
+    } else if (kind === 'twin') { // a hologram of Yajie's helmet on a projector
+      add(mesh(new THREE.CylinderGeometry(.4, .5, .5, 20), dk), X, .25, -.3); add(mesh(new THREE.TorusGeometry(.42, .04, 6, 28).rotateX(Math.PI / 2), c), X, .52, -.3);
+      add(new THREE.Mesh(new THREE.SphereGeometry(.5, 14, 10), new THREE.MeshBasicMaterial({ color: a.color, wireframe: true })), X, 1.9, -.3); add(new THREE.Mesh(new THREE.ConeGeometry(.45, 1.1, 18, 1, true), new THREE.MeshBasicMaterial({ color: 0x19e3ff, transparent: true, opacity: .13, side: THREE.DoubleSide, depthWrite: false })).rotateX(Math.PI), X, 1.05, -.3);
+      box(.5, .04, .36, mat(0xdfe6ff), -w / 2 + .55, 1.44, -.45); box(.03, .03, .3, c, -w / 2 + .55, 1.48, -.45).rotation.y = .6;
+    } else if (kind === 'github') { // a server tower with blinking commits and a crate
+      box(.7, 2.4, .7, dk, X, 1.2, -.3); for (let r = 0; r < 7; r++) for (let k = 0; k < 3; k++) box(.12, .08, .03, hash(r, k) > .45 ? neon(0x39d353, .9) : mat(0x0e4429), X - .18 + k * .18, .5 + r * .28, .06);
+      box(.3, .3, .3, M.box, -w / 2 + .5, 1.56, -.45);
+    } else if (kind === 'linkedin') { // a little network of contacts and a stack of cards
+      post(1.5); const P = [[0, 2.4, 0], [-.3, 2, .1], [.32, 2.05, -.05], [-.12, 1.65, -.1], [.2, 2.75, .08]]; P.forEach(([x, y, z], k) => add(mesh(new THREE.SphereGeometry(k ? .09 : .14, 12, 8), k % 2 ? neon(0x19e3ff, .8) : neon(0x3d8bff, 1)), X + x, y, -.3 + z));
+      for (const [i, j] of [[0, 1], [0, 2], [0, 4], [1, 3], [2, 3]]) { const A = new THREE.Vector3(...P[i]), B = new THREE.Vector3(...P[j]), ln = add(mesh(new THREE.CylinderGeometry(.015, .015, A.distanceTo(B), 5), M.grey), X + (A.x + B.x) / 2, (A.y + B.y) / 2, -.3 + (A.z + B.z) / 2); ln.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()); }
+      for (let k = 0; k < 4; k++) box(.3, .02, .18, k % 2 ? mat(0xdfe6ff) : neon(0x3d8bff, .5), -w / 2 + .5, 1.44 + k * .025, -.45);
+    } else if (kind === 'social') { // a ring light on a stand with a phone in it, and a heart
+      post(2); add(mesh(new THREE.TorusGeometry(.42, .06, 8, 32), neon(0xffe6f0, 1)), X, 2.55, -.3); box(.22, .4, .03, dk, X, 2.55, -.3); box(.18, .32, .01, c, X, 2.55, -.28);
+      const h = add(mesh(new THREE.SphereGeometry(.09, 10, 8), c), -w / 2 + .46, 1.58, -.45); add(mesh(new THREE.SphereGeometry(.09, 10, 8), c), -w / 2 + .56, 1.58, -.45); add(mesh(new THREE.ConeGeometry(.13, .18, 4), c), -w / 2 + .51, 1.47, -.45).rotation.x = Math.PI;
+    }
+  };
   // one standing desk, monitor and agent per job
   for (const a of AGENTS) {
     const G = F[a.floor], d = new THREE.Group(), w = a.id === 'chief' ? 3.9 : 3.5;
-    d.add(at(rbox(w, .18, 1.7, white, .06), 0, 1.32, 0), at(rbox(w, .1, .08, mat(a.color), .03), 0, 1.2, .84), at(rbox(w - .4, .7, .08, FOOT, .03), 0, .85, -.7));
+    d.add(at(rbox(w, .18, 1.7, white, .06), 0, 1.32, 0), at(rbox(w + .04, .07, .08, neon(a.color, 1), .03), 0, 1.3, .86), at(rbox(.08, .07, 1.74, neon(a.color, 1), .03), -w / 2 - .01, 1.3, 0), at(rbox(.08, .07, 1.74, neon(a.color, 1), .03), w / 2 + .01, 1.3, 0), at(rbox(w - .6, .04, .05, neon(a.color, .8), .01), 0, .06, .7), at(rbox(w - .4, .7, .08, FOOT, .03), 0, .85, -.7));
     for (const sx of [-1, 1]) d.add(at(rbox(.14, 1.25, 1.5, FOOT, .05), sx * (w / 2 - .15), .62, 0));
     d.add(at(rbox(.7, .06, .45, M.dark, .02), 0, 1.44, -.35), at(rbox(.12, .5, .12, M.dark, .03), 0, 1.7, -.42), at(rbox(2.2, 1.3, .12, mat(0x1d2027), .05), 0, 2.5, -.42));
     const cv = document.createElement('canvas'); cv.width = 256; cv.height = 144;
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
     d.add(at(new THREE.Mesh(new THREE.PlaneGeometry(2.04, 1.14), new THREE.MeshBasicMaterial({ map: tex })), 0, 2.5, -.35));
-    d.add(at(rbox(1.1, .05, .4, mat(0x3a3f4b), .02), 0, 1.44, .25), at(mesh(new THREE.CylinderGeometry(.13, .11, .26, 14), mat(a.color)), w / 2 - .5, 1.54, .2));
+    d.add(at(rbox(1.1, .05, .4, mat(0x3a3f4b), .02), 0, 1.44, .25), at(mesh(new THREE.CylinderGeometry(.13, .11, .26, 14), neon(a.color, .6)), w / 2 - .5, 1.54, .2), at(rbox(2.3, .05, .16, neon(a.color, 1), .02), 0, 3.18, -.42), at(rbox(.5, .03, .7, mat(0x0b0d14), .01), -w / 2 + .6, 1.43, .1), at(rbox(.42, .02, .5, neon(0xdfe6ff, .5), .01), -w / 2 + .6, 1.45, .1));
     const light = at(new THREE.Mesh(new THREE.SphereGeometry(.15, 14, 10), new THREE.MeshBasicMaterial({ color: 0x6b7280 })), .9, 3.3, -.42); d.add(light);
+    deskKit(a, d, w); shadowed(d);
     d.position.set(a.x, 0, a.z);
-    const who = astronaut(a.color), home = new THREE.Vector3(a.x, 0, a.z + 1.75); who.position.copy(home); who.rotation.y = Math.PI;
+    const who = astronaut(a.color); who.userData.deskOf = a.id; const home = new THREE.Vector3(a.x, 0, a.z + 1.75); who.position.copy(home); who.rotation.y = Math.PI;
     const ring = at(new THREE.Mesh(new THREE.TorusGeometry(.95, .07, 8, 40).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xecd08a })), home.x, .14, home.z); ring.visible = false;
     const pad = at(new THREE.Mesh(new THREE.CylinderGeometry(1.9, 1.9, 3.4, 10), new THREE.MeshBasicMaterial({ visible: false })), a.x, 1.7, a.z + .9); // generous click target
     for (const o of [d, who, pad]) o.userData.agent = a.id;
@@ -1715,7 +1897,7 @@ function buildOffice() {
 }
 function showFloor(n) {
   OFF.floor = n;
-  for (const k of [1, 2]) OFF.floors[k].visible = k === n;
+  for (const k of [1, 2, 3]) OFF.floors[k].visible = k === n;
   for (const id in OFF.desks) OFF.desks[id].lab.visible = OFF.desks[id].a.floor === n;
   for (const b of $('floors').querySelectorAll('button')) b.setAttribute('aria-pressed', String(+b.dataset.floor === n));
 }
@@ -1749,7 +1931,7 @@ function exitOffice() {
 }
 function selectAgent(id) { if (!OFF.desks[id]) return; OFF.sel = id; $('stationCard').classList.remove('min'); if (OFF.desks[id].a.floor !== OFF.floor) showFloor(OFF.desks[id].a.floor); applyOffice(true); $('station').scrollTop = 0; }
 $('floors').addEventListener('click', e => { const b = e.target.closest('button[data-floor]'); if (b) goFloor(+b.dataset.floor); });
-addEventListener('keydown', e => { if (inside && (e.key === '1' || e.key === '2') && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) goFloor(+e.key); });
+addEventListener('keydown', e => { if (inside && (e.key === '1' || e.key === '2' || e.key === '3') && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) goFloor(+e.key); });
 
 // ---- what each agent is doing right now, from the bridge ----
 const agentState = id => (OFF.state && OFF.state.agents.find(x => x.id === id)) || null;
@@ -1765,7 +1947,7 @@ function agentLine(id) { // [status, short text]
 const STATUS_HEX = { working: 0xffc95c, queued: 0x7aa2ff, done: 0x4ade9b, error: 0xff6b6b, idle: 0x6b7280, private: 0x6b7280 };
 function applyOffice(force) {
   if (!OFF.built) return;
-  const busyFloor = { 1: false, 2: false };
+  const busyFloor = { 1: false, 2: false, 3: false };
   for (const id in OFF.desks) {
     const k = OFF.desks[id], [status, text] = agentLine(id), key = status + '|' + text + '|' + (id === OFF.sel);
     k.ring.visible = id === OFF.sel; k.status = status; if (status === 'working') busyFloor[k.a.floor] = true;
@@ -1846,6 +2028,7 @@ function renderAgent(force) {
       : a.id === 'chief' ? (S.run_at ? `Runs every day at ${S.run_at} while Moonbase is up.` : '')
       : a.id === 'coach' ? 'Trains after every team run: new lessons from your mailboxes, a re-test of every old one, and questions for you where a model is unsure.'
       : a.id === 'github' ? 'Checks GitHub every 10 minutes while Moonbase is up.'
+      : a.id === 'linkedin' || a.id === 'social' ? 'I read the mail these networks send you. I never sign in to them and I never post: every draft is for you to copy.'
       : a.id === 'keymaster' ? 'Keys stay in the macOS Keychain. An agent is given a key only if that key names it, every request is written down, and no key is ever shown here or sent to the writing model.'
       : a.id === 'twin' ? 'Everything you tell me stays in a file on this Mac. I pass your writing style to the Reply Writer and your interests to the News Scout.' : 'Plain rules, no model needed.';
     if (a.id === 'chief' && S.notify && S.notify.topic) body += `<div class="sec">Phone notifications</div><div class="oi"><p>${S.notify.on ? 'On.' : 'Off.'} I send your phone a short line of counts after a briefing, and when a project is waiting to be pushed. Nothing from your mail is ever in it.</p><details><summary>Set up your phone</summary><p>1. Install the free <b>ntfy</b> app. 2. Tap + and subscribe to this topic, exactly as written. Keep it to yourself: anyone who knows it can see the counts.</p><pre>${esc(S.notify.topic)}</pre><div class="acts"><button data-copy>Copy topic</button><button data-office="notify-test">Send a test</button></div></details></div>`;
@@ -1936,6 +2119,7 @@ function updateOffice(dt, t) {
   me.who.position.set(c.pos.x, walking && !reduced ? Math.abs(Math.sin(t * 10)) * .12 : 0, c.pos.z); me.ring.position.set(c.pos.x, .14, c.pos.z);
   me.who.visible = c.floor === OFF.floor; me.ring.visible = me.who.visible && OFF.sel === 'chief'; me.say.visible = false;
   const run = OFF.state && OFF.state.running;
+  if (!reduced) { if (OFF.holo) OFF.holo.rotation.y = t * .6; if (OFF.globe) OFF.globe.rotation.y = t * .25; }
   OFF.leds.forEach((l, i) => { l.material.color.setHex(run && Math.sin(t * 9 + i * 2.3) > 0 ? 0xffc95c : hash(i, Math.floor(t * 1.5)) > .82 ? 0x1f6f52 : 0x4ade9b); });
 }
 
@@ -1943,7 +2127,7 @@ function updateOffice(dt, t) {
 const clock = new THREE.Clock();
 function frame() {
   const dt = Math.min(clock.getDelta(), .05), t = clock.elapsedTime;
-  if (inside) { updateOffice(dt, t); OFF.controls.update(); renderer.render(OFF.scene, OFF.cam); OFF.labels.render(OFF.scene, OFF.cam); requestAnimationFrame(frame); return; }
+  if (inside) { updateOffice(dt, t); updateFigures(dt, OFF.scene); OFF.controls.update(); renderer.render(OFF.scene, OFF.cam); OFF.labels.render(OFF.scene, OFF.cam); requestAnimationFrame(frame); return; }
   stepTween(dt); controls.update();
   updateRovers(dt, t); updatePuffs(dt);
   for (let i = popIns.length - 1; i >= 0; i--) { const b = popIns[i], s = Math.min(1, b.scale.x + dt * 3); b.scale.setScalar(s); if (s >= 1) popIns.splice(i, 1); }
@@ -1987,6 +2171,7 @@ function frame() {
   if (claudeNow.active) { stations.claude.pulse = Math.max(stations.claude.pulse, .6); if (!reduced && Math.random() < .12) puff(tmp.set(ST.claude.x, 9.6, ST.claude.z), new THREE.Vector3((Math.random() - .5) * .8, 1.8, (Math.random() - .5) * .8), 1.6, .25, .8, 0xd97757, .7); }
   if (!reduced && Math.random() < .08) puff(tmp.copy(stations.factory.grp.userData.stack).add(stations.factory.grp.position), new THREE.Vector3(.3, 1.6, 0), 3, .4, 1.6, 0xffffff, .5);
   { const u = stations.office.grp.userData, run = OFF.state && OFF.state.running; u.win.emissiveIntensity = run ? .75 + (reduced ? 0 : Math.sin(t * 5) * .25) : .2; u.beacon.material.color.setHex(run && Math.sin(t * 6) > 0 ? 0xffc95c : 0x14b8a6); }
+  updateFigures(dt, scene);
   renderer.render(scene, cam); labels.render(scene, cam);
   requestAnimationFrame(frame);
 }
@@ -2043,7 +2228,7 @@ function renderStation() {
     </div>
     <div class="sec">Recent crates <span>${rel.length ? rel.length + ' total' : ''}</span></div>
     <ul class="mini">${rel.slice(0, 4).map(e => `<li><span class="box">${ICON.box}</span><span><div class="t">${esc(e.title || '(no message)')}</div><div class="w">${esc(TYPE_LABEL[e.type] || e.type)} · ${esc(e.repo || '')}${e.local ? ' · test' : ''}</div></span><span class="w">${esc(ago(e.at))}</span></li>`).join('') || '<li style="display:block" class="muted">No crates through here yet.</li>'}</ul>`}
-    ${sel === 'office' ? `<button class="st-link obtn" data-office="enter">Go inside</button><p class="muted" style="margin:0;font-size:11.5px;line-height:1.5">Sixteen agents work in here on two floors. Floor 1: the Chief of Staff and the personal and work mail rooms. Floor 2: reply writer, news scout, follow-ups, meeting prep, deadlines, the Coach, the GitHub Watcher, the Keymaster and my twin.</p>` : ''}${sessList}${acts}`);
+    ${sel === 'office' ? `<button class="st-link obtn" data-office="enter">Go inside</button><p class="muted" style="margin:0;font-size:11.5px;line-height:1.5">Eighteen agents work in here on three floors. Floor 1: the Chief of Staff, the personal and work mail rooms and the social studio (LinkedIn and social media). Floor 3: the meeting room and an observation deck, where the team gathers between jobs. Floor 2: reply writer, news scout, follow-ups, meeting prep, deadlines, the Coach, the GitHub Watcher, the Keymaster and my twin.</p>` : ''}${sessList}${acts}`);
 }
 function renderTracking() {
   const r = tracked, ev = r ? r.ev : events[0];

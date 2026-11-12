@@ -1,14 +1,14 @@
-"""Render the seamless Mars sand texture the website lays under the base.
+"""Render the seamless Moon regolith texture the website lays under the base.
 
-Run: Blender --background --factory-startup --python blender/mars_ground.py
-Writes models/mars_ground.jpg (1024 x 1024). Every noise is fed (cos u, sin u, cos v, sin v), so the image tiles.
+Run: Blender --background --factory-startup --python blender/moon_ground.py
+Writes models/moon_ground.jpg (1024 x 1024). Every noise is fed (cos u, sin u, cos v, sin v), so the image tiles.
 """
 import math
 import os
 
 import bpy
 
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "mars_ground.jpg")
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "moon_ground.jpg")
 TAU = 2 * math.pi
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -23,7 +23,7 @@ sc.render.filepath = OUT
 
 bpy.ops.mesh.primitive_plane_add(size=2)
 plane = bpy.context.active_object
-m = bpy.data.materials.new("mars")
+m = bpy.data.materials.new("moon")
 m.use_nodes = True
 nt = m.node_tree
 N, L = nt.nodes, nt.links
@@ -73,35 +73,49 @@ def torus_noise(scale, detail, rough, seed):
     return n.outputs["Fac"]
 
 
-patches = torus_noise(0.55, 3, 0.5, 0.0)       # broad light and dark dust fields
-grain = torus_noise(6.0, 8, 0.65, 7.0)         # fine grit
-warp = torus_noise(1.2, 4, 0.5, 13.0)          # bends the ripples
-
-# wind ripples: integer frequencies keep them periodic, the warp keeps them from looking ruled
-phase = math_node("ADD", math_node("ADD", math_node("MULTIPLY", u, TAU * 22), math_node("MULTIPLY", v, TAU * 8)), math_node("MULTIPLY", warp, 16.0))
-ripple = math_node("POWER", math_node("MULTIPLY", math_node("ADD", math_node("SINE", phase), 1.0), 0.5), 3.0)
-
-# two faint tyre tracks that wander across and wrap
-def track(freq_v, amp, offset):
-    centre = math_node("ADD", math_node("MULTIPLY", math_node("SINE", math_node("ADD", math_node("MULTIPLY", v, TAU * freq_v), offset)), amp), 0.5 + offset * 0.05)
-    d = math_node("ABSOLUTE", math_node("SUBTRACT", u, centre))
-    ruts = math_node("ADD", math_node("LESS_THAN", math_node("ABSOLUTE", math_node("SUBTRACT", d, 0.009)), 0.0025), 0)
-    return ruts
 
 
-tracks = track(1, 0.07, 0.0)
+def torus_voronoi(scale, seed):
+    """4D Voronoi on the same torus: (distance to the cell centre, a random number per cell)."""
+    comb = N.new("ShaderNodeCombineXYZ")
+    for i, s in enumerate((cu, su, cv)):
+        L.new(s, comb.inputs[i])
+    n = N.new("ShaderNodeTexVoronoi")
+    n.voronoi_dimensions = "4D"
+    n.inputs["Scale"].default_value = scale
+    L.new(comb.outputs[0], n.inputs["Vector"])
+    L.new(math_node("ADD", sv, seed), n.inputs["W"])
+    rnd = N.new("ShaderNodeSeparateColor")
+    L.new(n.outputs["Color"], rnd.inputs[0])
+    return n.outputs["Distance"], rnd.outputs[0]
+
+
+patches = torus_noise(0.55, 3, 0.5, 0.0)       # broad light and dark dust fields (maria and highlands)
+grain = torus_noise(7.0, 9, 0.7, 7.0)          # fine regolith grit
+mottle = torus_noise(2.2, 5, 0.6, 13.0)        # mid-size blotches
+
+
+def craters(scale, seed, share, size):
+    """Small impact craters: a bright rim and a dark bowl in some of the Voronoi cells."""
+    d, rnd = torus_voronoi(scale, seed)
+    on = math_node("LESS_THAN", rnd, share)
+    rim = math_node("LESS_THAN", math_node("ABSOLUTE", math_node("SUBTRACT", d, size)), size * 0.22)
+    bowl = math_node("LESS_THAN", d, size * 0.8)
+    return math_node("MULTIPLY", on, math_node("SUBTRACT", math_node("MULTIPLY", rim, 0.16), math_node("MULTIPLY", bowl, 0.12)))
+
+
+pits = math_node("ADD", craters(2.2, 3.0, 0.45, 0.2), craters(5.5, 21.0, 0.4, 0.17))
 
 ramp = N.new("ShaderNodeValToRGB")
 cr = ramp.color_ramp
-cr.elements[0].position, cr.elements[0].color = 0.25, (0.33, 0.035, 0.016, 1)
-cr.elements[1].position, cr.elements[1].color = 0.78, (0.78, 0.13, 0.055, 1)
-mid = cr.elements.new(0.52)
-mid.color = (0.58, 0.075, 0.032, 1)
-shade = math_node("ADD", math_node("MULTIPLY", patches, 0.8), math_node("MULTIPLY", grain, 0.25))
-shade = math_node("ADD", shade, math_node("MULTIPLY", ripple, 0.05))
-shade = math_node("SUBTRACT", shade, math_node("MULTIPLY", tracks, 0.08))
+cr.elements[0].position, cr.elements[0].color = 0.2, (0.045, 0.047, 0.055, 1)
+cr.elements[1].position, cr.elements[1].color = 0.85, (0.36, 0.37, 0.4, 1)
+mid = cr.elements.new(0.5)
+mid.color = (0.16, 0.165, 0.185, 1)
+shade = math_node("ADD", math_node("MULTIPLY", patches, 0.55), math_node("MULTIPLY", grain, 0.3))
+shade = math_node("ADD", shade, math_node("MULTIPLY", mottle, 0.25))
+shade = math_node("ADD", shade, pits)
 L.new(shade, ramp.inputs["Fac"])
-
 emit = node("ShaderNodeEmission", Strength=1.0)
 L.new(ramp.outputs["Color"], emit.inputs["Color"])
 out = N.new("ShaderNodeOutputMaterial")
