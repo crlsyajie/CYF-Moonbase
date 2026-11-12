@@ -40,6 +40,8 @@ DEFAULT_CONFIG = {
     "run_at": "07:30",                    # daily run while the bridge is up; "" turns it off
     # Phone notifications through ntfy: counts only, never anything from a message. The topic is a private channel name.
     "notify": {"on": True, "server": "https://ntfy.sh", "topic": ""},
+    "job_interests": ["ai", "automation", "creative", "technologist", "developer", "engineer", "remote", "video", "design", "ux", "content", "production"],
+    "auto_push": True,                    # the GitHub Watcher pushes finished commits on its own (it never commits for you)
     "github_user": "crlsyajie",           # whose pushes the GitHub Watcher follows
     # Key slots: the only secrets an agent may ask the Keymaster for, and which agent may ask. Values live in the macOS Keychain.
     "keys": {"github_token": {"for": ["github"], "what": "A read-only GitHub token, so the GitHub Watcher can also see pushes to private repos. Optional."}},
@@ -1245,6 +1247,103 @@ class Twin(Agent):
         }
 
 
+def post_ideas(office, ctx, style):
+    """Ready-to-edit post drafts built from what Yajie really shipped (GitHub pushes) and the AI stories picked today.
+    Templates only: nothing is posted anywhere, and [brackets] mark what only Yajie can say."""
+    ideas, seen = [], set()
+    for p in (office.github.get("pushes") or [])[:12]:
+        repo = p["repo"].split("/")[-1]
+        if not p.get("msg") or repo in seen:
+            continue
+        seen.add(repo)
+        text = ("I just shipped an update to %s: %s.\n\n[One line on the problem it solves.]\n[One thing you learned building it.]\n\n#buildinpublic #AI" if style == "linkedin"
+                else "New in %s: %s 🚀\n[Add a screen recording or screenshot.]\n#buildinpublic") % (repo, p["msg"].rstrip("."))
+        ideas.append(item("idea:push:" + p["id"], "Show what you shipped in " + repo, "from your GitHub push", "", "you pushed this " + day_label(parse_dt(p["at"])).lower(), draft=text, draft_by="template"))
+        if len(ideas) == 2:
+            break
+    for n in (ctx.get("news") or [])[:2]:
+        text = ("My take on \"%s\":\n\n[Do you agree? What does it change for your work?]\n\n%s" if style == "linkedin" else "Hot take on this 👇\n\"%s\"\n[Your opinion in one line.]\n%s") % (n["title"], n.get("link", ""))
+        ideas.append(item("idea:news:" + n["id"], "React to: " + n["title"], "from today's AI news", "", "the News Scout picked it for you", draft=text, draft_by="template", link=n.get("link", ""), link_label="Open story"))
+    return ideas
+
+
+class LinkedInAgent(Agent):
+    """Reads the mail LinkedIn sends (it never signs in to LinkedIn): who wants to connect, messages, and job alerts ranked
+    against Yajie's interests, and drafts posts from real work."""
+    id, name, role, color = "linkedin", "LinkedIn Agent", "Tracks your LinkedIn: invitations, messages, matching jobs and post ideas", "#0a66c2"
+    needs = ("sorter_personal", "sorter_work", "github", "scout")
+
+    def run(self, ctx):
+        self.say("Reading what LinkedIn sent you")
+        wants = [w.lower() for w in self.o.cfg.get("job_interests", [])]
+        invites, messages, jobs, other = [], [], [], 0
+        for wing in WINGS:
+            for m in ctx["mail"].get(wing, []):
+                if m["sent"] or "linkedin.com" not in m["from"] or (now() - parse_dt(m["date"])).days > 7:
+                    continue
+                text = (m["subject"] + " " + m["snippet"]).lower()
+                if m["from"].startswith("invitations@") or "want to connect" in text or "invitation" in text:
+                    invites.append(item(m["id"], m["from_name"] or "Someone", mail_meta(m), m["snippet"], "wants to connect"))
+                elif m["from"].startswith(("messages-noreply@", "messaging-digest")) or "sent you a message" in text or "new message" in text:
+                    messages.append(item(m["id"], m["subject"], mail_meta(m), m["snippet"], "a message is waiting"))
+                elif "job" in m["from"] or "hiring" in text or " role" in text:
+                    hits = [w for w in wants if re.search(r"\b" + re.escape(w) + r"\b", text)]
+                    jobs.append((len(hits), item(m["id"], m["subject"], mail_meta(m), m["snippet"], ("matches " + ", ".join(hits[:4])) if hits else "", tone="warn" if len(hits) >= 2 else "")))
+                else:
+                    other += 1
+        jobs.sort(key=lambda j: -j[0])
+        good = [j for n, j in jobs if n]
+        ideas = post_ideas(self.o, ctx, "linkedin")
+        ctx["linkedin"] = (len(invites), len(messages), len(good))
+        bits = (["%d waiting to connect" % len(invites)] if invites else []) + (["%d message%s" % (len(messages), "" if len(messages) == 1 else "s")] if messages else []) + (["%d matching job%s" % (len(good), "" if len(good) == 1 else "s")] if good else [])
+        return {
+            "headline": ", ".join(bits) if bits else "Nothing new on LinkedIn",
+            "stats": [["Invitations", len(invites)], ["Messages", len(messages)], ["Matching jobs", len(good)], ["Post ideas", len(ideas)]],
+            "note": "" if not self.o.demo["personal"] else "Your real Gmail is not connected, so there is no LinkedIn mail to read.",
+            "sections": [{"title": "Waiting to connect", "empty": "No invitations this week.", "items": invites},
+                         {"title": "Messages", "empty": "", "items": messages},
+                         {"title": "Jobs that match you", "empty": "No job alerts matched your interests this week.", "items": good[:8]},
+                         {"title": "Other job alerts", "empty": "", "items": [j for n, j in jobs if not n][:6]},
+                         {"title": "Post ideas", "empty": "Push some work to GitHub and I will draft a post about it.", "items": ideas}],
+        }
+
+
+PLATFORMS = {"Instagram": ("instagram.com",), "Facebook": ("facebookmail.com", "facebook.com"), "TikTok": ("tiktok.com",), "YouTube": ("youtube.com",),
+             "X": ("x.com", "twitter.com"), "Pinterest": ("pinterest.com",), "Threads": ("threads.net", "threads.com"), "Discord": ("discord.com",), "Reddit": ("reddit.com", "redditmail.com")}
+
+
+class SocialAgent(Agent):
+    """Watches the other networks the same way: through the notification mail they send, never by signing in."""
+    id, name, role, color = "social", "Social Media Agent", "Watches your social accounts and drafts posts from your real work", "#e1306c"
+    needs = ("sorter_personal", "sorter_work", "github", "scout")
+
+    def run(self, ctx):
+        self.say("Checking your social notifications")
+        per, people = {}, []
+        for wing in WINGS:
+            for m in ctx["mail"].get(wing, []):
+                if m["sent"] or (now() - parse_dt(m["date"])).days > 7:
+                    continue
+                site = next((name for name, doms in PLATFORMS.items() if any(m["from"].endswith(d) or ("." + d) in m["from"] or ("@" + d) in m["from"] for d in doms)), None)
+                if not site:
+                    continue
+                per[site] = per.get(site, 0) + 1
+                text = (m["subject"] + " " + m["snippet"]).lower()
+                if re.search(r"\b(mentioned|tagged|commented|replied|message|messaged|followed|following you|sent you|new follower)\b", text):
+                    people.append(item(m["id"], m["subject"], site + " · " + mail_meta(m), m["snippet"], "someone interacted with you", tone="warn"))
+        ideas = post_ideas(self.o, ctx, "social")
+        ctx["social"] = len(people)
+        total = sum(per.values())
+        return {
+            "headline": ("%d interaction%s to check" % (len(people), "" if len(people) == 1 else "s")) if people else ("%d post idea%s ready" % (len(ideas), "" if len(ideas) == 1 else "s") if ideas else "All quiet"),
+            "stats": [["Interactions", len(people)], ["Notifications", total], ["Networks", len(per)], ["Post ideas", len(ideas)]],
+            "note": "" if total or self.o.demo["personal"] else "No Instagram, Facebook, TikTok, YouTube, X or Pinterest mail arrived this week, so I can only draft posts. Turn on email notifications in those apps and I will track them here.",
+            "sections": [{"title": "People interacting with you", "empty": "Nobody mentioned, messaged or followed you this week.", "items": people[:10]},
+                         {"title": "Activity by network", "empty": "", "items": [item("net:" + k, k, "%d notification%s this week" % (v, "" if v == 1 else "s")) for k, v in sorted(per.items(), key=lambda kv: -kv[1])]},
+                         {"title": "Post ideas", "empty": "Push some work to GitHub and I will draft a post about it.", "items": ideas}],
+        }
+
+
 class Chief(Agent):
     id, name, role, color = "chief", "Chief of Staff", "Runs the team and writes your briefing", "#d6ad55"
 
@@ -1274,6 +1373,11 @@ class Chief(Agent):
             lines.append("%d AI stories worth reading" % len(ctx["news"]))
         if ctx.get("pushes"):
             lines.append("%d GitHub push%s today" % (len(ctx["pushes"]), "" if len(ctx["pushes"]) == 1 else "es"))
+        li = ctx.get("linkedin", (0, 0, 0))
+        if li[0] or li[2]:
+            lines.append("LinkedIn: %d waiting to connect, %d matching jobs" % (li[0], li[2]))
+        if ctx.get("social"):
+            lines.append("%d social interaction%s to check" % (ctx["social"], "" if ctx["social"] == 1 else "s"))
         if ctx.get("twin"):
             lines.append("Your twin has questions for you")
         if ctx.get("coach", (0, 0))[1]:
@@ -1296,7 +1400,7 @@ class Chief(Agent):
 
 # ---------------------------------------------------------------- the office
 ORDER = ["sorter_personal", "sorter_work", "calendar_personal", "calendar_work", "scout", "github", "analyst_personal", "analyst_work",
-         "writer", "followup", "prep", "deadlines", "coach", "keymaster", "twin", "chief"]
+         "writer", "followup", "prep", "deadlines", "linkedin", "social", "coach", "keymaster", "twin", "chief"]
 
 
 class Office:
@@ -1326,14 +1430,15 @@ class Office:
         self.notified = read_json(os.path.join(DATA, "notified.json"), {}) or {}   # what was last sent to the phone, per kind
         n = dict(DEFAULT_CONFIG["notify"], **(self.cfg.get("notify") or {}))
         if not n.get("topic"):                     # a long random channel name: only someone who knows it can listen
-            n["topic"] = "moonbase-" + secrets.token_urlsafe(18)
+            # lowercase letters and digits that cannot be mistaken for each other, so it is easy to type on a phone
+            n["topic"] = "moonbase-" + "".join(secrets.choice("abcdefghjkmnpqrstuvwxyz23456789") for _ in range(20))
             self.cfg["notify"] = n
             write_json(cfg_path, self.cfg)
         self.cfg["notify"] = n
         made = [Sorter(self, "personal"), Analyst(self, "personal"), Scheduler(self, "personal"),
                 Sorter(self, "work"), Analyst(self, "work"), Scheduler(self, "work"),
                 ReplyWriter(self), NewsScout(self), FollowUps(self), MeetingPrep(self), Deadlines(self),
-                GitHubWatcher(self), Coach(self), Keymaster(self), Twin(self), Chief(self)]
+                GitHubWatcher(self), LinkedInAgent(self), SocialAgent(self), Coach(self), Keymaster(self), Twin(self), Chief(self)]
         self.agents = {a.id: a for a in made}
         self.running, self.last_run, self.run_lock = False, None, threading.Lock()
         saved = read_json(os.path.join(DATA, "reports.json"), {}) or {}
@@ -1384,7 +1489,7 @@ class Office:
             return False
         try:
             req = urllib.request.Request(n["server"].rstrip("/") + "/" + urllib.parse.quote(n["topic"]), data=text.encode("utf-8"),
-                                         headers={"Title": "Moonbase: " + title, "Tags": "office", "User-Agent": "moonbase-office"})
+                                         headers={"Title": "Moonbase: " + title, "Tags": "office", "Priority": "high", "User-Agent": "moonbase-office"})   # high: shows as a banner, not a silent entry
             urllib.request.urlopen(req, timeout=8).read()
         except Exception:
             return False
@@ -1398,6 +1503,9 @@ class Office:
         if not repo:
             return
         ahead, dirty = int(info.get("ahead") or 0), int(info.get("dirty") or 0)
+        if info.get("pushed"):
+            self.notify("Pushed to GitHub", "The GitHub Watcher pushed %d commit%s for you." % (int(info["pushed"]), "" if int(info["pushed"]) == 1 else "s"), key="pushed", force=True)
+            self.github["at"] = 0                  # look at GitHub again right away
         if (ahead or dirty) and repo not in self.waiting:
             self.notify("Work waiting to be pushed", "A project has work that is not on GitHub yet.", key="push")
         if ahead or dirty:

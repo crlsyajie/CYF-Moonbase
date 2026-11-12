@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Claude Code Stop hook for the GitHub Watcher (Moonbase Agent Office).
 
-When Claude finishes a turn in a git project that has work GitHub does not have yet, this makes Claude ask Yajie
-one question, "push this?", before it stops. It never pushes anything itself, and it asks once per new commit (or once
-per session for uncommitted work), so saying no is remembered. It also tells the GitHub Watcher's desk what is waiting.
+When Claude finishes a turn in a git project with commits GitHub does not have yet, this pushes them (a plain
+`git push` of the current branch to its own upstream: never a force push, never a new branch), because Yajie asked
+for pushes to go out without a question. Set "auto_push": false in the office config to be asked instead. It never
+commits: for uncommitted work it makes Claude ask "commit and push?" once per session. It also tells the GitHub Watcher's desk what is waiting.
 Runs inside Claude Code because the bridge, a background service, cannot read ~/Documents. Errors are ignored.
 """
 import json
 import os
 import subprocess
 import sys
+import time
 import urllib.request
 
 DATA = os.path.expanduser(os.environ.get("MOONBASE_OFFICE_DATA", "~/.local/share/moonbase-office"))
@@ -40,6 +42,21 @@ def main():
         pass
     if h.get("stop_hook_active") or not (ahead or dirty):
         return                                          # already asked this turn, or nothing to push
+    try:
+        auto = json.load(open(os.path.join(DATA, "config.json"))).get("auto_push", True)
+    except Exception:
+        auto = True
+    if ahead and auto and has_upstream and branch:
+        r = subprocess.run(["git", "-C", cwd, "push"], capture_output=True, text=True, timeout=25)
+        if r.returncode == 0:
+            try:
+                body = json.dumps({"repo": name, "branch": branch, "ahead": 0, "dirty": dirty, "pushed": ahead}).encode()
+                urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:8787/office/pushable", data=body, headers={"Content-Type": "application/json"}), timeout=2).read()
+            except Exception:
+                pass
+            print(json.dumps({"systemMessage": "GitHub Watcher pushed %d commit%s of %s (%s) to GitHub." % (ahead, "" if ahead == 1 else "s", name, branch)}))
+            return
+        # the push did not go through (no network, rejected, sign-in needed): fall through and ask instead
     path = os.path.join(DATA, "push_asked.json")
     try:
         asked = json.load(open(path))
@@ -52,8 +69,10 @@ def main():
         if dirty:
             what += ", plus %d file%s with uncommitted changes" % (dirty, "" if dirty == 1 else "s")
         ask = "Ask the user one short question: do they want to push now?"
-    elif dirty and not ahead and rec.get("session") != h.get("session_id"):
-        rec["session"] = h.get("session_id")
+    elif dirty and not ahead and h.get("session_id") not in rec.get("sessions", []) and time.time() - rec.get("asked_at", 0) > 3 * 3600:
+        # once per session, and at most once every three hours per project, however many sessions are working in it
+        rec["sessions"] = (rec.get("sessions", []) + [h.get("session_id")])[-20:]
+        rec["asked_at"] = time.time()
         what = "%d file%s with changes that are not committed or pushed" % (dirty, "" if dirty == 1 else "s")
         ask = "Ask the user one short question: do they want you to commit and push this work now?"
     else:
