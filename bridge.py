@@ -57,6 +57,15 @@ def forwarder():
                 time.sleep(delay)
                 delay = min(delay * 2, 60)
 
+# The Agent Office (office.py): agents that sort mail, read calendars and scout AI news. Its reports are private:
+# they are served only to this machine's own page (see office_ok) and never go through emit(), so never to the hub.
+OFFICE = None
+try:
+    import office as _office
+    OFFICE = _office.Office()
+except Exception as e:
+    print("agent office unavailable:", e)
+
 history = []          # recent crate events, replayed to new viewers
 clients = []          # one queue per open page
 lock = threading.Lock()
@@ -202,7 +211,55 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204); self.cors(); self.end_headers()
 
+    def office_ok(self):
+        """Office data is for this Mac's own Moonbase page only: no other website (Origin) and no other host name may read or change it."""
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0]
+        origin = self.headers.get("Origin")
+        site = self.headers.get("Sec-Fetch-Site")
+        return (host in ("127.0.0.1", "localhost") and (not origin or origin in ("http://127.0.0.1:%d" % PORT, "http://localhost:%d" % PORT))
+                and site in (None, "same-origin", "none"))
+
+    def send_json(self, code, value):
+        body = json.dumps(value).encode()
+        self.send_response(code); self.send_header("Content-Type", "application/json"); self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff"); self.end_headers(); self.wfile.write(body)
+
+    def office_post(self):
+        global last_seen
+        last_seen = time.time()
+        if not OFFICE or not self.office_ok():
+            return self.send_json(403 if OFFICE else 503, {"ok": False, "error": "not available"})
+        try:
+            size = int(self.headers.get("Content-Length", 0) or 0)
+            if size > 8_000_000:
+                return self.send_json(413, {"ok": False, "error": "too large"})
+            body = json.loads(self.rfile.read(size) or b"{}")
+            if self.path == "/office/run":
+                started = OFFICE.run_async(fresh_news=bool(body.get("fresh_news")))
+                return self.send_json(200, {"ok": True, "started": started})
+            if self.path == "/office/feedback":
+                OFFICE.feedback(str(body.get("kind")), str(body.get("id")), str(body.get("label")))
+                return self.send_json(200, {"ok": True})
+            if self.path == "/office/pushable":        # the Stop hook reports work in a project that GitHub does not have yet
+                OFFICE.pushable(body)
+                return self.send_json(200, {"ok": True})
+            if self.path == "/office/answer":          # an answer to one of the twin's questions
+                OFFICE.answer(str(body.get("qid")), body.get("value"))
+                return self.send_json(200, {"ok": True})
+            if self.path == "/office/ask":             # a question for the twin
+                return self.send_json(200, dict(OFFICE.ask(str(body.get("q") or "")), ok=True))
+            if self.path == "/office/ingest":          # a courier delivers mail or a calendar for one wing
+                n = OFFICE.ingest(str(body.get("wing")), str(body.get("kind")), body.get("items"))
+                if body.get("run", True):
+                    OFFICE.run_async()
+                return self.send_json(200, {"ok": True, "stored": n})
+            return self.send_json(404, {"ok": False, "error": "unknown"})
+        except Exception as e:
+            return self.send_json(400, {"ok": False, "error": str(e)[:200]})
+
     def do_POST(self):
+        if self.path.startswith("/office/"):
+            return self.office_post()
         if self.path != "/hook":
             self.send_response(404); self.end_headers(); return
         global last_seen
@@ -222,6 +279,14 @@ class Handler(BaseHTTPRequestHandler):
             body = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html"), "rb").read()
             self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Cache-Control", "no-cache")
             self.end_headers(); self.wfile.write(body); return
+        if self.path == "/office/state":
+            global last_seen
+            last_seen = time.time()
+            if not OFFICE or not self.office_ok():
+                return self.send_json(403 if OFFICE else 503, {"ok": False, "error": "not available"})
+            if not OFFICE.last_run and not OFFICE.running:
+                OFFICE.run_async()                     # first visit: put the team to work
+            return self.send_json(200, OFFICE.state())
         kind = {".glb": "model/gltf-binary", ".jpg": "image/jpeg"}.get(os.path.splitext(self.path)[1])
         if self.path.startswith("/models/") and kind:  # the Blender buildings and the Mars ground
             f = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", os.path.basename(self.path))
@@ -273,5 +338,7 @@ if __name__ == "__main__":
     threading.Thread(target=idle_watch, daemon=True).start()
     if UPSTREAM:
         threading.Thread(target=forwarder, daemon=True).start()
+    if OFFICE:
+        threading.Thread(target=OFFICE.schedule_loop, daemon=True).start()
     print(f"Moonbase on http://127.0.0.1:{PORT}{'  + forwarding to ' + UPSTREAM[0] if UPSTREAM else ''}  (page /, hooks → /hook, live feed → /events)")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()

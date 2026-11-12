@@ -9,6 +9,7 @@ A live view of my dev work as a lunar base. Each push to GitHub, and each Claude
 - **Creative Media Factory**: where Claude's skills run; a party starts there (dance floor, disco ball, dancers, confetti) while a skill runs
 - **Formula 1 Garage**: the F1 GP Predictor; runs of the `f1-gp-update` skill send a crate here and the car rolls out onto the apron
 - **Launch Pad**: behind the Habitat; every successful deploy (GitHub Pages builds, deployment statuses, or `wrangler`/`vercel`/`netlify`/`firebase` deploys run from Claude Code) launches the rocket
+- **Agent Office**: click it to walk inside. Sixteen agents work on two floors on my mail, calendars, AI news and code (see below)
 - **Off-Duty Lounge**: after 10 minutes with no activity I walk here and watch a movie, read or paint; any activity sends me back to work
 
 ## Live Claude Code activity (local)
@@ -24,6 +25,42 @@ Then open http://127.0.0.1:8787 (the bridge serves the page too). Without the br
 Claude chat (claude.ai) has no hooks; it reports chats through the hub's MCP connector instead (see below).
 
 Privacy: the bridge never forwards prompt text or full commands, only the event kind, tool name, a file's base name and the project folder name.
+
+## Agent Office (local and private)
+
+`office.py` is a team of agents written from scratch on the Python standard library. The bridge loads it and serves it to the page at `/office/*`.
+
+| Desk | What it does | How it thinks |
+| --- | --- | --- |
+| Chief of Staff | Runs everyone in order, spots personal/work clashes, writes the briefing | Plain code |
+| Mail Sorter (personal, work) | Separates spam from real mail | Its own Naive Bayes model |
+| Inbox Analyst (personal, work) | Picks the emails that need me, and says why | Its own Naive Bayes model |
+| Scheduler (personal, work) | Today, tomorrow, clashes and free time | Plain code |
+| Reply Writer | Drafts a suggested reply for each important email | A local model through Ollama (`llama3.2:3b`); fill-in templates when Ollama is off |
+| News Scout | Reads AI news feeds and keeps what matches my interests | Its own Naive Bayes model |
+| Follow-up Tracker, Meeting Prep, Deadline Watcher | Quiet threads, context before meetings, due dates in mail | Plain rules |
+| Coach | Keeps training the three models: lessons from what really happened in the mailboxes (spam folder, mail I replied to), a re-test of every lesson after each run, and questions for me where a model is unsure | Plain code driving the models |
+| GitHub Watcher | Checks my GitHub for new pushes every 10 minutes | GitHub's public API |
+| Keymaster | Guards the keys agents need. Values live in the macOS Keychain, go only to the agent a key slot names, every request is logged, and no value ever reaches a report, the page or the writing model | Plain code |
+| Yajie's Twin | Asks me questions, keeps my answers, guesses my next answer before asking and keeps score, and passes my writing style to the Reply Writer and my interests to the News Scout | A trait profile and a word-overlap search, both from scratch |
+
+Inside, the office has two floors (keys 1 and 2, or the switch at the bottom left). Floor 1 is the front office: the personal and work mail rooms, the manager's office and a lounge. Floor 2 is the workshop: the open workspace, the vault, the training room, the twin's study and the dev room. The Chief walks to whoever is working, by corridor and lift.
+
+Keys: a slot in `config.json` (`"keys"`) names which agent may ask for which key. Add a value yourself with `security add-generic-password -U -s moonbase-office -a <name> -w`, which asks for it in the terminal. Website passwords do not belong here; no agent signs in to a website.
+
+The three models are defined and trained in `office.py`: they start from a small starter set and learn from every correction made in the office ("Not spam", "This is important", "Not for me"). Personal is Gmail, work is Outlook; each has its own agents.
+
+Everything the office keeps lives in `~/.local/share/moonbase-office/` (owner-only files, outside this repo): `config.json` (interests, news feeds, important senders, daily run time, writing model), `models.json`, `inbox/<wing>/mail.json` and `calendar.json`, and the last reports. Until mail is delivered for a wing, its agents work on made-up practice mail and say so.
+
+Other endpoints: `POST /office/answer` (an answer for the twin) and `POST /office/ask` (a question for the twin).
+
+Mail and calendars are delivered to the agents, they never fetch them: `POST /office/ingest` with `{ "wing": "personal" | "work", "kind": "mail" | "calendar", "items": [...] }`, or `python3 office.py ingest personal mail file.json`. Mail items take `from`, `subject`, `body` or `snippet`, `date`, and optionally `thread_id`, `sent`, `labels`; calendar items take `title`, `start`, `end`, `attendees`, `location`.
+
+Privacy: office reports are served only to the page on 127.0.0.1 (requests from any other website or host name are refused), are never passed to the hub, and never appear on the hosted page, which draws the office with every report hidden.
+
+```bash
+python3 office.py run      # run the team once in the terminal and print the briefing
+```
 
 ## Hosted hub (Cloudflare Workers, free plan)
 

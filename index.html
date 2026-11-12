@@ -357,18 +357,60 @@ body { color: var(--ink); }
 #blList { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
 .feed .log { overflow-x: hidden; }
 .card { overflow: clip; } /* trims without ever becoming a scroll box */
+/* ---- Agent Office: the walk-in room and its report panel ---- */
+.fade { position: absolute; inset: 0; background: #05060a; opacity: 0; pointer-events: none; transition: opacity .26s ease; }
+.fade.on { opacity: 1; }
+.hud.in-office { grid-template-columns: minmax(0, 1fr) 380px; }
+.hud.in-office .kpis, .hud.in-office .tracking, .hud.in-office .feed, .hud.in-office .mapctl, .hud.in-office #listBtn, .hud.in-office #namesBtn, .hud.in-office .chip { display: none; }
+.hud.in-office .station { grid-row: 2 / 5; align-self: stretch; }
+.atag { gap: 6px; max-width: 210px; } .atag i { border-radius: 50%; flex: none; } .atag b { font-weight: 700; }
+.atag .s { color: rgba(236, 234, 228, .72); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.roster { display: flex; flex-wrap: wrap; gap: 6px; }
+.roster button { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .25); cursor: pointer; padding: 0; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); }
+.roster button[aria-current="true"] { border-color: #fff; box-shadow: 0 0 0 2px rgba(236, 208, 138, .9); }
+.roster button:focus-visible, .obtn:focus-visible, .acts button:focus-visible, .acts a:focus-visible { outline: 2px solid #d6ad55; outline-offset: 2px; }
+.olist { list-style: none; margin: -4px 0 0; padding: 0; display: grid; gap: 6px; }
+.oi { background: rgba(255, 255, 255, .06); border-radius: 12px; padding: 8px 10px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07); display: grid; gap: 3px; min-width: 0; }
+.oi.warn { box-shadow: inset 0 0 0 1px rgba(255, 201, 92, .5); }
+.oi .t { font-weight: 650; overflow-wrap: anywhere; } .oi .w, .oi .why { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.oi p { margin: 2px 0 0; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.oi .why::before { content: 'Why: '; font-weight: 700; }
+.oi details { margin-top: 3px; } .oi summary { cursor: pointer; font-weight: 700; font-size: 11.5px; color: #ecd08a; }
+.oi pre { white-space: pre-wrap; font: 12px/1.5 var(--font-ui); margin: 6px 0; padding: 8px 10px; border-radius: 10px; background: rgba(0, 0, 0, .28); overflow-wrap: anywhere; }
+.acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.acts button, .acts a { font: 600 11px var(--font-ui); color: var(--ink); text-decoration: none; border-radius: 999px; padding: 4px 10px; cursor: pointer; border: 1px solid var(--line); background: rgba(255, 255, 255, .1); }
+.acts button:hover, .acts a:hover { background: rgba(255, 255, 255, .22); } .acts button:disabled { opacity: .6; cursor: default; }
+.banner { font-size: 11.5px; line-height: 1.45; border-radius: 12px; padding: 8px 10px; background: var(--warn-bg); color: var(--warn); overflow-wrap: anywhere; }
+.floors { position: absolute; left: 14px; bottom: 14px; z-index: 5; padding: 6px; display: grid; gap: 4px; border-radius: 16px; }
+.floors button { display: flex; align-items: center; gap: 9px; font: 600 12px var(--font-ui); color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 11px; padding: 6px 12px 6px 7px; cursor: pointer; text-align: left; }
+.floors button b { width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center; background: rgba(255, 255, 255, .12); font-size: 13px; }
+.floors button:hover { background: rgba(255, 255, 255, .12); }
+.floors button[aria-pressed="true"] { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .28); } .floors button[aria-pressed="true"] b { background: #d6ad55; color: #1a1408; }
+.floors button.busy b { box-shadow: 0 0 0 2px #ffc95c; }
+.floors button:focus-visible, .askbox input:focus-visible, .askbox textarea:focus-visible { outline: 2px solid #d6ad55; outline-offset: 2px; }
+.askbox { display: flex; gap: 6px; margin: -4px 0 0; } .askbox.col { flex-direction: column; margin-top: 4px; }
+.askbox input, .askbox textarea { flex: 1; min-width: 0; font: 12.5px/1.4 var(--font-ui); color: var(--ink); background: rgba(0, 0, 0, .28); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; resize: vertical; }
+.askbox input::placeholder, .askbox textarea::placeholder { color: var(--muted); }
+.askbox .obtn { width: auto; padding: 7px 14px; border-radius: 10px; }
+.acts button { text-align: left; }
+@media (max-width: 860px) { .floors { position: static; grid-auto-flow: column; justify-content: start; } }
+.tiles.t3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .tiles.t4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.obtn { width: 100%; font: 700 12.5px var(--font-ui); cursor: pointer; } .obtn:disabled { opacity: .6; cursor: default; }
+@media (max-width: 1100px) { .hud.in-office { grid-template-columns: minmax(0, 1fr) 320px; } }
+@media (max-width: 860px) { .hud.in-office { grid-template-columns: minmax(0, 1fr); } .atag:not(.sel) { display: none; } } /* a phone has no room for twelve nameplates: show the selected one, pick others from the dots */
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="scene" id="scene" aria-label="3D moon base: your habitat, the build factory, the GitHub and Claude warehouses, and empty build sites"></div>
+  <div class="scene" id="scene" aria-label="3D moon base: your habitat, the build factory, the GitHub and Claude warehouses, and the Agent Office you can walk into"></div>
+  <div class="fade" id="fade" aria-hidden="true"></div>
   <div class="hud">
     <header class="topbar card">
       <div class="brand">
         <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 28 9v14l-12 7L4 23V9z" fill="#3461f5"/><path d="M16 2 28 9l-12 7L4 9z" fill="#6f8dff"/><path d="M16 16v14l12-7V9z" fill="#2347c9"/><circle cx="20" cy="10.5" r="2.2" fill="#fff" opacity=".9"/></svg>
         Moonbase
       </div>
-      <div class="chip"><span class="code">MB-01</span><span><b>Moonbase Yajie</b><small>Sea of Tranquility · 9 stations</small></span></div>
+      <div class="chip"><span class="code">MB-01</span><span><b>Moonbase Yajie</b><small>Sea of Tranquility · 10 stations</small></span></div>
       <div class="live off" id="live"><span class="dot"></span><span id="statusText">Connecting</span><time id="clock"></time></div>
       <span class="viewers" id="viewers" hidden title="People looking at Moonbase right now"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span id="viewersN"></span></span>
       <button class="panels-btn" id="listBtn" aria-expanded="false" aria-controls="buildings" title="List of buildings (B)">Buildings</button>
@@ -378,6 +420,7 @@ body { color: var(--ink); }
     </header>
 
     <button class="overview" id="overviewBtn" hidden title="Back to the whole base (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>Whole base</button>
+    <div class="card floors" id="floors" hidden role="group" aria-label="Office floors"><button data-floor="2" aria-pressed="false" title="Floor 2 (press 2)"><b>2</b><span>Workshop</span></button><button data-floor="1" aria-pressed="true" title="Floor 1 (press 1)"><b>1</b><span>Front office</span></button></div>
     <nav class="card buildings" id="buildings" hidden aria-label="Buildings"><div class="bl-head"><b>Buildings</b><span id="blCount"></span></div><ul id="blList"></ul></nav>
 
     <section class="kpis">
@@ -405,7 +448,7 @@ body { color: var(--ink); }
     <section class="feed card" id="feedCard"><button class="fold" aria-label="Fold this panel" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
       <div class="tabs"><b>Cargo log</b><span id="logCount"></span></div>
       <ul class="log" id="log"></ul>
-      <p class="hint">Click GitHub, Claude Code, the Chat Tower, Creative Media or F1 on the map to send a test crate from there.</p>
+      <p class="hint">Click GitHub, Claude Code, the Chat Tower, Creative Media or F1 on the map to send a test crate from there. Click the Agent Office to walk in.</p>
     </section>
   </div>
 </div>
@@ -452,13 +495,14 @@ const ST = {
   media:   { ...slot(30),  r: 10, color: 0xe0458f, css: '#e0458f', eyebrow: 'FACTORY · CM-01',   name: 'Creative Media Factory', sub: 'Where Claude\'s skills make things' },
   lounge:  { ...slot(210), r: 9,  color: 0x9d6bd6, css: '#9d6bd6', eyebrow: 'LEISURE · LG-01',   name: 'Off-Duty Lounge', sub: "Where I go when I'm not building" },
   f1:      { ...slot(330), r: 10, color: 0xe10600, css: '#e10600', eyebrow: 'RACING · F1-01',    name: 'Formula 1 Garage', sub: 'F1 GP Predictor: race data and predictions' },
+  office:  { x: +(slot(330).x + slot(30).x).toFixed(2), z: +(slot(330).z + slot(30).z).toFixed(2), r: 10, color: 0x14b8a6, css: '#14b8a6', eyebrow: 'OPERATIONS · AO-01', name: 'Agent Office', sub: 'My team of agents: mail, calendars and AI news' },
 };
 // Road network. Stops are gates in front of each building; the factory is ringed by the Main Road,
 // so traffic drives around it instead of through it. Chat's road curls round Claude Code to join its spoke.
 const RING = 10.6, polar = (cx, cz, deg, r) => [cx + r * Math.sin(deg * Math.PI / 180), cz + r * Math.cos(deg * Math.PI / 180)];
 const degTo = (a, b) => Math.atan2(b.x - a.x, b.z - a.z) * 180 / Math.PI;
 const NODES = {}, EDGES = [], CHAINS = []; // CHAINS: roads as drawn ({ nodes, kind, closed }); EDGES: the same roads as a graph
-const LINKED = { chat: 'claude', launch: 'you' }; // pieces on the outer ring, reached through their neighbour
+const LINKED = { chat: 'claude', launch: 'you', office: 'f1' }; // pieces on the outer ring, reached through their neighbour
 const spokes = Object.keys(ST).filter(id => id !== 'factory' && !LINKED[id]);
 for (const id of spokes) {
   const d = degTo(ST.factory, ST[id]);
@@ -1004,7 +1048,7 @@ function pin(hex) {
 const stations = {};
 for (const id in ST) {
   const s = ST[id];
-  const grp = id === 'you' ? habitat() : id === 'launch' ? launchPad() : id === 'lounge' ? lounge() : id === 'factory' ? factory() : id === 'f1' ? paddock() : id === 'media' ? mediaStudio() : id === 'chat' ? chatTower() : s.site ? buildSite() : hexWarehouse(s.css, id);
+  const grp = id === 'you' ? habitat() : id === 'launch' ? launchPad() : id === 'lounge' ? lounge() : id === 'factory' ? factory() : id === 'f1' ? paddock() : id === 'media' ? mediaStudio() : id === 'chat' ? chatTower() : id === 'office' ? officeBuilding() : s.site ? buildSite() : hexWarehouse(s.css, id);
   grp.position.set(s.x, 0, s.z); if (id === 'factory' || id === 'claude') grp.scale.setScalar(.8); // leaves room for the Main Road and the chat road
   if (id !== 'factory') { const f = ST.factory; grp.rotation.y = Math.atan2(f.x - s.x, f.z - s.z); }
   grp.traverse(o => { o.userData.station = id; });
@@ -1422,10 +1466,10 @@ if (renderer) {
 let sel = 'github';
 if (renderer) {
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), hitList = Object.values(stations).map(s => s.grp);
-  const pick = e => { const r = renderer.domElement.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, cam); const h = ray.intersectObjects(hitList, true)[0]; return h ? h.object.userData.station : null; };
+  const pick = e => { if (inside) return null; const r = renderer.domElement.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, cam); const h = ray.intersectObjects(hitList, true)[0]; return h ? h.object.userData.station : null; };
   let down = null;
   renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
-  renderer.domElement.addEventListener('pointerup', e => { if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5) { const id = pick(e); if (id) { sel = id; renderStation(); } } down = null; });
+  renderer.domElement.addEventListener('pointerup', e => { if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5) { const id = pick(e); if (id) { sel = id; renderStation(); if (id === 'office') enterOffice(); } } down = null; });
   renderer.domElement.addEventListener('dblclick', e => { const id = pick(e); if (id && ST[id].link) window.open(ST[id].link[0], '_blank', 'noopener'); });
   renderer.domElement.addEventListener('pointermove', e => { if (e.buttons) return; renderer.domElement.style.cursor = pick(e) ? 'pointer' : 'grab'; });
 }
@@ -1456,10 +1500,403 @@ if (renderer) {
   figure('pup', p => { GLB.pup = p; figure('astronaut', m => { GLB.astronaut = m; for (const g of GLB.waiting.splice(0)) dressAstronaut(g); }); });
 }
 
+// ---------- Agent Office: a building you can walk into. Sixteen agents work on two floors on mail, calendars, news and code. ----------
+// Their reports are private. They come from the local bridge (office.py) and only when this page is opened on Yajie's own Mac;
+// anywhere else the office is drawn, but no report is ever loaded.
+const AGENTS = [ // id, name, role, wing, colour, floor, desk x, desk z, room
+  ['sorter_personal', 'Mail Sorter', 'Separates spam from real mail', 'personal', 0x4f8cff, 1, -16.4, -12.6, 'personal'],
+  ['analyst_personal', 'Inbox Analyst', 'Picks the emails that need you', 'personal', 0x4f8cff, 1, -12, -12.6, 'personal'],
+  ['calendar_personal', 'Scheduler', 'Tells you what is on your calendar', 'personal', 0x4f8cff, 1, -7.6, -12.6, 'personal'],
+  ['chief', 'Chief of Staff', 'Runs the team and writes your briefing', 'shared', 0xd6ad55, 1, -15.4, 2.3, 'chief'],
+  ['sorter_work', 'Mail Sorter', 'Separates spam from real mail', 'work', 0xf59e0b, 1, -1.9, -12.6, 'work'],
+  ['analyst_work', 'Inbox Analyst', 'Picks the emails that need you', 'work', 0xf59e0b, 1, 2.5, -12.6, 'work'],
+  ['calendar_work', 'Scheduler', 'Tells you what is on your calendar', 'work', 0xf59e0b, 1, 6.9, -12.6, 'work'],
+  ['writer', 'Reply Writer', 'Drafts a suggested reply for each important email', 'shared', 0xa78bfa, 2, -16.2, -12.6, 'open'],
+  ['scout', 'News Scout', 'Reads AI news and keeps what is relevant to you', 'shared', 0x22c55e, 2, -11.6, -12.6, 'open'],
+  ['followup', 'Follow-up Tracker', 'Catches conversations that went quiet', 'shared', 0xec4899, 2, -7, -12.6, 'open'],
+  ['prep', 'Meeting Prep', 'Pulls the emails you need before each meeting', 'shared', 0x06b6d4, 2, -2.4, -12.6, 'open'],
+  ['deadlines', 'Deadline Watcher', 'Finds due dates hidden in your mail', 'shared', 0xef4444, 2, 2.2, -12.6, 'open'],
+  ['keymaster', 'Keymaster', 'Guards the keys the agents need and never shows them', 'shared', 0xfacc15, 2, -15.6, 2.3, 'vault'],
+  ['coach', 'Coach', 'Keeps training the other agents', 'shared', 0xf97316, 2, -6.4, 2.3, 'training'],
+  ['twin', "Yajie's Twin", 'Asks you questions and learns to think like you', 'shared', 0x3461f5, 2, 5, 2.3, 'study'],
+  ['github', 'GitHub Watcher', 'Checks your GitHub for new pushes', 'shared', 0x8b949e, 2, 13.6, 2.3, 'dev'],
+].map(([id, name, role, wing, color, floor, x, z, room]) => ({ id, name, role, wing, color, floor, x, z, room, css: '#' + color.toString(16).padStart(6, '0') }));
+// Rooms: the sign on the floor, and the way in from the corridor (a corridor point, then a point just inside the door).
+const ROOMS = {
+  personal: { label: 'PERSONAL · GMAIL', floor: 1, path: [[-12.1, -1.5], [-12.1, -5.6]] },
+  work: { label: 'WORK · OUTLOOK', floor: 1, path: [[2.5, -1.5], [2.5, -5.6]] },
+  chief: { label: "MANAGER'S OFFICE", floor: 1, path: [[-9.05, -1.5], [-9.05, 3.2]] },
+  open: { label: 'OPEN WORKSPACE', floor: 2, path: [[-5.5, -1.5], [-5.5, -5.6]] },
+  vault: { label: 'THE VAULT', floor: 2, path: [[-11.35, -1.5], [-11.35, 3.2]] },
+  training: { label: 'TRAINING ROOM', floor: 2, path: [[.15, -1.5], [.15, 3.2]] },
+  study: { label: "YAJIE'S STUDY", floor: 2, path: [[8.85, -1.5], [8.85, 3.2]] },
+  dev: { label: 'DEV ROOM · GITHUB', floor: 2, path: [[17.3, -1.5], [17.3, 3.2]] },
+};
+const LIFT = [[14.5, -1.5], [14.5, -7.2]], FLOOR_NAME = { 1: 'Front office', 2: 'Workshop' };
+const NO_MAIL = new Set(['scout', 'github', 'keymaster', 'twin', 'coach']); // desks that do not depend on the mailboxes
+const OFF = { scene: new THREE.Scene(), cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 800), desks: {}, state: null, sel: 'chief', floor: 1, private: !LOCAL, err: '', built: false, moving: false, n: 0, twinReply: null };
+let inside = false;
+
+// The building on the base: a two-storey office with a canopy door, a roof sign and windows that glow while the team is working.
+function officeBuilding() {
+  const g = new THREE.Group(), teal = mat(0x14b8a6), W = 12, D = 8.4, Hh = 6.6, y0 = .4;
+  g.add(at(rbox(W + .5, y0, D + .5, FOOT, .12), 0, y0 / 2, 0));
+  g.add(at(rbox(W, Hh, D, WALL, .3), 0, y0 + Hh / 2, 0));
+  g.add(at(rbox(W + .3, .5, D + .3, teal, .14), 0, y0 + 3.45, 0));                    // band between the two floors
+  g.add(at(rbox(W + .4, .45, D + .4, NAVY, .12), 0, y0 + Hh + .2, 0));                // roof slab
+  const win = toon({ color: 0x2b3a55, emissive: 0xffd98a, emissiveIntensity: .2 });
+  for (const yy of [y0 + 1.9, y0 + 5]) for (let i = 0; i < 4; i++) {
+    if (yy < 3 && (i === 1 || i === 2)) continue;                                      // the door takes the middle of the ground floor
+    g.add(at(rbox(1.9, 1.5, .2, win, .08), -4.2 + i * 2.8, yy, D / 2 + .02));
+  }
+  for (const sx of [-1, 1]) for (const yy of [y0 + 1.9, y0 + 5]) for (const z of [-2, 1.6]) g.add(at(rbox(.2, 1.5, 2.1, win, .08), sx * (W / 2 + .02), yy, z));
+  g.add(door(0, y0 + 1.3, D / 2 + .05, 2.2, 2.4, GOLD));
+  g.add(at(rbox(4.2, .25, 1.7, teal, .1), 0, y0 + 2.95, D / 2 + .8));
+  for (const sx of [-1, 1]) g.add(at(rbox(.16, 2.9, .16, FOOT, .05), sx * 1.9, y0 + 1.45, D / 2 + 1.5));
+  g.add(ramp(D / 2 + .2, 3, 2.4, null), plant(-3.4, D / 2 + 1.1), plant(3.4, D / 2 + 1.1));
+  const sign = canvasTex(512, 112, (x) => { x.fillStyle = '#24305e'; x.fillRect(0, 0, 512, 112); x.fillStyle = '#14b8a6'; x.fillRect(0, 100, 512, 12); x.fillStyle = '#fff'; x.font = '800 58px "Plus Jakarta Sans", -apple-system, sans-serif'; x.textAlign = 'center'; x.fillText('AGENT OFFICE', 256, 74); });
+  g.add(at(rbox(6.6, 1.5, .3, NAVY, .1), 0, y0 + Hh + 1.2, D / 2 - .6));
+  g.add(at(new THREE.Mesh(new THREE.PlaneGeometry(6.3, 1.38), new THREE.MeshBasicMaterial({ map: sign })), 0, y0 + Hh + 1.2, D / 2 - .44));
+  for (const [x, z] of [[-3.6, -1.8], [3.2, -2.2]]) { g.add(at(rbox(2, .9, 1.5, mat(0x6b6e76), .15), x, y0 + Hh + .85, z)); g.add(at(mesh(new THREE.CylinderGeometry(.4, .4, .06, 18), mat(0x2b2d33)), x, y0 + Hh + 1.33, z)); }
+  g.add(at(mesh(new THREE.CylinderGeometry(.06, .06, 3.2, 8), M.grey), 4.8, y0 + Hh + 2, -3));
+  const beacon = at(new THREE.Mesh(new THREE.SphereGeometry(.2, 14, 10), new THREE.MeshBasicMaterial({ color: 0x14b8a6 })), 4.8, y0 + Hh + 3.7, -3); g.add(beacon);
+  Object.assign(g.userData, { win, beacon });
+  return g;
+}
+
+// The inside, built the first time you walk in: two floors of rooms with white partitions, glass on the two sides nearest the
+// camera, a wood corridor through the middle and a lift and stairs in the north-east corner.
+function buildOffice() {
+  if (OFF.built) return; OFF.built = true;
+  const S = OFF.scene; S.background = new THREE.Color(0x0b0d14); S.environment = scene.environment;
+  S.add(new THREE.HemisphereLight(0xfff4e6, 0x8a8fa8, 1.05));
+  const sunIn = new THREE.DirectionalLight(0xfff0dd, 1.5); sunIn.position.set(16, 34, 22); sunIn.castShadow = true; sunIn.shadow.mapSize.set(2048, 2048);
+  Object.assign(sunIn.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 120 }); sunIn.shadow.bias = -.0004; sunIn.shadow.normalBias = .04; sunIn.shadow.radius = 4; S.add(sunIn);
+  const F = { 1: new THREE.Group(), 2: new THREE.Group() }; OFF.floors = F; OFF.picks = { 1: [], 2: [] }; S.add(F[1], F[2]);
+  const H = 2.8, HP = 3.5, wallM = mat(0xf4f2ee), darkM = mat(0x3a3f4b), white = mat(0xfaf9f6);
+  const glassM = new THREE.MeshStandardMaterial({ color: 0x9fd3ff, transparent: true, opacity: .16, roughness: .1, depthWrite: false });
+  const wood = toon({ map: canvasTex(128, 128, (x) => { x.fillStyle = '#c99a68'; x.fillRect(0, 0, 128, 128); for (let i = 0; i < 4; i++) { x.fillStyle = ['#c4925f', '#d0a373', '#c99a68', '#bd8a58'][i]; x.fillRect(0, i * 32, 128, 31); x.fillStyle = 'rgba(70,40,15,.25)'; x.fillRect((i * 53) % 128, i * 32, 2, 31); } }, [5, 3]) });
+  const woodBox = mat(0xa9764a);
+  const put = (G, o, x, y, z) => { G.add(at(o, x, y, z)); return o; };
+  const wallX = (G, x1, x2, z, gaps = [], h = H) => { let a = x1; for (const [g1, g2] of [...gaps, [x2, x2]]) { if (g1 - a > .05) put(G, rbox(g1 - a, h, .35, wallM, .05), (a + g1) / 2, h / 2, z); a = g2; } };
+  const wallZ = (G, z1, z2, x, gaps = [], h = H) => { let a = z1; for (const [g1, g2] of [...gaps, [z2, z2]]) { if (g1 - a > .05) put(G, rbox(.35, h, g1 - a, wallM, .05), x, h / 2, (a + g1) / 2); a = g2; } };
+  const glass = (G, a1, a2, c, alongX) => { // a glazed wall: sill, top rail, mullions and one long pane
+    const len = a2 - a1, mid = (a1 + a2) / 2, n = Math.round(len / 2.4), P = (w, h, d, m, u, y) => put(G, rbox(alongX ? w : d, h, alongX ? d : w, m, .04), alongX ? u : c, y, alongX ? c : u);
+    P(len, .3, .3, darkM, mid, .15); P(len, .16, .22, darkM, mid, H);
+    for (let k = 0; k <= n; k++) P(.14, H, .18, darkM, a1 + len * k / n, H / 2);
+    put(G, new THREE.Mesh(new THREE.BoxGeometry(alongX ? len : .06, H - .4, alongX ? .06 : len), glassM), alongX ? mid : c, H / 2 + .1, alongX ? c : mid);
+  };
+  const area = (G, x1, x2, z1, z2, m) => put(G, rbox(x2 - x1, .08, z2 - z1, m, .03), (x1 + x2) / 2, .04, (z1 + z2) / 2);
+  const sign = (G, text, x, z, w = 9, color = 'rgba(36,48,94,.6)') => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w * .125), new THREE.MeshBasicMaterial({ map: canvasTex(640, 80, (c) => { c.fillStyle = color; c.font = '800 48px "Plus Jakarta Sans", -apple-system, sans-serif'; c.textAlign = 'center'; c.fillText(text, 320, 57); }), transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; put(G, m, x, .11, z); };
+  const pot = (G, x, z, s = 1.3) => { const p = plant(x, z); p.scale.setScalar(s); G.add(p); };
+  const stools = (G, x, z, r, n, cols) => { for (let k = 0; k < n; k++) { const a = k / n * TAU + .4; put(G, mesh(new THREE.CylinderGeometry(.45, .38, .8, 16), mat(cols[k % cols.length])), x + Math.sin(a) * r, .4, z + Math.cos(a) * r); } };
+  const roundTable = (G, x, z, r = 1.6) => { put(G, mesh(new THREE.CylinderGeometry(r, r, .16, 36), white), x, 1.2, z); put(G, mesh(new THREE.CylinderGeometry(.25, .7, 1.1, 18), FOOT), x, .55, z); };
+  const eastFace = (G, tex, x, y, z, w, h) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); m.rotation.y = Math.PI / 2; put(G, m, x, y, z); return m; }; // a picture or screen on a wall face that looks east
+  for (const n of [1, 2]) { // what both floors share
+    const G = F[n];
+    put(G, rbox(38.6, .6, 28.6, mat(0x9da1a9, { roughness: 1 }), .2), 0, -.3, 0); put(G, rbox(39.3, 1.1, 29.3, NAVY, .3), 0, -1.1, 0);
+    wallX(G, -19.2, 19.2, -14.15, [], HP); wallZ(G, -14.15, 14.15, -19.15, [], HP);
+    glass(G, -19, 19, 14.15, true); glass(G, -14, 14, 19.15, false);
+    area(G, -18.9, 18.9, -3.8, .8, wood);                                              // the corridor
+    wallZ(G, -14, -4, 10);                                                             // lift and stair core
+    for (let k = 0; k < 7; k++) put(G, rbox(3, .32 + k * .32, .72, mat(0xd9dce3), .04), 12, (.32 + k * .32) / 2, -5 - k * .74);
+    put(G, rbox(3.6, 3.2, .5, darkM, .08), 16.6, 1.6, -13.75);
+    for (const dx of [-.76, .76]) put(G, rbox(1.46, 2.6, .12, mat(0xb8bcc6), .03), 16.6 + dx, 1.3, -13.46);
+    put(G, new THREE.Mesh(new THREE.BoxGeometry(.18, .3, .06), new THREE.MeshBasicMaterial({ color: 0x4ade9b })), 14.55, 1.5, -13.9);
+    sign(G, 'FLOOR ' + n + ' · ' + FLOOR_NAME[n].toUpperCase(), 14.6, -3, 7.4, 'rgba(60,35,10,.55)');
+  }
+  { // Floor 1: personal and work mail rooms, the manager's office, a lounge
+    const G = F[1];
+    wallX(G, -19, 10, -4, [[-13.5, -10.7], [1.1, 3.9]]); wallZ(G, -14, -4, -4.5);
+    wallX(G, -19, -7, 1, [[-10.4, -7.7]]); wallZ(G, 1, 14, -7);
+    area(G, -18.6, -5, -13.6, -7.4, mat(0xbfd2ff, { roughness: 1 })); area(G, -4, 9.5, -13.6, -7.4, mat(0xffdca6, { roughness: 1 })); area(G, -18.6, -7.5, 1.5, 9, mat(0xefdcab, { roughness: 1 }));
+    area(G, -6.7, 18.9, 1, 13.9, wood);
+    sign(G, ROOMS.personal.label, -11.8, -6, 9, 'rgba(29,78,216,.75)'); sign(G, ROOMS.work.label, 2.7, -6, 9, 'rgba(180,83,9,.8)'); sign(G, ROOMS.chief.label, -13, 11.6, 8.6); sign(G, 'LOUNGE', 6, 12.4, 5, 'rgba(60,35,10,.55)');
+    // reception planter in the corridor, like a wooden box full of green
+    put(G, rbox(6.4, 1.3, 1.5, woodBox, .1), -4.5, .65, -3); for (let k = 0; k < 6; k++) put(G, mesh(new THREE.IcosahedronGeometry(.62, 0), mat(k % 2 ? 0x4fa35c : 0x5fae6a)), -7 + k, 1.55, -3 + (k % 2 ? .15 : -.15));
+    // manager's office: the briefing board on the west wall, two visitor stools, a plant
+    put(G, rbox(.2, 2.5, 4.4, mat(0x1d2027), .06), -18.9, 2, 7.6);
+    const bc = document.createElement('canvas'); bc.width = 512; bc.height = 300; OFF.board = { cv: bc, tex: new THREE.CanvasTexture(bc), key: '' }; OFF.board.tex.colorSpace = THREE.SRGBColorSpace;
+    eastFace(G, OFF.board.tex, -18.78, 2, 7.6, 4.16, 2.3);
+    stools(G, -13.6, 7.2, 1.5, 2, [0xd6ad55, 0x24305e]); pot(G, -17.8, 12.6, 1.5); pot(G, -8.2, 12.8);
+    // lounge: sofa, coffee counter, round tables
+    const sofa = mat(0x7c6bd6);
+    put(G, rbox(5, 1, 1.6, sofa, .3), -2, .55, 12.4); put(G, rbox(5, 1.8, .6, sofa, .25), -2, .95, 13.3); for (const dx of [-2.6, 2.6]) put(G, rbox(.6, 1.4, 1.7, sofa, .25), -2 + dx, .75, 12.4);
+    put(G, rbox(1.4, 1.3, 4.6, white, .1), -5.9, .65, 6); put(G, rbox(1.5, .14, 4.7, NAVY, .05), -5.9, 1.37, 6); put(G, rbox(.9, 1, .9, mat(0x2b2d33), .1), -5.9, 1.95, 4.7); put(G, rbox(.5, .5, .5, mat(0xe5484d), .08), -5.9, 1.7, 6.6);
+    roundTable(G, 5, 6.8); stools(G, 5, 6.8, 2.5, 4, [0x4f8cff, 0xf59e0b, 0x22c55e, 0xec4899]); roundTable(G, 12.5, 9.6, 1.4); stools(G, 12.5, 9.6, 2.2, 3, [0xa78bfa, 0x06b6d4, 0xef4444]);
+    pot(G, 17.6, 12.6, 1.6); pot(G, 17.6, 2.4); pot(G, 8.6, 12.8); pot(G, -18, -5.2, 1.1); pot(G, 8.8, -5.2, 1.1);
+    for (const [z, c] of [[-9, 0x3461f5], [-1.5, 0xe5484d]]) { const d = door(0, 0, 0, 1.9, 2.9, mat(c)); d.rotation.y = Math.PI / 2; put(G, d, -18.9, 1.55, z); }
+    // the plaza outside, with hedge planters, only seen from the ground floor
+    put(G, rbox(50, .4, 40, mat(0x596070, { roughness: 1 }), .3), 0, -1.85, 0);
+    for (const [x, z, w, d] of [[-9, 17.6, 16, 2], [9, 17.6, 12, 2], [22.6, 3, 2, 14]]) { put(G, rbox(w, .9, d, mat(0x858a94), .1), x, -1.2, z); const n = Math.round(Math.max(w, d) / 2); for (let k = 0; k < n; k++) put(G, mesh(new THREE.IcosahedronGeometry(.95, 1), mat(k % 2 ? 0x4fa35c : 0x5fae6a)), w > d ? x - w / 2 + 1 + k * 2 : x, -.35, w > d ? z : z - d / 2 + 1 + k * 2); }
+  }
+  { // Floor 2: the open workspace, the vault, the training room, Yajie's study and the dev room
+    const G = F[2];
+    wallX(G, -19, 10, -4, [[-8, -3]]);
+    wallX(G, -19, 19, 1, [[-12.6, -10.1], [-1.2, 1.5], [7.7, 10], [16.1, 18.5]]); for (const x of [-9.5, 2, 10.5]) wallZ(G, 1, 14, x);
+    area(G, -18.6, 5.5, -13.6, -7.4, mat(0xc9eed8, { roughness: 1 })); area(G, -18.6, -9.9, 1.5, 13.8, mat(0x5b606b, { roughness: 1 })); area(G, -9.1, 1.6, 1.5, 9, mat(0xffd2b0, { roughness: 1 }));
+    area(G, 2.4, 10.1, 1.5, 9, mat(0xbfd2ff, { roughness: 1 })); area(G, 10.9, 18.8, 1.5, 13.8, mat(0x40454f, { roughness: 1 }));
+    sign(G, ROOMS.open.label, -6, -6, 9, 'rgba(21,128,61,.8)'); sign(G, ROOMS.vault.label, -14.3, 12, 6, 'rgba(250,204,21,.85)'); sign(G, ROOMS.training.label, -3.8, 12, 7.4, 'rgba(194,65,12,.8)'); sign(G, ROOMS.study.label, 6.2, 12, 6.6, 'rgba(29,78,216,.75)'); sign(G, 'DEV ROOM', 14.8, 12, 5, 'rgba(255,255,255,.7)');
+    roundTable(G, 7.2, -9.4); stools(G, 7.2, -9.4, 2.4, 4, [0xa78bfa, 0x22c55e, 0xec4899, 0x06b6d4]); pot(G, 8.8, -5.2, 1.1); pot(G, -18, -5.2, 1.1);
+    put(G, rbox(6.4, 1.3, 1.5, woodBox, .1), 5, .65, -2.9); for (let k = 0; k < 6; k++) put(G, mesh(new THREE.IcosahedronGeometry(.62, 0), mat(k % 2 ? 0x4fa35c : 0x5fae6a)), 2.5 + k, 1.55, -2.9 + (k % 2 ? .15 : -.15));
+    // vault: a round safe door, deposit boxes, a little gold
+    const steel = mat(0xaab0bb, { roughness: .4, metalness: .5 });
+    const safe = mesh(new THREE.CylinderGeometry(1.5, 1.5, .5, 36), steel); safe.rotation.z = Math.PI / 2; put(G, safe, -18.7, 1.75, 9.5);
+    const hub = mesh(new THREE.CylinderGeometry(.35, .35, .3, 20), mat(0xfacc15)); hub.rotation.z = Math.PI / 2; put(G, hub, -18.35, 1.75, 9.5);
+    for (let k = 0; k < 3; k++) { const sp = rbox(.12, 2.1, .14, mat(0xfacc15), .04); sp.rotation.x = k * Math.PI / 3; put(G, sp, -18.38, 1.75, 9.5); }
+    for (let r = 0; r < 3; r++) for (let k = 0; k < 5; k++) put(G, rbox(.3, .7, .78, steel, .04), -18.8, .6 + r * .82, 4 + k * .86);
+    for (let k = 0; k < 5; k++) put(G, rbox(.9, .3, .45, mat(0xf2b33d, { roughness: .35, metalness: .6 }), .05), -11.6 + (k % 3) * .1, .15 + Math.floor(k / 3) * .3, 11.2 + (k % 3) * .5);
+    // training room: the rack that holds the trained models, a whiteboard, seats for a lesson
+    put(G, rbox(1.8, 2.6, 1.2, mat(0x23262e), .1), -2.9, 1.3, 2);
+    OFF.leds = []; for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) { const led = new THREE.Mesh(new THREE.BoxGeometry(.16, .1, .04), new THREE.MeshBasicMaterial({ color: 0x4ade9b })); put(G, led, -3.45 + k * .36, .6 + r * .5, 2.62); OFF.leds.push(led); }
+    put(G, new THREE.Mesh(new THREE.PlaneGeometry(1.6, .34), new THREE.MeshBasicMaterial({ map: canvasTex(256, 54, (c) => { c.fillStyle = '#f97316'; c.fillRect(0, 0, 256, 54); c.fillStyle = '#fff'; c.font = '800 30px -apple-system, sans-serif'; c.textAlign = 'center'; c.fillText('MY MODELS', 128, 38); }) })), -2.9, 2.35, 2.62);
+    eastFace(G, canvasTex(256, 128, (c) => { c.fillStyle = '#fff'; c.fillRect(0, 0, 256, 128); c.strokeStyle = '#24305e'; c.lineWidth = 3; c.beginPath(); c.moveTo(20, 100); c.lineTo(70, 70); c.lineTo(120, 80); c.lineTo(170, 40); c.lineTo(230, 22); c.stroke(); c.fillStyle = '#f97316'; c.font = '800 20px -apple-system, sans-serif'; c.fillText('getting better', 20, 26); }), -9.28, 1.6, 8, 4.4, 2.2);
+    stools(G, -4.5, 8.2, 1.6, 3, [0xf97316, 0x24305e, 0xf2b33d]);
+    // Yajie's study: books, an armchair and a mirror for the twin
+    put(G, rbox(.9, 2.6, 4, woodBox, .08), 2.75, 1.3, 8.2); for (let r = 0; r < 3; r++) for (let k = 0; k < 6; k++) put(G, rbox(.5, .62, .44, mat([0x3461f5, 0xe0458f, 0xf2b33d, 0x14b8a6, 0xf4f4f1, 0x9d6bd6][(r * 2 + k) % 6]), .04), 2.95, .5 + r * .8, 6.7 + k * .6);
+    put(G, rbox(1.6, .9, 1.6, mat(0x3461f5), .3), 8, .5, 10.8); put(G, rbox(1.6, 1.7, .5, mat(0x3461f5), .2), 8, .9, 11.7);
+    put(G, rbox(1.5, 2.5, .14, mat(0xd6ad55), .06), 8.4, 1.35, 1.5); put(G, new THREE.Mesh(new THREE.PlaneGeometry(1.25, 2.2), new THREE.MeshBasicMaterial({ color: 0xbfe3ff })), 8.4, 1.35, 1.58);
+    // dev room: a wall of green squares, a second machine, a plant
+    eastFace(G, canvasTex(256, 128, (c) => { c.fillStyle = '#0d1117'; c.fillRect(0, 0, 256, 128); for (let i = 0; i < 20; i++) for (let j = 0; j < 7; j++) { c.fillStyle = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'][Math.floor(hash(i, j) * 5)]; c.fillRect(10 + i * 12, 24 + j * 12, 10, 10); } c.fillStyle = '#8b949e'; c.font = '700 13px -apple-system, sans-serif'; c.fillText('pushes', 10, 16); }), 10.72, 1.6, 8, 4.4, 2.2);
+    put(G, rbox(1.2, 1.9, 1.2, mat(0x23262e), .1), 17.6, .95, 12.6); pot(G, 11.8, 12.8); pot(G, -10.4, 12.8, 1.1); pot(G, 1.2, 12.9, 1.1);
+  }
+  // one standing desk, monitor and agent per job
+  for (const a of AGENTS) {
+    const G = F[a.floor], d = new THREE.Group(), w = a.id === 'chief' ? 3.9 : 3.5;
+    d.add(at(rbox(w, .18, 1.7, white, .06), 0, 1.32, 0), at(rbox(w, .1, .08, mat(a.color), .03), 0, 1.2, .84), at(rbox(w - .4, .7, .08, FOOT, .03), 0, .85, -.7));
+    for (const sx of [-1, 1]) d.add(at(rbox(.14, 1.25, 1.5, FOOT, .05), sx * (w / 2 - .15), .62, 0));
+    d.add(at(rbox(.7, .06, .45, M.dark, .02), 0, 1.44, -.35), at(rbox(.12, .5, .12, M.dark, .03), 0, 1.7, -.42), at(rbox(2.2, 1.3, .12, mat(0x1d2027), .05), 0, 2.5, -.42));
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 144;
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+    d.add(at(new THREE.Mesh(new THREE.PlaneGeometry(2.04, 1.14), new THREE.MeshBasicMaterial({ map: tex })), 0, 2.5, -.35));
+    d.add(at(rbox(1.1, .05, .4, mat(0x3a3f4b), .02), 0, 1.44, .25), at(mesh(new THREE.CylinderGeometry(.13, .11, .26, 14), mat(a.color)), w / 2 - .5, 1.54, .2));
+    const light = at(new THREE.Mesh(new THREE.SphereGeometry(.15, 14, 10), new THREE.MeshBasicMaterial({ color: 0x6b7280 })), .9, 3.3, -.42); d.add(light);
+    d.position.set(a.x, 0, a.z);
+    const who = astronaut(a.color), home = new THREE.Vector3(a.x, 0, a.z + 1.75); who.position.copy(home); who.rotation.y = Math.PI;
+    const ring = at(new THREE.Mesh(new THREE.TorusGeometry(.95, .07, 8, 40).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xecd08a })), home.x, .14, home.z); ring.visible = false;
+    const pad = at(new THREE.Mesh(new THREE.CylinderGeometry(1.9, 1.9, 3.4, 10), new THREE.MeshBasicMaterial({ visible: false })), a.x, 1.7, a.z + .9); // generous click target
+    for (const o of [d, who, pad]) o.userData.agent = a.id;
+    const tag = document.createElement('div'); tag.className = 'tag atag';
+    const lab = new CSS2DObject(tag); lab.position.set(a.x, .1, a.z + 3.4);   // a nameplate on the floor in front of the desk, clear of the screen
+    G.add(d, ring, pad, lab); (a.id === 'chief' ? S : G).add(who); OFF.picks[a.floor].push(d, who, pad);
+    OFF.desks[a.id] = { a, d, who, tag, lab, cv, tex, light, ring, home, key: '', visit: new THREE.Vector3(a.x + 1.5, 0, a.z + 4.3) };
+  }
+  OFF.desks.chief.ring.removeFromParent(); S.add(OFF.desks.chief.ring);     // the Chief walks between floors, so the Chief and the ring belong to neither
+  OFF.chief = { pos: OFF.desks.chief.home.clone(), floor: 1, room: 'chief', queue: [], goal: 'chief', face: null };
+  // camera, labels and controls for the inside
+  OFF.labels = new CSS2DRenderer(); OFF.labels.domElement.className = 'labels'; OFF.labels.domElement.hidden = true; sceneEl.appendChild(OFF.labels.domElement);
+  OFF.controls = new OrbitControls(OFF.cam, renderer.domElement);
+  Object.assign(OFF.controls, { enabled: false, enableDamping: true, minPolarAngle: .45, maxPolarAngle: 1.15, minAzimuthAngle: .15, maxAzimuthAngle: Math.PI / 2 - .15, minZoom: .7, maxZoom: 3.6, screenSpacePanning: true });
+  const fit = () => {
+    const w = sceneEl.clientWidth, h = sceneEl.clientHeight, side = w > 860 ? 400 : 0, a = w / h, v = Math.max(41, 57 / (Math.max(320, w - side) / h));
+    OFF.labels.setSize(w, h);
+    Object.assign(OFF.cam, { left: -v * a / 2, right: v * a / 2, top: v / 2, bottom: -v / 2 });
+    if (side) OFF.cam.setViewOffset(w, h, side / 2, -24, w, h); else OFF.cam.clearViewOffset();   // keep the room clear of the report panel
+    OFF.cam.updateProjectionMatrix();
+  };
+  new ResizeObserver(fit).observe(sceneEl); fit();
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  const agentAt = e => { const r = renderer.domElement.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, OFF.cam);
+    let o = (ray.intersectObjects(OFF.picks[OFF.floor], true)[0] || {}).object; while (o && !o.userData.agent) o = o.parent; return o ? o.userData.agent : null; };
+  let down = null;
+  renderer.domElement.addEventListener('pointerdown', e => { if (inside) down = [e.clientX, e.clientY]; });
+  renderer.domElement.addEventListener('pointerup', e => { if (inside && down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5) { const id = agentAt(e); if (id) selectAgent(id); } down = null; });
+  renderer.domElement.addEventListener('pointermove', e => { if (inside && !e.buttons) renderer.domElement.style.cursor = agentAt(e) ? 'pointer' : 'grab'; });
+  showFloor(1);
+}
+function showFloor(n) {
+  OFF.floor = n;
+  for (const k of [1, 2]) OFF.floors[k].visible = k === n;
+  for (const id in OFF.desks) OFF.desks[id].lab.visible = OFF.desks[id].a.floor === n;
+  for (const b of $('floors').querySelectorAll('button')) b.setAttribute('aria-pressed', String(+b.dataset.floor === n));
+}
+function goFloor(n) { // a quick blink between floors
+  if (!inside || n === OFF.floor || OFF.moving) return;
+  const fade = $('fade'); fade.classList.add('on'); OFF.moving = true;
+  setTimeout(() => { showFloor(n); applyOffice(); fade.classList.remove('on'); OFF.moving = false; }, reduced ? 20 : 200);
+}
+function officeView() { const tg = new THREE.Vector3(0, 1, 0); OFF.controls.target.copy(tg); OFF.cam.zoom = 1; OFF.cam.position.setFromSpherical(new THREE.Spherical(160, .84, Math.PI / 4)).add(tg); OFF.cam.updateProjectionMatrix(); OFF.controls.update(); }
+function enterOffice() {
+  if (inside || OFF.moving || !renderer) return; OFF.moving = true; buildOffice();
+  sel = 'office'; renderStation(); showBuildings(false);
+  tweenTo(curAz(), null, 3, new THREE.Vector3(ST.office.x, 2, ST.office.z));
+  const fade = $('fade'); setTimeout(() => fade.classList.add('on'), reduced ? 0 : 240);
+  setTimeout(() => {
+    inside = true; focused = false; controls.enabled = false; OFF.controls.enabled = true;
+    labels.domElement.hidden = true; OFF.labels.domElement.hidden = false; $('floors').hidden = false;
+    document.querySelector('.hud').classList.add('in-office'); $('overviewBtn').hidden = false; $('overviewBtn').lastChild.textContent = 'Leave office';
+    $('stationCard').classList.remove('min'); officeView(); showFloor(OFF.desks[OFF.sel].a.floor); applyOffice(); officePoll(); fade.classList.remove('on'); OFF.moving = false;
+  }, reduced ? 40 : 600);
+}
+function exitOffice() {
+  if (!inside || OFF.moving) return; OFF.moving = true;
+  const fade = $('fade'); fade.classList.add('on');
+  setTimeout(() => {
+    inside = false; controls.enabled = true; OFF.controls.enabled = false;
+    labels.domElement.hidden = false; OFF.labels.domElement.hidden = true; $('floors').hidden = true;
+    document.querySelector('.hud').classList.remove('in-office'); $('overviewBtn').lastChild.textContent = 'Whole base';
+    renderer.domElement.style.cursor = 'grab'; overview(); renderStation(); fade.classList.remove('on'); OFF.moving = false;
+  }, reduced ? 40 : 320);
+}
+function selectAgent(id) { if (!OFF.desks[id]) return; OFF.sel = id; $('stationCard').classList.remove('min'); if (OFF.desks[id].a.floor !== OFF.floor) showFloor(OFF.desks[id].a.floor); applyOffice(true); $('station').scrollTop = 0; }
+$('floors').addEventListener('click', e => { const b = e.target.closest('button[data-floor]'); if (b) goFloor(+b.dataset.floor); });
+addEventListener('keydown', e => { if (inside && (e.key === '1' || e.key === '2') && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) goFloor(+e.key); });
+
+// ---- what each agent is doing right now, from the bridge ----
+const agentState = id => (OFF.state && OFF.state.agents.find(x => x.id === id)) || null;
+function agentLine(id) { // [status, short text]
+  if (OFF.private) return ['private', 'Private'];
+  const s = agentState(id);
+  if (!s) return ['idle', OFF.err ? 'Offline' : 'Starting'];
+  if (s.status === 'working') return ['working', s.task || 'Working'];
+  if (s.status === 'queued') return ['queued', 'Up next'];
+  if (s.status === 'error') return ['error', 'Hit a problem'];
+  return [s.report ? 'done' : 'idle', s.report ? s.report.headline : 'Idle'];
+}
+const STATUS_HEX = { working: 0xffc95c, queued: 0x7aa2ff, done: 0x4ade9b, error: 0xff6b6b, idle: 0x6b7280, private: 0x6b7280 };
+function applyOffice(force) {
+  if (!OFF.built) return;
+  const busyFloor = { 1: false, 2: false };
+  for (const id in OFF.desks) {
+    const k = OFF.desks[id], [status, text] = agentLine(id), key = status + '|' + text + '|' + (id === OFF.sel);
+    k.ring.visible = id === OFF.sel; k.status = status; if (status === 'working') busyFloor[k.a.floor] = true;
+    if (key === k.key) continue; k.key = key;
+    k.light.material.color.setHex(STATUS_HEX[status]);
+    k.tag.classList.toggle('sel', id === OFF.sel);
+    k.tag.innerHTML = `<i style="background:#${STATUS_HEX[status].toString(16).padStart(6, '0')}"></i><b>${esc(k.a.name)}</b><span class="s">${esc(text)}</span>`;
+    const x = k.cv.getContext('2d'), num = (text.match(/\d+/) || [])[0], big = status === 'working' ? '•••' : status === 'private' ? '—' : status === 'error' ? '!' : num || (status === 'done' ? '✓' : '');
+    x.fillStyle = { working: '#3b2a0a', queued: '#172033', done: '#0d2a1e', error: '#3a1114' }[status] || '#161a22'; x.fillRect(0, 0, 256, 144);
+    x.fillStyle = k.a.css; x.fillRect(0, 0, 256, 12);
+    x.textAlign = 'center'; x.fillStyle = '#fff'; x.font = '800 60px -apple-system, "Plus Jakarta Sans", sans-serif'; x.fillText(big, 128, 86);
+    x.font = '600 19px -apple-system, "Plus Jakarta Sans", sans-serif'; x.fillStyle = 'rgba(255,255,255,.78)'; x.fillText(text.length > 25 ? text.slice(0, 24) + '…' : text, 128, 122);
+    k.tex.needsUpdate = true;
+  }
+  for (const b of $('floors').querySelectorAll('button')) b.classList.toggle('busy', busyFloor[+b.dataset.floor]);
+  const S = OFF.state, chief = agentState('chief'), lines = OFF.private ? ['Reports are private.', 'They only show on', "Yajie's own Mac."] : !S ? ['Waiting for the agents…'] : S.running ? ['The team is working…'] : (chief && chief.report && chief.report.briefing) || ['No briefing yet.'];
+  const bkey = lines.join('|');
+  if (bkey !== OFF.board.key) {
+    OFF.board.key = bkey; const x = OFF.board.cv.getContext('2d');
+    x.fillStyle = '#10141c'; x.fillRect(0, 0, 512, 300); x.fillStyle = '#d6ad55'; x.fillRect(0, 0, 512, 46);
+    x.fillStyle = '#10141c'; x.font = '800 26px -apple-system, sans-serif'; x.textAlign = 'left'; x.fillText("TODAY'S BRIEFING", 20, 33);
+    x.font = '600 24px -apple-system, sans-serif'; lines.slice(0, 6).forEach((l, i) => { x.fillStyle = '#d6ad55'; x.fillRect(22, 70 + i * 39, 9, 9); x.fillStyle = '#f5f4f0'; x.fillText(l.length > 36 ? l.slice(0, 35) + '…' : l, 44, 82 + i * 39); });
+    OFF.board.tex.needsUpdate = true;
+  }
+  if (inside) renderAgent(force);
+}
+async function officePoll() {
+  if (OFF.private) return applyOffice();
+  try { const r = await fetch('/office/state', { cache: 'no-store' }); if (!r.ok) throw new Error(r.status === 503 ? 'the agents are not installed in this copy of the bridge' : 'the bridge answered ' + r.status); OFF.state = await r.json(); OFF.err = ''; }
+  catch (e) { OFF.state = null; OFF.err = /fetch|network/i.test(String(e.message)) ? 'the Moonbase bridge is not running' : String(e.message || e); }
+  applyOffice();
+}
+async function officeSend(path, body) {
+  let j = null;
+  try { const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }); j = await r.json(); OFF.note = j.ok ? '' : j.error || 'That did not work.'; }
+  catch (e) { OFF.note = 'The Moonbase bridge is not reachable.'; }
+  await officePoll(); return j;
+}
+setInterval(() => { if (document.hidden || OFF.private) return; OFF.n++; const running = OFF.state && OFF.state.running; if (inside ? (running || OFF.n % 8 === 0) : running) officePoll(); }, 1000);
+
+// ---- the report panel for the agent you clicked ----
+function renderAgent(force) {
+  if (!force && /TEXTAREA|INPUT/.test(document.activeElement?.tagName) && $('station').contains(document.activeElement)) return; // never redraw under someone typing
+  const a = AGENTS.find(x => x.id === OFF.sel) || AGENTS[3], S = OFF.state, st = agentState(a.id), rep = st && st.report, [status, text] = agentLine(a.id);
+  const pill = { working: '<span class="pill warn">Working</span>', queued: '<span class="pill blue">Up next</span>', done: '<span class="pill">Done</span>', error: '<span class="pill red">Problem</span>', private: '<span class="pill grey">Private</span>' }[status] || '<span class="pill grey">Idle</span>';
+  const roster = `<div class="roster" role="tablist" aria-label="Agents">${AGENTS.map(x => `<button data-agent="${x.id}" role="tab" style="background:${x.css}" title="${esc(x.name)}${x.wing === 'shared' ? '' : ' · ' + x.wing} · floor ${x.floor}" aria-label="${esc(x.name)}${x.wing === 'shared' ? '' : ', ' + x.wing}, floor ${x.floor}" aria-current="${x.id === a.id}"></button>`).join('')}</div>`;
+  const head = `<div class="st-head"><span class="st-icon" style="background:${a.css}">${stationIcon('office')}</span><div><div class="eyebrow">FLOOR ${a.floor} · ${esc(ROOMS[a.room].label)}</div><h2>${esc(a.name)}</h2><p>${esc(a.role)}</p></div></div>${roster}
+    <div class="st-status">${pill}<span>${esc(status === 'done' && S ? text + (st.last_run ? ' · ' + ago(st.last_run) : '') : text)}</span></div>`;
+  let body = '';
+  if (OFF.private) body = `<p class="muted" style="margin:0;line-height:1.55">This is where my agents work on my mail, calendars, AI news and code. Their reports are private, so they only appear when Moonbase is opened on my own Mac.</p>`;
+  else if (!S) body = `<div class="banner">The agents are not answering: ${esc(OFF.err || 'still starting')}.</div><p class="muted" style="margin:0;line-height:1.55">They live inside the Moonbase bridge on this Mac. Open Moonbase at http://127.0.0.1:8787 with the bridge running.</p>`;
+  else {
+    const demo = a.wing === 'shared' ? (S.demo.personal || S.demo.work) : S.demo[a.wing];
+    if (demo && !NO_MAIL.has(a.id)) body += `<div class="banner">Practice data. ${a.wing === 'shared' ? (S.demo.personal && S.demo.work ? 'Your real mail and calendars are' : 'Your real ' + (S.demo.personal ? 'Gmail' : 'Outlook') + ' is') : 'Your real ' + (a.wing === 'personal' ? 'Gmail' : 'Outlook') + ' is'} not connected yet, so made-up examples stand in for it.</div>`;
+    if (OFF.note) body += `<div class="banner">${esc(OFF.note)}</div>`;
+    if (st && st.status === 'error') body += `<div class="banner">${esc(st.error)}</div>`;
+    if (rep) {
+      if (rep.note) body += `<div class="banner">${esc(rep.note)}</div>`;
+      const stats = rep.stats || [];
+      if (stats.length) body += `<div class="tiles t${Math.min(4, stats.length)}">${stats.map(([k, v]) => `<div class="tile"><div class="k">${esc(k)}</div><div class="v"${String(v).length > 5 ? ' style="font-size:12.5px"' : ''}>${esc(v)}</div></div>`).join('')}</div>`;
+      if (rep.ask_box) { const r = OFF.twinReply;
+        body += `<div class="sec">Ask your twin</div><form class="askbox" data-twin><input name="q" maxlength="300" placeholder="What would I say about…" aria-label="Ask your twin a question" value="${esc(r ? r.q : '')}"><button class="obtn st-link">Ask</button></form>`;
+        if (r) body += `<div class="oi">${r.pending ? '<div class="w">Thinking…</div>' : `${r.answer ? `<p>${esc(r.answer)}</p><div class="w">in your voice, written by ${esc(r.by)}</div>` : ''}${r.note ? `<div class="w">${esc(r.note)}</div>` : ''}${(r.matches || []).map(m => `<div class="w" style="margin-top:4px">${esc(m.q)}</div><p>${esc(m.a)}</p>`).join('')}`}</div>`; }
+      for (const sec of rep.sections || []) {
+        if (!sec.items.length && !sec.empty) continue;
+        body += `<div class="sec">${esc(sec.title)} <span>${sec.items.length || ''}</span></div>`;
+        body += sec.items.length ? `<ul class="olist">${sec.items.map(it => `<li class="oi${it.tone === 'warn' ? ' warn' : ''}">
+          <div class="t">${esc(it.title)}</div>${it.meta ? `<div class="w">${esc(it.meta)}</div>` : ''}${it.body ? `<p>${esc(it.body)}</p>` : ''}${it.why ? `<div class="why">${esc(it.why)}</div>` : ''}
+          ${it.ask ? (it.ask.options.length ? `<div class="acts">${it.ask.options.map((o, i) => `<button data-answer="${esc(it.ask.qid)}|${i}">${esc(o)}</button>`).join('')}</div>` : `<form class="askbox col" data-open="${esc(it.ask.qid)}"><textarea name="a" rows="2" maxlength="1200" placeholder="Your answer" aria-label="Your answer"></textarea><button class="obtn st-link">Save answer</button></form>`) : ''}
+          ${it.code ? `<details><summary>How to add this key</summary><p>Paste this in Terminal. It asks for the key there and puts it in your macOS Keychain, so it never passes through this page or through Claude.</p><pre>${esc(it.code)}</pre><div class="acts"><button data-copy>Copy command</button></div></details>` : ''}
+          ${it.draft ? `<details><summary>Suggested reply${it.draft_by === 'template' ? ' (template)' : ''}</summary><pre>${esc(it.draft)}</pre><div class="acts"><button data-copy>Copy reply</button></div></details>` : ''}
+          ${(it.actions || it.link || it.agent) ? `<div class="acts">${/^https?:\/\//.test(it.link || '') ? `<a href="${esc(it.link)}" target="_blank" rel="noopener noreferrer">${esc(it.link_label || 'Open')}</a>` : ''}${it.agent ? `<button data-agent="${esc(it.agent)}">Open desk</button>` : ''}${(it.actions || []).map(([label, kind, val]) => `<button data-fb="${esc(kind)}|${esc(it.fb_id || it.id)}|${esc(val)}">${esc(label)}</button>`).join('')}</div>` : ''}</li>`).join('')}</ul>` : `<p class="muted" style="margin:-4px 0 0">${esc(sec.empty)}</p>`;
+      }
+    } else body += `<p class="muted" style="margin:0">No report yet. ${S.running ? 'The team is on it.' : 'Run the team to get one.'}</p>`;
+    const m = S.models || {}, learned = k => m[k] ? `Trained from scratch on ${m[k].seed} starter examples, ${m[k].corrections} correction${m[k].corrections === 1 ? '' : 's'} from you and ${m[k].auto || 0} lesson${m[k].auto === 1 ? '' : 's'} from the Coach.` : '';
+    const foot = a.id.startsWith('sorter') ? learned('spam') : a.id.startsWith('analyst') ? learned('important') : a.id === 'scout' ? learned('news')
+      : a.id === 'writer' ? (S.writer.online ? `Writing with ${S.writer.model}, running on this Mac.` : `${S.writer.note}.`)
+      : a.id === 'chief' ? (S.run_at ? `Runs every day at ${S.run_at} while Moonbase is up.` : '')
+      : a.id === 'coach' ? 'Trains after every team run: new lessons from your mailboxes, a re-test of every old one, and questions for you where a model is unsure.'
+      : a.id === 'github' ? 'Checks GitHub every 10 minutes while Moonbase is up.'
+      : a.id === 'keymaster' ? 'Keys stay in the macOS Keychain. An agent is given a key only if that key names it, every request is written down, and no key is ever shown here or sent to the writing model.'
+      : a.id === 'twin' ? 'Everything you tell me stays in a file on this Mac. I pass your writing style to the Reply Writer and your interests to the News Scout.' : 'Plain rules, no model needed.';
+    body += `<button class="st-link obtn" data-office="run"${S.running ? ' disabled' : ''}>${S.running ? 'The team is working…' : 'Run the team now'}</button><p class="muted" style="margin:0;font-size:11px;line-height:1.5">${esc(foot)}${S.last_run ? ' Last full run ' + esc(ago(S.last_run)) + '.' : ''}</p>`;
+  }
+  setHTML('station', head + body);
+}
+$('station').addEventListener('click', e => {
+  const b = e.target.closest('[data-office],[data-agent],[data-fb],[data-copy],[data-answer]'); if (!b) return;
+  if (b.dataset.office === 'enter') return enterOffice();
+  if (b.dataset.office === 'run') return officeSend('/office/run', { fresh_news: OFF.sel === 'scout' });
+  if (b.dataset.agent) return selectAgent(b.dataset.agent);
+  if (b.dataset.fb) { const [kind, id, label] = b.dataset.fb.split('|'); b.disabled = true; b.textContent = 'Learning…'; return officeSend('/office/feedback', { kind, id, label }); }
+  if (b.dataset.answer) { const [qid, i] = b.dataset.answer.split('|'); b.disabled = true; return officeSend('/office/answer', { qid, value: +i }); }
+  if ('copy' in b.dataset) { const pre = b.closest('details').querySelector('pre'); navigator.clipboard?.writeText(pre.textContent).then(() => { b.textContent = 'Copied'; }, () => {}); }
+});
+$('station').addEventListener('submit', async e => {
+  const f = e.target.closest('form'); if (!f) return; e.preventDefault();
+  if (f.dataset.open) { const v = f.elements.a.value.trim(); if (!v) return; f.elements.a.blur(); await officeSend('/office/answer', { qid: f.dataset.open, value: v }); return renderAgent(true); }
+  if ('twin' in f.dataset) { const q = f.elements.q.value.trim(); if (!q) return; f.elements.q.blur(); OFF.twinReply = { q, pending: true }; renderAgent(true);
+    try { const r = await fetch('/office/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q }) }); OFF.twinReply = { q, ...(await r.json()) }; } catch (err) { OFF.twinReply = { q, note: 'The Moonbase bridge is not reachable.' }; }
+    renderAgent(true); }
+});
+function updateOffice(dt, t) {
+  for (const id in OFF.desks) {
+    const k = OFF.desks[id]; if (id === 'chief') continue;
+    const busy = k.status === 'working', turn = busy || k.status === 'queued' ? Math.PI : Math.PI / 4; // at work they face the screen, otherwise they turn round to the room
+    let d = turn - k.who.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); k.who.rotation.y += d * Math.min(1, dt * 6);
+    k.who.position.y = busy && !reduced ? Math.abs(Math.sin(t * 9 + k.a.x)) * .09 : 0;
+  }
+  // The Chief walks to whoever is working: out of one room, along the corridor, into the next, and by lift between floors.
+  const c = OFF.chief, me = OFF.desks.chief, V = p => new THREE.Vector3(p[0], 0, p[1]);
+  if (!c.queue.length) {
+    const working = Object.values(OFF.desks).find(k => k.status === 'working' && k.a.id !== 'chief'), goal = working || me;
+    if (goal.a.id !== c.goal) {
+      const out = r => ROOMS[r].path.slice().reverse().map(V), into = r => ROOMS[r].path.map(V);
+      if (goal.a.floor !== c.floor) c.queue.push(...out(c.room), ...LIFT.map(V), { floor: goal.a.floor }, V(LIFT[0]), ...into(goal.a.room));
+      else if (goal.a.room !== c.room) c.queue.push(...out(c.room), ...into(goal.a.room));
+      c.queue.push(working ? working.visit.clone() : me.home.clone());
+      Object.assign(c, { goal: goal.a.id, room: goal.a.room, face: working ? working.home : null });
+    }
+  }
+  let face = c.face ? Math.atan2(c.face.x - c.pos.x, c.face.z - c.pos.z) : me.status === 'working' ? Math.PI : Math.PI / 4, walking = false;
+  if (c.queue.length) {
+    const next = c.queue[0];
+    if (!next.isVector3) { c.floor = next.floor; c.queue.shift(); }
+    else { const gap = next.clone().sub(c.pos), dist = gap.length(), step = (reduced ? 80 : 10) * dt;
+      if (dist <= step) { c.pos.copy(next); c.queue.shift(); } else { c.pos.add(gap.multiplyScalar(step / dist)); face = Math.atan2(gap.x, gap.z); walking = true; } }
+  }
+  let d = face - me.who.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); me.who.rotation.y += d * Math.min(1, dt * 9);
+  me.who.position.set(c.pos.x, walking && !reduced ? Math.abs(Math.sin(t * 10)) * .12 : 0, c.pos.z); me.ring.position.set(c.pos.x, .14, c.pos.z);
+  me.who.visible = c.floor === OFF.floor; me.ring.visible = me.who.visible && OFF.sel === 'chief';
+  const run = OFF.state && OFF.state.running;
+  OFF.leds.forEach((l, i) => { l.material.color.setHex(run && Math.sin(t * 9 + i * 2.3) > 0 ? 0xffc95c : hash(i, Math.floor(t * 1.5)) > .82 ? 0x1f6f52 : 0x4ade9b); });
+}
+
 // ---------- render loop ----------
 const clock = new THREE.Clock();
 function frame() {
   const dt = Math.min(clock.getDelta(), .05), t = clock.elapsedTime;
+  if (inside) { updateOffice(dt, t); OFF.controls.update(); renderer.render(OFF.scene, OFF.cam); OFF.labels.render(OFF.scene, OFF.cam); requestAnimationFrame(frame); return; }
   stepTween(dt); controls.update();
   updateRovers(dt, t); updatePuffs(dt);
   for (let i = popIns.length - 1; i >= 0; i--) { const b = popIns[i], s = Math.min(1, b.scale.x + dt * 3); b.scale.setScalar(s); if (s >= 1) popIns.splice(i, 1); }
@@ -1502,6 +1939,7 @@ function frame() {
   if (astro && !reduced) { astro.position.y = Math.abs(Math.sin(t * 2.2)) * .25; astro.rotation.y = Math.sin(t * .5) * .5; }
   if (claudeNow.active) { stations.claude.pulse = Math.max(stations.claude.pulse, .6); if (!reduced && Math.random() < .12) puff(tmp.set(ST.claude.x, 9.6, ST.claude.z), new THREE.Vector3((Math.random() - .5) * .8, 1.8, (Math.random() - .5) * .8), 1.6, .25, .8, 0xd97757, .7); }
   if (!reduced && Math.random() < .08) puff(tmp.copy(stations.factory.grp.userData.stack).add(stations.factory.grp.position), new THREE.Vector3(.3, 1.6, 0), 3, .4, 1.6, 0xffffff, .5);
+  { const u = stations.office.grp.userData, run = OFF.state && OFF.state.running; u.win.emissiveIntensity = run ? .75 + (reduced ? 0 : Math.sin(t * 5) * .25) : .2; u.beacon.material.color.setHex(run && Math.sin(t * 6) > 0 ? 0xffc95c : 0x14b8a6); }
   renderer.render(scene, cam); labels.render(scene, cam);
   requestAnimationFrame(frame);
 }
@@ -1523,6 +1961,7 @@ function stationIcon(id) {
   const s = ST[id];
   if (id === 'you') return '<svg viewBox="0 0 32 32"><path d="M4 24a12 12 0 0 1 24 0z" fill="#fff"/><rect x="3" y="23" width="26" height="4" rx="2" fill="#fff" opacity=".7"/></svg>';
   if (id === 'factory') return '<svg viewBox="0 0 32 32"><path d="M4 27V14l7 4v-4l7 4v-8h10v17z" fill="#fff"/></svg>';
+  if (id === 'office') return '<svg viewBox="0 0 32 32" fill="#fff"><rect x="6" y="5" width="20" height="23" rx="2.5"/><g fill="rgba(0,0,0,.38)"><rect x="10" y="9" width="4" height="4" rx="1"/><rect x="18" y="9" width="4" height="4" rx="1"/><rect x="10" y="16" width="4" height="4" rx="1"/><rect x="18" y="16" width="4" height="4" rx="1"/><rect x="14" y="23" width="4" height="5"/></g></svg>';
   if (s.site) return '<svg viewBox="0 0 32 32" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M16 8v16M8 16h16"/></svg>';
   return '<svg viewBox="0 0 32 32"><path d="M16 3 27 9.5v13L16 29 5 22.5v-13z" fill="#fff"/></svg>';
 }
@@ -1533,6 +1972,7 @@ const mediaBusy = () => Date.now() - lastSkillAt < 90e3 || rovers.some(r => !r.d
 const htmlCache = {};
 const setHTML = (id, html) => { if (htmlCache[id] !== html) { htmlCache[id] = html; $(id).innerHTML = html; } };
 function renderStation() {
+  if (inside) return renderAgent();
   const s = ST[sel], rel = events.filter(e => routeOf(e).includes(sel)), into = events.filter(e => routeOf(e).at(-1) === sel);
   const inbound = rovers.filter(r => !r.done && r.route.at(-1) === sel).length;
   const today = rel.filter(e => new Date(e.at).toDateString() === new Date().toDateString()).length;
@@ -1556,7 +1996,7 @@ function renderStation() {
     </div>
     <div class="sec">Recent crates <span>${rel.length ? rel.length + ' total' : ''}</span></div>
     <ul class="mini">${rel.slice(0, 4).map(e => `<li><span class="box">${ICON.box}</span><span><div class="t">${esc(e.title || '(no message)')}</div><div class="w">${esc(TYPE_LABEL[e.type] || e.type)} · ${esc(e.repo || '')}${e.local ? ' · test' : ''}</div></span><span class="w">${esc(ago(e.at))}</span></li>`).join('') || '<li style="display:block" class="muted">No crates through here yet.</li>'}</ul>`}
-    ${sessList}${acts}`);
+    ${sel === 'office' ? `<button class="st-link obtn" data-office="enter">Go inside</button><p class="muted" style="margin:0;font-size:11.5px;line-height:1.5">Sixteen agents work in here on two floors. Floor 1: the Chief of Staff and the personal and work mail rooms. Floor 2: reply writer, news scout, follow-ups, meeting prep, deadlines, the Coach, the GitHub Watcher, the Keymaster and my twin.</p>` : ''}${sessList}${acts}`);
 }
 function renderTracking() {
   const r = tracked, ev = r ? r.ev : events[0];
@@ -1691,6 +2131,7 @@ function stationStatus(id) {
     case 'chat': return chatNow.active ? ['In conversation', true] : ['Quiet', false];
     case 'media': return mediaBusy() ? ['Party!', true] : ['Ready', false];
     case 'f1': return Date.now() - f1At < 90e3 ? ['Car out', true] : ['In the garage', false];
+    case 'office': return OFF.private ? ['Private', false] : OFF.state && OFF.state.running ? ['Team working', true] : OFF.state ? ['Briefing ready', false] : ['Walk in', false];
     case 'launch': { const st = stations.launch.grp.userData.state; return st === 'ignite' || st === 'lift' ? ['Launching!', true] : st === 'ready' ? ['Ready on the pad', false] : ['Refuelling', false]; }
     case 'lounge': return me.mode === 'lounge' && !me.travel ? ['Yajie is here', true] : ['Empty', false];
     default: return ['', false];
@@ -1719,10 +2160,10 @@ addEventListener('keydown', e => {
 setInterval(renderBuildings, 1000);
 // ---- leaving a building focus: a "Whole base" button, Esc, or double-click on empty space ----
 let focused = false;
-function focusOn(id) { focused = true; $('overviewBtn').hidden = false; tweenTo(curAz(), null, Math.max(cam.zoom, 1.7), new THREE.Vector3(ST[id].x, 0, ST[id].z)); }
+function focusOn(id) { if (inside) return; focused = true; $('overviewBtn').hidden = false; tweenTo(curAz(), null, Math.max(cam.zoom, 1.7), new THREE.Vector3(ST[id].x, 0, ST[id].z)); }
 function overview() { if (!renderer) return; focused = false; $('overviewBtn').hidden = true; tweenTo(HOME.az, HOME.pol, 1, true); }
-$('overviewBtn').onclick = overview;
-addEventListener('keydown', e => { if (e.key === 'Escape' && focused && $('buildings').hidden) overview(); });
+$('overviewBtn').onclick = () => inside ? exitOffice() : overview();
+addEventListener('keydown', e => { if (e.key !== 'Escape' || !$('buildings').hidden) return; if (inside) exitOffice(); else if (focused) overview(); });
 if (renderer) renderer.domElement.addEventListener('dblclick', e => { const r = renderer.domElement.getBoundingClientRect(), v = new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), rc = new THREE.Raycaster(); rc.setFromCamera(v, cam); if (!rc.intersectObjects(Object.values(stations).map(x => x.grp), true).length && focused) overview(); });
 $('home')?.addEventListener('click', () => { focused = false; $('overviewBtn').hidden = true; });
 $('panelsBtn').onclick = () => { const bare = document.querySelector('.hud').classList.toggle('bare'); $('panelsBtn').textContent = bare ? 'Show panels' : 'Hide panels'; $('panelsBtn').setAttribute('aria-pressed', String(bare)); };
