@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Moonbase Yajie</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
 <style>
 /* Layout: a full-bleed 3D diorama (a chunk of moon floating in space) with white operations cards floating over it,
    in the style of a logistics control room. Phones: the scene on top, the cards flow below it. */
@@ -404,6 +404,120 @@ body { color: var(--ink); }
 .obtn { width: 100%; font: 700 12.5px var(--font-ui); cursor: pointer; } .obtn:disabled { opacity: .6; cursor: default; }
 @media (max-width: 1100px) { .hud.in-office { grid-template-columns: minmax(0, 1fr) 320px; } }
 @media (max-width: 860px) { .hud.in-office { grid-template-columns: minmax(0, 1fr); } .atag:not(.sel) { display: none; } } /* a phone has no room for twelve nameplates: show the selected one, pick others from the dots */
+/* ---- Modern website look: flat dark surfaces, hairline borders, one typeface, a site-style header. Replaces the glass rims and sheen. ---- */
+:root {
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+  --surface: rgba(14, 16, 22, .84); --surface-2: rgba(255, 255, 255, .045); --surface-3: rgba(255, 255, 255, .08);
+  --ink: #f2f3f5; --muted: #9a9fad; --line: rgba(255, 255, 255, .09); --line-2: rgba(255, 255, 255, .16);
+  --accent: #6ee7ff; --accent-ink: #06222b;
+  --ok: #4ade9b; --ok-bg: rgba(74, 222, 155, .12); --warn: #f5c563; --warn-bg: rgba(245, 197, 99, .12);
+  --r: 14px; --r-sm: 8px;
+  --shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 12px 32px rgba(0, 0, 0, .36);
+}
+body { font-size: 13px; -webkit-font-smoothing: antialiased; letter-spacing: -.003em; }
+.card { background: var(--surface); -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); text-shadow: none; }
+.card::before, .card::after { content: none; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .card { background: #0e1016; } }
+/* header: a site navigation bar across the top */
+.topbar { margin: -12px -14px 0; border-radius: 0; border-width: 0 0 1px; padding: 10px 18px; gap: 6px; box-shadow: none; background: rgba(10, 11, 16, .78); }
+.brand { font-weight: 700; font-size: 15px; letter-spacing: -.02em; gap: 9px; } .brand svg { width: 22px; height: 22px; }
+.chip { background: none; border: 0; box-shadow: none; padding: 0 10px 0 0; gap: 8px; border-radius: 0; }
+.chip .code { background: var(--surface-3); color: var(--muted); border-radius: 6px; padding: 4px 6px; font-size: 10.5px; }
+.chip b { font-size: 12.5px; font-weight: 600; } .chip small { font-size: 11px; }
+.live, .live.off { background: none; box-shadow: none; padding: 6px 10px; font-weight: 500; font-size: 12.5px; border-radius: var(--r-sm); }
+.live { color: var(--ok); } .live.off { color: var(--muted); } .live time { color: var(--muted); }
+.live .dot { width: 7px; height: 7px; }
+.viewers { background: none; border: 0; box-shadow: none; color: var(--muted); font-weight: 500; padding: 6px 10px; }
+.panels-btn, .btns button { background: none; border: 1px solid transparent; box-shadow: none; border-radius: var(--r-sm); color: var(--muted); font-weight: 500; font-size: 12.5px; padding: 7px 10px; transition: background .15s, color .15s; }
+.panels-btn:hover, .btns button:hover, .panels-btn[aria-expanded="true"] { background: var(--surface-3); color: var(--ink); }
+.btns button { border-color: var(--line); color: var(--ink); }
+.me { margin-left: 6px; padding-left: 14px; border-left: 1px solid var(--line); gap: 9px; }
+.avatar { width: 30px; height: 30px; font-size: 11px; font-weight: 700; background: #23262f; border: 1px solid var(--line-2); color: var(--ink); }
+.me b { font-size: 12.5px; font-weight: 600; } .me small { font-size: 11px; }
+/* stat cards */
+.kpis { gap: 10px; }
+.kpi { border-radius: var(--r); padding: 12px 16px 12px 14px; gap: 12px; }
+.kpi .ic { width: 30px; height: 30px; border-radius: var(--r-sm); background: var(--surface-3) !important; color: var(--muted) !important; box-shadow: none; } .kpi .ic svg { width: 16px; height: 16px; }
+.kpi .k { font-size: 11.5px; font-weight: 500; } .kpi .v { font-size: 20px; font-weight: 600; letter-spacing: -.03em; } .kpi .s { font-size: 11px; }
+.up { font-weight: 600; }
+.mapctl { border-radius: 10px; padding: 4px; } .mapctl button { width: 32px; height: 32px; border-radius: 7px; color: var(--muted); } .mapctl button:hover { background: var(--surface-3); color: var(--ink); } .mapctl svg { width: 16px; height: 16px; }
+/* side panel */
+.station { padding: 16px; } #station { gap: 14px; }
+.st-icon { border-radius: 10px; box-shadow: none; }
+.eyebrow { color: var(--muted); font-weight: 600; font-size: 10.5px; letter-spacing: .08em; }
+.st-head h2 { font-size: 15px; font-weight: 600; letter-spacing: -.015em; } .st-head p { font-size: 12px; }
+.st-status { border-top-color: var(--line); padding-top: 12px; }
+.pill { border-radius: 6px; font-weight: 600; font-size: 11px; padding: 4px 8px; }
+.pill.blue { background: var(--surface-3); color: var(--ink); } .pill.grey { background: var(--surface-2); }
+.tile, .shipcard { background: var(--surface-2); box-shadow: none; border: 1px solid var(--line); border-radius: 10px; }
+.tile .k { font-weight: 500; } .tile .v { font-weight: 600; letter-spacing: -.02em; }
+.tile .bar { background: var(--surface-3); } .tile .bar i { background: var(--accent); }
+.sec { font-weight: 600; font-size: 12px; } .mini .t { font-weight: 500; } .mini .box { background: var(--surface-3); border-radius: 6px; }
+.st-link { border-radius: var(--r-sm); background: #f2f3f5; color: #0c0d11; border: 1px solid #f2f3f5; box-shadow: none; font-weight: 600; padding: 9px 12px; transition: background .15s; }
+.st-link:hover { background: #fff; }
+.fold { background: none; border: 0; box-shadow: none; border-radius: 7px; color: var(--muted); } .fold:hover { background: var(--surface-3); color: var(--ink); }
+.tabs b { background: none; border: 0; box-shadow: none; padding: 4px 0; font-weight: 600; font-size: 12.5px; border-radius: 0; }
+.tr-head h3 { font-size: 12.5px; font-weight: 600; }
+.log .m { font-weight: 500; } .hint { font-size: 11.5px; }
+.step .c { background: var(--surface-3); box-shadow: none; border-color: transparent; } .step b { font-weight: 600; }
+.step.done .c { background: #f2f3f5; color: #0c0d11; } .step.now .c { background: var(--surface-3); color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent); }
+.step::before { background: var(--line-2); height: 2px; } .step.done::before, .step.now::before { background: #f2f3f5; }
+.working { color: #ffb08f; font-weight: 600; }
+/* map labels */
+.tag, .sessions-card { background: rgba(14, 16, 22, .88); border: 1px solid var(--line-2); border-radius: 7px; box-shadow: 0 4px 14px rgba(0, 0, 0, .35); font-weight: 500; font-size: 11.5px; padding: 4px 9px 4px 8px; color: var(--ink); }
+.tag i { width: 6px; height: 6px; border-radius: 50%; }
+.tag.sel { box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px rgba(0, 0, 0, .35); }
+.bubble { border-radius: 10px 10px 10px 3px; font-weight: 500; }
+.overview { background: #f2f3f5; color: #0c0d11; border: 0; border-radius: var(--r-sm); box-shadow: 0 8px 24px rgba(0, 0, 0, .4); font-weight: 600; font-size: 12.5px; padding: 8px 14px 8px 10px; -webkit-backdrop-filter: none; backdrop-filter: none; top: 70px; }
+.buildings { top: 62px; border-radius: var(--r); padding: 10px; }
+#blList button { border-radius: var(--r-sm); } #blList button:hover, #blList button[aria-current="true"] { background: var(--surface-3); border-color: transparent; box-shadow: none; }
+#blList i { border-radius: 50%; width: 8px; height: 8px; } #blList .n { font-weight: 600; } #blList .st { border-radius: 6px; font-weight: 600; background: var(--surface-2); }
+/* office */
+.floors { border-radius: 10px; padding: 4px; gap: 2px; } .floors button { border-radius: 7px; font-weight: 500; color: var(--muted); }
+.floors button b { border-radius: 6px; background: var(--surface-3); font-weight: 600; font-size: 12px; }
+.floors button:hover { background: var(--surface-2); color: var(--ink); }
+.floors button[aria-pressed="true"] { background: var(--surface-3); border-color: transparent; color: var(--ink); } .floors button[aria-pressed="true"] b { background: #f2f3f5; color: #0c0d11; }
+.roster button { box-shadow: none; border-color: transparent; } .roster button[aria-current="true"] { border-color: #0e1016; box-shadow: 0 0 0 1.5px #f2f3f5; }
+.oi { background: var(--surface-2); box-shadow: none; border: 1px solid var(--line); border-radius: 10px; } .oi.warn { box-shadow: none; border-color: rgba(245, 197, 99, .45); }
+.oi .t { font-weight: 600; } .oi summary { color: var(--accent); font-weight: 600; }
+.acts button, .acts a { border-radius: 6px; background: var(--surface-2); font-weight: 500; } .acts button:hover, .acts a:hover { background: var(--surface-3); }
+.banner { border-radius: 10px; }
+.msg { border-radius: 12px; } .msg.me { background: #f2f3f5; color: #0c0d11; border-color: #f2f3f5; } .msg.them { background: var(--surface-2); }
+.cit { background: rgba(0, 0, 0, .22); border: 1px solid var(--line); }
+.askbox input, .askbox textarea { background: rgba(0, 0, 0, .25); border-radius: var(--r-sm); }
+button:focus-visible, .st-link:focus-visible, .overview:focus-visible, #blList button:focus-visible, .roster button:focus-visible, .obtn:focus-visible, .acts button:focus-visible, .acts a:focus-visible, .floors button:focus-visible, .askbox input:focus-visible, .askbox textarea:focus-visible, .dock select:focus-visible, .dock input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* ---- Chat with the agents from the main screen: a launcher bottom right of the map, the conversation opens above it ---- */
+.dock { grid-column: 1; grid-row: 4; justify-self: end; align-self: end; position: relative; pointer-events: auto; z-index: 8; }
+.dock-btn { display: flex; align-items: center; gap: 9px; font: 600 13px var(--font-ui); color: #0c0d11; background: #f2f3f5; border: 0; border-radius: 999px; padding: 11px 16px 11px 14px; cursor: pointer; box-shadow: 0 10px 28px rgba(0, 0, 0, .45); white-space: nowrap; transition: background .15s, transform .15s; }
+.dock-btn:hover { background: #fff; transform: translateY(-1px); } .dock-btn svg { width: 17px; height: 17px; }
+.dock-btn kbd { font: 500 11px var(--font-code); color: #5c6170; border: 1px solid #c9ccd4; border-radius: 5px; padding: 1px 6px; }
+.dock-panel { position: absolute; right: 0; bottom: calc(100% + 10px); width: 384px; height: min(540px, calc(100vh - 170px)); display: flex; flex-direction: column; background: rgba(14, 16, 22, .95); }
+.dock-head { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 14px; border-bottom: 1px solid var(--line); flex: none; }
+.dock-head i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.dock-head label { display: grid; gap: 1px; flex: 1; min-width: 0; } .dock-head label span { font-size: 11px; color: var(--muted); }
+.dock select { font: 600 13.5px var(--font-ui); color: var(--ink); background: transparent; border: 0; padding: 0; margin: 0; cursor: pointer; width: 100%; min-width: 0; text-overflow: ellipsis; }
+.dock select option { background: #14161d; color: var(--ink); font-weight: 500; }
+.dock-head button { width: 30px; height: 30px; border: 0; border-radius: 7px; background: none; color: var(--muted); cursor: pointer; display: grid; place-items: center; flex: none; } .dock-head button:hover { background: var(--surface-3); color: var(--ink); } .dock-head svg { width: 16px; height: 16px; }
+.dock-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.dock-log .msg { font-size: 13px; max-width: 88%; flex: none; } .dock-log .msg.me { align-self: flex-end; } .dock-log .msg.them { align-self: flex-start; }
+.dock-empty { margin: auto 0; display: grid; gap: 12px; } .dock-empty b { font-size: 15px; font-weight: 600; letter-spacing: -.015em; } .dock-empty p { margin: -6px 0 0; color: var(--muted); line-height: 1.5; }
+.dock-try { display: flex; flex-wrap: wrap; gap: 6px; } .dock-try button { font: 500 12px var(--font-ui); color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 6px 11px; cursor: pointer; } .dock-try button:hover { background: var(--surface-3); }
+.dock-form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); flex: none; }
+.dock-form input { flex: 1; min-width: 0; font: 13.5px/1.4 var(--font-ui); color: var(--ink); background: rgba(0, 0, 0, .28); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; } .dock-form input::placeholder { color: var(--muted); }
+.dock-form button { width: 40px; border: 0; border-radius: 10px; background: #f2f3f5; color: #0c0d11; cursor: pointer; display: grid; place-items: center; flex: none; } .dock-form button:hover { background: #fff; } .dock-form button:disabled { opacity: .5; cursor: default; } .dock-form svg { width: 17px; height: 17px; }
+.dock-note { margin: 0; padding: 0 14px 10px; font-size: 11px; color: var(--muted); flex: none; }
+.tracking { max-width: min(640px, calc(100% - 200px)); }
+@media (max-width: 1240px) { .dock-btn kbd { display: none; } .tracking { max-width: min(640px, calc(100% - 170px)); } .chip small { display: none; } }
+@media (max-width: 1000px) { .chip { display: none; } }
+@media (max-width: 860px) {
+  .topbar { margin: -16px -16px 0; padding: 10px 16px; } .me { border-left: 0; padding-left: 0; margin-left: 0; }
+  .tracking { max-width: none; }
+  .dock { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); z-index: 20; }
+  .dock-panel { width: calc(100vw - 32px); max-width: 420px; height: min(520px, calc(100dvh - 110px)); }
+  .dock-btn span { display: none; } .dock-btn { padding: 14px; }
+  .dock-form input { font-size: 16px; } /* stops phones zooming the page on focus */
+}
 </style>
 </head>
 <body>
@@ -455,6 +569,16 @@ body { color: var(--ink); }
       <div class="tabs"><b>Cargo log</b><span id="logCount"></span></div>
       <ul class="log" id="log"></ul>
       <p class="hint">Click GitHub, Claude Code, the Chat Tower, Creative Media or F1 on the map to send a test crate from there. Click the Agent Office to walk in.</p>
+    </section>
+    <section class="dock" id="dock" hidden aria-label="Chat with your agents">
+      <div class="dock-panel card" id="dockPanel" hidden role="dialog" aria-label="Chat with your agents">
+        <div class="dock-head"><i id="dockDot"></i><label><span>Talking to</span><select id="dockAgent" aria-label="Choose an agent"></select></label>
+          <button id="dockClose" aria-label="Close chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <div class="dock-log" id="dockLog" aria-live="polite"></div>
+        <form class="dock-form" id="dockForm"><input id="dockInput" name="t" maxlength="400" autocomplete="off" placeholder="Message your agents…" aria-label="Message"><button aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></form>
+        <p class="dock-note">Stays on this Mac. Agents answer from their latest reports.</p>
+      </div>
+      <button class="dock-btn" id="dockBtn" aria-expanded="false" aria-controls="dockPanel" title="Chat with your agents (press /)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1.1-4.6A8 8 0 1 1 21 12z"/></svg><span>Ask your agents</span><kbd>/</kbd></button>
     </section>
   </div>
 </div>
@@ -1920,7 +2044,7 @@ function enterOffice() {
   setTimeout(() => {
     inside = true; focused = false; controls.enabled = false; OFF.controls.enabled = true;
     labels.domElement.hidden = true; OFF.labels.domElement.hidden = false; $('floors').hidden = false;
-    document.querySelector('.hud').classList.add('in-office'); $('overviewBtn').hidden = false; $('overviewBtn').lastChild.textContent = 'Leave office';
+    document.querySelector('.hud').classList.add('in-office'); loadChat(OFF.sel); $('overviewBtn').hidden = false; $('overviewBtn').lastChild.textContent = 'Leave office';
     $('stationCard').classList.remove('min'); officeView(); showFloor(OFF.desks[OFF.sel].a.floor); applyOffice(); officePoll(); fade.classList.remove('on'); OFF.moving = false;
   }, reduced ? 40 : 600);
 }
@@ -1935,10 +2059,10 @@ function exitOffice() {
   }, reduced ? 40 : 320);
 }
 function scrollChat() { const c = $('chatLog'); if (c) c.scrollTop = c.scrollHeight; }
-async function loadChat(id) { if (OFF.private || OFF.chats[id]) return; try { const r = await (await fetch('/office/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent: id, text: '' }) })).json(); if (r.ok && !OFF.chats[id]) { OFF.chats[id] = r.history || []; if (OFF.sel === id) { renderAgent(); scrollChat(); } } } catch (e) {} }
+async function loadChat(id) { if (OFF.private || OFF.chats[id]) return; try { const r = await (await fetch('/office/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent: id, text: '' }) })).json(); if (r.ok && !OFF.chats[id]) { OFF.chats[id] = r.history || []; if (OFF.sel === id) { renderAgent(); scrollChat(); } renderDock(); } } catch (e) {} }
 function selectAgent(id) { loadChat(id); if (!OFF.desks[id]) return; OFF.sel = id; $('stationCard').classList.remove('min'); if (OFF.desks[id].a.floor !== OFF.floor) showFloor(OFF.desks[id].a.floor); applyOffice(true); $('station').scrollTop = 0; }
 $('floors').addEventListener('click', e => { const b = e.target.closest('button[data-floor]'); if (b) goFloor(+b.dataset.floor); });
-addEventListener('keydown', e => { if (inside && (e.key === '1' || e.key === '2' || e.key === '3') && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) goFloor(+e.key); });
+addEventListener('keydown', e => { if (inside && (e.key === '1' || e.key === '2' || e.key === '3') && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) goFloor(+e.key); });
 
 // ---- what each agent is doing right now, from the bridge ----
 const agentState = id => (OFF.state && OFF.state.agents.find(x => x.id === id)) || null;
@@ -2368,7 +2492,7 @@ document.querySelectorAll('.fold').forEach(b => {
 function setNames(off) { const l = document.querySelector('.labels'); if (l) l.classList.toggle('off', off); $('namesBtn').textContent = off ? 'Show names' : 'Hide names'; $('namesBtn').setAttribute('aria-pressed', String(off)); try { localStorage.setItem('hide-names', off ? '1' : '0'); } catch (e) {} }
 try { if (localStorage.getItem('hide-names') === '1') setNames(true); } catch (e) {}
 $('namesBtn').onclick = () => setNames(!document.querySelector('.labels')?.classList.contains('off'));
-addEventListener('keydown', e => { if ((e.key === 'n' || e.key === 'N') && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) setNames(!document.querySelector('.labels')?.classList.contains('off')); });
+addEventListener('keydown', e => { if ((e.key === 'n' || e.key === 'N') && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) setNames(!document.querySelector('.labels')?.classList.contains('off')); });
 // ---- building list: live status per station; click to fly there and open its panel ----
 function stationStatus(id) {
   const into = rovers.filter(r => !r.done && r.route.at(-1) === id).length, busyAt = rovers.some(r => !r.done && r.wait > 0 && r.route[r.leg] === id);
@@ -2404,7 +2528,7 @@ $('blList').addEventListener('click', e => {
 addEventListener('click', e => { if (!$('buildings').hidden && !e.target.closest('#buildings') && !e.target.closest('#listBtn')) showBuildings(false); });
 addEventListener('keydown', e => {
   if (e.key === 'Escape' && !$('buildings').hidden) showBuildings(false);
-  if ((e.key === 'b' || e.key === 'B') && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) showBuildings($('buildings').hidden);
+  if ((e.key === 'b' || e.key === 'B') && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) showBuildings($('buildings').hidden);
 });
 setInterval(renderBuildings, 1000);
 // ---- leaving a building focus: a "Whole base" button, Esc, or double-click on empty space ----
@@ -2452,6 +2576,41 @@ if (FEED_URL.startsWith('ws')) {
   es.onerror = offline;
 }
 setInterval(renderClaude, 30e3);
+// ---- Chat dock on the main screen: pick any agent and talk without walking into the office. Same conversations as the desk panels.
+var DOCK = { open: false, agent: 'chief', busy: false };
+const DOCK_TRY = { chief: ["What's new?", 'What deadlines do I have?', 'What meetings do I have?', 'Run the team'], github: ['What did I push today?', 'Anything waiting to be pushed?'], twin: ['What do you know about me?'], scout: ["What's the AI news?"], linkedin: ['Any jobs for me?'], deadlines: ['What is due soon?'] };
+const msgHTML = m => `<div class="msg ${m.me ? 'me' : 'them'}">${m.pending ? '<span class="w">Thinking…</span>' : esc(m.text)}${(m.items || []).map(it => `<div class="cit"><b>${esc(it.title)}</b>${it.meta ? `<span>${esc(it.meta)}</span>` : ''}${it.body ? `<span>${esc(it.body)}</span>` : ''}${it.why ? `<span>${esc(it.why)}</span>` : ''}</div>`).join('')}</div>`;
+function renderDock() {
+  if (!DOCK || !DOCK.open) return;
+  const a = AGENTS.find(x => x.id === DOCK.agent) || AGENTS[3], log = (OFF.chats[a.id] || []).slice(-40), box = $('dockLog');
+  $('dockDot').style.background = a.css; $('dockInput').placeholder = 'Message ' + a.name + '…';
+  box.innerHTML = log.length ? log.map(msgHTML).join('') : `<div class="dock-empty"><b>${esc(a.name)}</b><p>${esc(a.role)}. ${a.id === 'chief' ? 'Not sure who to ask? Ask me and I will pass it to the right agent.' : 'Ask about anything in my latest report.'}</p><div class="dock-try">${(DOCK_TRY[a.id] || ["What's new?", 'How many?']).map(q => `<button type="button" data-say="${esc(q)}">${esc(q)}</button>`).join('')}</div></div>`;
+  box.scrollTop = box.scrollHeight;
+}
+function openDock(on) { DOCK.open = on; $('dockPanel').hidden = !on; $('dockBtn').setAttribute('aria-expanded', on); if (on) { loadChat(DOCK.agent); renderDock(); $('dockInput').focus(); } else $('dockBtn').focus(); }
+async function dockSay(text) {
+  const id = DOCK.agent; text = text.trim(); if (!text || DOCK.busy) return;
+  DOCK.busy = true; $('dockForm').lastElementChild.disabled = true;
+  const log = OFF.chats[id] = [...(OFF.chats[id] || []), { me: true, text }, { me: false, pending: true }]; renderDock();
+  try { const r = await (await fetch('/office/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent: id, text }) })).json();
+    if (r.ok) { OFF.chats[id] = r.history; const k = OFF.desks[id]; if (k && k.w && r.reply) { k.w.line = r.reply.text.length > 90 ? r.reply.text.slice(0, 88) + '…' : r.reply.text; k.w.lineUntil = clock.elapsedTime + 7; } }
+    else { log.pop(); log.push({ me: false, text: r.error || 'That did not work.' }); } }
+  catch (err) { log.pop(); log.push({ me: false, text: 'The Moonbase bridge is not reachable.' }); }
+  DOCK.busy = false; $('dockForm').lastElementChild.disabled = false; renderDock(); if (inside && OFF.sel === id) renderAgent(true);
+}
+if (!OFF.private) {
+  $('dock').hidden = false;
+  $('dockAgent').innerHTML = [['Whole team', a => a.id === 'chief'], ['Personal · Gmail', a => a.wing === 'personal'], ['Work · Outlook', a => a.wing === 'work'], ['Specialists', a => a.wing === 'shared' && a.id !== 'chief']]
+    .map(([g, f]) => `<optgroup label="${g}">${AGENTS.filter(f).map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('')}</optgroup>`).join('');
+  $('dockAgent').value = DOCK.agent;
+  $('dockAgent').onchange = e => { DOCK.agent = e.target.value; loadChat(DOCK.agent); renderDock(); $('dockInput').focus(); };
+  $('dockBtn').onclick = () => openDock(!DOCK.open);
+  $('dockClose').onclick = () => openDock(false);
+  $('dockForm').onsubmit = e => { e.preventDefault(); const v = $('dockInput').value; $('dockInput').value = ''; dockSay(v); };
+  $('dockLog').onclick = e => { const b = e.target.closest('[data-say]'); if (b) dockSay(b.dataset.say); };
+  $('dockPanel').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); openDock(false); } });
+  addEventListener('keydown', e => { if (e.key === '/' && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) { e.preventDefault(); openDock(true); } });
+}
 </script>
 </body>
 </html>
