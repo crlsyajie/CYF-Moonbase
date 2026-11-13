@@ -389,6 +389,11 @@ body { color: var(--ink); }
 .floors button[aria-pressed="true"] { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .28); } .floors button[aria-pressed="true"] b { background: #d6ad55; color: #1a1408; }
 .floors button.busy b { box-shadow: 0 0 0 2px #ffc95c; }
 .floors button:focus-visible, .askbox input:focus-visible, .askbox textarea:focus-visible { outline: 2px solid #d6ad55; outline-offset: 2px; }
+.chat { display: grid; gap: 6px; margin: -4px 0 0; }   /* no scroll box of its own: the panel scrolls, and only the last few messages are shown */
+.msg { max-width: 92%; padding: 7px 10px; border-radius: 12px; font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere; display: grid; gap: 5px; }
+.msg.me { justify-self: end; background: rgba(53, 224, 255, .16); border: 1px solid rgba(53, 224, 255, .35); border-bottom-right-radius: 4px; }
+.msg.them { justify-self: start; background: rgba(255, 255, 255, .08); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.cit { display: grid; gap: 1px; padding: 5px 8px; border-radius: 8px; background: rgba(0, 0, 0, .25); font-size: 11.5px; } .cit span { color: var(--muted); }
 .askbox { display: flex; gap: 6px; margin: -4px 0 0; } .askbox.col { flex-direction: column; margin-top: 4px; }
 .askbox input, .askbox textarea { flex: 1; min-width: 0; font: 12.5px/1.4 var(--font-ui); color: var(--ink); background: rgba(0, 0, 0, .28); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; resize: vertical; }
 .askbox input::placeholder, .askbox textarea::placeholder { color: var(--muted); }
@@ -1619,7 +1624,7 @@ const BREAKS = [['lounge', -4.4, 6, 'Coffee time'], ['lounge', -1, 10.6, 'Five m
   ['meeting', -9, -6.8, 'Team sync in the meeting room'], ['meeting', -6.2, -6.8, 'Going over the plan'], ['meeting', -3.4, -6.8, 'Sharing my numbers'], ['meeting', -.8, -6.8, 'Listening in on the sync'], ['deck', -3, 7, 'Looking at Earth for a minute'], ['deck', 6, 6, 'Fresh air on the deck']];
 const REPLIES = ['Got it.', 'Thanks, on it.', 'Noted.', 'Nice work.', 'Leave it with me.', 'Good to know.'], SMALL = [['Busy day?', 'Always.'], ['Coffee later?', 'Count me in.'], ['How is your queue?', 'Under control.'], ['Seen the Chief?', 'Doing the rounds.']];
 const NO_MAIL = new Set(['scout', 'github', 'keymaster', 'twin', 'coach']); // desks that do not depend on the mailboxes
-const OFF = { scene: new THREE.Scene(), cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 800), desks: {}, state: null, sel: 'chief', floor: 1, private: !LOCAL, err: '', built: false, moving: false, n: 0, twinReply: null };
+const OFF = { chats: {}, scene: new THREE.Scene(), cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 800), desks: {}, state: null, sel: 'chief', floor: 1, private: !LOCAL, err: '', built: false, moving: false, n: 0, twinReply: null };
 let inside = false;
 
 // The building on the base: a two-storey office with a canopy door, a roof sign and windows that glow while the team is working.
@@ -1929,7 +1934,9 @@ function exitOffice() {
     renderer.domElement.style.cursor = 'grab'; overview(); renderStation(); fade.classList.remove('on'); OFF.moving = false;
   }, reduced ? 40 : 320);
 }
-function selectAgent(id) { if (!OFF.desks[id]) return; OFF.sel = id; $('stationCard').classList.remove('min'); if (OFF.desks[id].a.floor !== OFF.floor) showFloor(OFF.desks[id].a.floor); applyOffice(true); $('station').scrollTop = 0; }
+function scrollChat() { const c = $('chatLog'); if (c) c.scrollTop = c.scrollHeight; }
+async function loadChat(id) { if (OFF.private || OFF.chats[id]) return; try { const r = await (await fetch('/office/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent: id, text: '' }) })).json(); if (r.ok && !OFF.chats[id]) { OFF.chats[id] = r.history || []; if (OFF.sel === id) { renderAgent(); scrollChat(); } } } catch (e) {} }
+function selectAgent(id) { loadChat(id); if (!OFF.desks[id]) return; OFF.sel = id; $('stationCard').classList.remove('min'); if (OFF.desks[id].a.floor !== OFF.floor) showFloor(OFF.desks[id].a.floor); applyOffice(true); $('station').scrollTop = 0; }
 $('floors').addEventListener('click', e => { const b = e.target.closest('button[data-floor]'); if (b) goFloor(+b.dataset.floor); });
 addEventListener('keydown', e => { if (inside && (e.key === '1' || e.key === '2' || e.key === '3') && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) goFloor(+e.key); });
 
@@ -2001,6 +2008,9 @@ function renderAgent(force) {
   else if (!S) body = `<div class="banner">The agents are not answering: ${esc(OFF.err || 'still starting')}.</div><p class="muted" style="margin:0;line-height:1.55">They live inside the Moonbase bridge on this Mac. Open Moonbase at http://127.0.0.1:8787 with the bridge running.</p>`;
   else {
     const demo = a.wing === 'shared' ? (S.demo.personal || S.demo.work) : S.demo[a.wing];
+    { const log = (OFF.chats[a.id] || []).slice(-6);   // talk to this agent
+      body += `<div class="sec">Talk to ${esc(a.name)}</div><div class="chat" id="chatLog">${log.length ? log.map(m => `<div class="msg ${m.me ? 'me' : 'them'}">${m.pending ? '<span class="w">Thinking…</span>' : esc(m.text)}${(m.items || []).map(it => `<div class="cit"><b>${esc(it.title)}</b>${it.meta ? `<span>${esc(it.meta)}</span>` : ''}${it.body ? `<span>${esc(it.body)}</span>` : ''}${it.why ? `<span>${esc(it.why)}</span>` : ''}</div>`).join('')}</div>`).join('') : `<p class="muted" style="margin:0">Ask me what's new, how many, or about anything in my report. Say "run" to put the team to work.</p>`}</div>
+        <form class="askbox" data-chat="${a.id}"><input name="t" maxlength="400" autocomplete="off" placeholder="Message ${esc(a.name)}…" aria-label="Message ${esc(a.name)}"><button class="obtn st-link">Send</button></form>`; }
     if (demo && !NO_MAIL.has(a.id)) body += `<div class="banner">Practice data. ${a.wing === 'shared' ? (S.demo.personal && S.demo.work ? 'Your real mail and calendars are' : 'Your real ' + (S.demo.personal ? 'Gmail' : 'Outlook') + ' is') : 'Your real ' + (a.wing === 'personal' ? 'Gmail' : 'Outlook') + ' is'} not connected yet, so made-up examples stand in for it.</div>`;
     if (OFF.note) body += `<div class="banner">${esc(OFF.note)}</div>`;
     if (st && st.status === 'error') body += `<div class="banner">${esc(st.error)}</div>`;
@@ -2049,6 +2059,13 @@ $('station').addEventListener('click', e => {
 $('station').addEventListener('submit', async e => {
   const f = e.target.closest('form'); if (!f) return; e.preventDefault();
   if (f.dataset.open) { const v = f.elements.a.value.trim(); if (!v) return; f.elements.a.blur(); await officeSend('/office/answer', { qid: f.dataset.open, value: v }); return renderAgent(true); }
+  if (f.dataset.chat) { const id = f.dataset.chat, text = f.elements.t.value.trim(); if (!text) return; f.elements.t.blur();
+    const log = OFF.chats[id] = [...(OFF.chats[id] || []), { me: true, text }, { me: false, pending: true }]; renderAgent(true); scrollChat();
+    try { const r = await (await fetch('/office/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent: id, text }) })).json();
+      if (r.ok) { OFF.chats[id] = r.history; const k = OFF.desks[id]; if (k && k.w && r.reply) { k.w.line = r.reply.text.length > 90 ? r.reply.text.slice(0, 88) + '…' : r.reply.text; k.w.lineUntil = clock.elapsedTime + 7; } }
+      else { log.pop(); log.push({ me: false, text: r.error || 'That did not work.' }); } }
+    catch (err) { log.pop(); log.push({ me: false, text: 'The Moonbase bridge is not reachable.' }); }
+    renderAgent(true); scrollChat(); const inp = $('station').querySelector('form[data-chat] input'); if (inp) inp.focus(); return; }
   if ('twin' in f.dataset) { const q = f.elements.q.value.trim(); if (!q) return; f.elements.q.blur(); OFF.twinReply = { q, pending: true }; renderAgent(true);
     try { const r = await fetch('/office/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q }) }); OFF.twinReply = { q, ...(await r.json()) }; } catch (err) { OFF.twinReply = { q, note: 'The Moonbase bridge is not reachable.' }; }
     renderAgent(true); }

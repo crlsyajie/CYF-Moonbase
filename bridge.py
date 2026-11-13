@@ -249,6 +249,8 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/office/answer":          # an answer to one of the twin's questions
                 OFFICE.answer(str(body.get("qid")), body.get("value"))
                 return self.send_json(200, {"ok": True})
+            if self.path == "/office/chat":            # talk to one agent
+                return self.send_json(200, dict(OFFICE.chat(str(body.get("agent")), str(body.get("text") or "")), ok=True))
             if self.path == "/office/ask":             # a question for the twin
                 return self.send_json(200, dict(OFFICE.ask(str(body.get("q") or "")), ok=True))
             if self.path == "/office/ingest":          # a courier delivers mail or a calendar for one wing
