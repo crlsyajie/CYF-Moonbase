@@ -1012,31 +1012,37 @@ class GitHubWatcher(Agent):
         if not re.match(r"^[A-Za-z0-9-]{1,39}$", user):
             return {"headline": "No GitHub user set", "stats": [], "note": "Add \"github_user\" to config.json.", "sections": []}
         cache = self.o.github
-        cache.setdefault("msgs", {})
         token = self.o.secret("github_token", self.id)
         if time.time() - cache.get("at", 0) > 240:
             self.say("Asking GitHub for new pushes")
             try:
-                events = self.api("https://api.github.com/users/%s/events%s?per_page=60" % (user, "" if token else "/public"), token)
-                pushes = []
-                for e in events:
-                    if e.get("type") != "PushEvent":
+                # GitHub's activity feed runs days late and leaves commit messages out, so read the repos themselves:
+                # which ones were pushed to most recently, then the newest commits of each. A repo is only asked
+                # again when its "pushed at" time changes, which keeps this to one request on a quiet check.
+                repos = self.api("https://api.github.com/users/%s/repos?sort=pushed&per_page=8" % user, token) if not token else \
+                    self.api("https://api.github.com/user/repos?sort=pushed&per_page=8&affiliation=owner", token)
+                seen, pushes = cache.setdefault("repos", {}), []
+                for r in repos[:6]:
+                    full, stamp, branch = str(r.get("full_name", "")), str(r.get("pushed_at", "")), str(r.get("default_branch", ""))
+                    if not re.match(r"^[\w.-]+/[\w.-]+$", full):
                         continue
-                    p = e.get("payload") or {}
-                    commits, head = p.get("commits") or [], str(p.get("head") or "")
-                    msg = commits[-1].get("message", "") if commits else cache["msgs"].get(head, "")
-                    pushes.append({"id": str(e.get("id")), "repo": str((e.get("repo") or {}).get("name", "")), "branch": str(p.get("ref", "")).replace("refs/heads/", ""),
-                                   "head": head, "msg": msg.split("\n")[0][:140], "n": len(commits) or int(p.get("size") or 1), "at": e.get("created_at")})
-                for p in pushes[:6]:      # GitHub's newer event feed leaves the commit message out; look up the newest few
-                    if not p["msg"] and re.match(r"^[0-9a-f]{7,40}$", p["head"]) and re.match(r"^[\w.-]+/[\w.-]+$", p["repo"]):
+                    old = seen.get(full) or {}
+                    if old.get("stamp") != stamp:
                         try:
-                            c = self.api("https://api.github.com/repos/%s/commits/%s" % (p["repo"], p["head"]), token)
-                            p["msg"] = cache["msgs"][p["head"]] = str((c.get("commit") or {}).get("message", "")).split("\n")[0][:140]
+                            got = self.api("https://api.github.com/repos/%s/commits?per_page=6" % full, token)
+                            old = {"stamp": stamp, "commits": [{"id": str(c.get("sha", "")), "repo": full, "branch": branch, "head": str(c.get("sha", "")),
+                                                              "msg": str((c.get("commit") or {}).get("message", "")).split("\n")[0][:140], "n": 1,
+                                                              "at": ((c.get("commit") or {}).get("committer") or {}).get("date")} for c in got]}
+                            seen[full] = old
                         except Exception:
-                            break
+                            pass
+                    pushes += old.get("commits", [])
+                for k in [k for k in seen if k not in set(str(r.get("full_name", "")) for r in repos)]:
+                    del seen[k]
+                pushes.sort(key=lambda p: str(p.get("at") or ""), reverse=True)
+                pushes = pushes[:30]
                 cache.update(at=time.time(), pushes=pushes, error="")
-                for k in list(cache["msgs"])[:-300]:
-                    del cache["msgs"][k]
+                cache.pop("msgs", None)
             except Exception as e:
                 cache.update(at=time.time() - 120, error="GitHub did not answer (%s)" % str(e)[:80])
             write_json(os.path.join(DATA, "github.json"), cache)
@@ -1676,6 +1682,14 @@ class Office:
                 hits = [(sec, it) for n, sec, it in scored if n][:4]
                 if re.search(r"\b(how many|count|numbers?|stats?|total)\b", low) and rep.get("stats"):
                     reply = "; ".join("%s: %s" % (k, v) for k, v in rep["stats"]) + "."
+                elif agent_id == "github" and re.search(r"\b(push(ed|es)?|commit(s|ted)?|latest|recent|last)\b", low) and not re.search(r"\b(waiting|not pushed|unpushed|pending)\b", low):
+                    rows = [(sec, it) for sec, it in items if sec.startswith("Recent pushes")]
+                    named = [(sec, it) for sec, it in rows if want & bag(it.get("meta", "").split(" \u00b7 ")[0].replace("-", " "))]      # a project was named
+                    rows = named or rows
+                    if "today" in low or "yesterday" in low:
+                        rows = [(sec, it) for sec, it in rows if (" \u00b7 Today " if "today" in low else " \u00b7 Yesterday ") in it.get("meta", "")]
+                    reply = ("Your latest push%s:" % ("" if len(rows[:5]) == 1 else "es")) if rows else "Nothing pushed %s that I can see." % ("today" if "today" in low else "yesterday" if "yesterday" in low else "lately")
+                    found = [{"title": it["title"], "meta": it.get("meta", ""), "body": "", "why": ""} for sec, it in rows[:5]]
                 elif hits:
                     reply = "Here is what I have on that."
                     found = [{"title": it["title"], "meta": sec + ((" · " + it["meta"]) if it.get("meta") else ""), "body": it.get("body", ""), "why": it.get("why", "")} for sec, it in hits]
