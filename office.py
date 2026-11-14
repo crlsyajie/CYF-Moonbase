@@ -2345,8 +2345,19 @@ class Inspector(Agent):
                 pct = round(100.0 * (len(DATE_TESTS) - len(date_bad)) / len(DATE_TESTS))
                 checks.append((grade_of(pct) if date_bad else "ok", "read %d of %d test dates correctly%s" % (len(DATE_TESTS) - len(date_bad), len(DATE_TESTS), (". Got wrong: " + "; ".join("“%s”" % t for t in date_bad[:3])) if date_bad else "")))
             if aid == "chief":
-                pct = round(100.0 * (len(ROUTE_TESTS) - len(route_bad)) / len(ROUTE_TESTS))
+                know_bad = []
+                for q, must in CHIEF_TESTS:
+                    try:
+                        r = O.respond("chief", q)
+                        ok = re.search(must, r["text"] + " " + " ".join(f["title"] + " " + f.get("body", "") for f in r["items"]), re.I)
+                    except Exception:
+                        ok = False
+                    if not ok:
+                        know_bad.append(q)
+                n = len(ROUTE_TESTS) + len(CHIEF_TESTS)
+                pct = round(100.0 * (n - len(route_bad) - len(know_bad)) / n)
                 checks.append((grade_of(pct) if route_bad else "ok", "sent %d of %d test questions to the right agent%s" % (len(ROUTE_TESTS) - len(route_bad), len(ROUTE_TESTS), (". Got wrong: " + "; ".join("“%s”" % t for t in route_bad[:3])) if route_bad else "")))
+                checks.append((grade_of(pct) if know_bad else "ok", "answered %d of %d questions about the office correctly%s" % (len(CHIEF_TESTS) - len(know_bad), len(CHIEF_TESTS), (". Got wrong: " + "; ".join("“%s”" % t for t in know_bad[:3])) if know_bad else "")))
             if aid == "coach" and any(it.get("tone") == "warn" for sec in (a.report or {}).get("sections", []) for it in sec.get("items", []) if str(it.get("id", "")).startswith("card:")):
                 checks.append(("watch", "a model still gets lessons wrong after drilling"))
             if aid in pace:
@@ -2502,6 +2513,63 @@ class Chief(Agent):
                 {"title": "Team report", "empty": "", "items": [item(a.id, a.name + (" · " + a.wing if a.wing != "shared" else ""), head(a.id), "", "", agent=a.id) for a in A.values() if a.id != "chief"]},
             ],
         }
+
+
+# ---------------------------------------------------------------- what the Chief knows about the office itself
+ABOUT = {  # what each desk does, in plain words; {mail} and {cal} are filled in per wing
+    "sorter": "Reads every new email in your {mail} and separates spam from real mail, with a spam model built from scratch (Naive Bayes) that learns from your corrections. It only bins an email when it is 90% sure; anything it is unsure about goes to the Coach as a question for you",
+    "analyst": "Reads the real mail the Mail Sorter lets through in your {mail} and picks the emails that need you, with an importance model that learns from your corrections. Every pick says why it was chosen",
+    "calendar": "Reads your {cal} and tells you what is on today and next, including meetings that clash",
+    "chief": "Runs the whole team in order, writes your briefing from everyone's reports, spots clashes between your personal and work calendars, and sends counts-only notifications to your phone. Ask me anything: I answer questions about the team and the office myself, and pass other questions to the agent who owns the subject",
+    "writer": "Drafts a suggested reply for each important email. The language model on your Mac writes it, and it must pass rule checks (on topic, no made-up dates or prices, ignores instructions hidden in the email) or you get a fill-in template instead. Nothing is ever sent for you",
+    "scout": "Reads eight AI news sources and keeps the stories that match your interests, with a news model that learns when you tap Not for me",
+    "followup": "Catches conversations that went quiet: emails you owe a reply to, and people you are waiting on",
+    "prep": "Before each meeting, pulls the recent emails from the people you are meeting",
+    "deadlines": "Finds due dates hidden in your mail, such as submit by 30th November, and lists what is coming up",
+    "github": "Follows your GitHub: your latest pushes with their messages, and projects on your Mac with work that is not pushed yet. Finished work is committed and pushed for you after each Claude Code session",
+    "linkedin": "Reads the emails LinkedIn sends you (it never signs in to LinkedIn): connection requests, messages, and job alerts ranked against your job interests, plus post ideas from your real work",
+    "social": "Reads the notification emails from your social media accounts and drafts post ideas from your real work",
+    "librarian": "Finds anything across your mail, calendar, news and code by meaning, and keeps a map of the people, organisations, projects and topics that appear together. Ask it everything about a name, or anything about money",
+    "coach": "Keeps training the three models: it learns from what really happened in your mailboxes (your spam folder, the emails you replied to), re-tests every lesson, drills the ones a model gets wrong, and asks you about the cases the models are unsure of",
+    "keymaster": "Guards the keys agents need, such as a GitHub token, in your Mac's Keychain. Agents ask it for a key and it logs who asked. It never shows a key and never handles your website passwords",
+    "twin": "Asks you two questions every morning about how you decide and work, learns your leanings, and answers what you would think about something from what you told it",
+    "inspector": "Scores every agent on each run: fair exams for the trained models, fixed tests for dates, question routing and my own knowledge, a writing exam, health checks, and trends from the database. It reports the agents performing badly and asks you to grade a few real items",
+    "mentor": "Tracks your path to AI engineer: which skills AI job posts ask for, which ones Moonbase already shows, what to build next, and two quiz questions a day",
+}
+PLACE = {"chief": (1, "manager's office"), "sorter_personal": (1, "personal mail room"), "analyst_personal": (1, "personal mail room"), "calendar_personal": (1, "personal mail room"),
+         "sorter_work": (1, "work mail room"), "analyst_work": (1, "work mail room"), "calendar_work": (1, "work mail room"), "linkedin": (1, "social studio"), "social": (1, "social studio"),
+         "writer": (2, "open workspace"), "scout": (2, "open workspace"), "followup": (2, "open workspace"), "prep": (2, "open workspace"), "deadlines": (2, "open workspace"),
+         "librarian": (2, "open workspace"), "mentor": (2, "open workspace"), "keymaster": (2, "vault"), "coach": (2, "training room"), "inspector": (2, "training room"),
+         "twin": (2, "study"), "github": (2, "dev room")}
+ALIASES = [("sorter", r"mail sorters?|sorters?|spam filter"), ("analyst", r"inbox analysts?|analysts?"), ("calendar", r"schedulers?"), ("writer", r"reply writer|writer"),
+           ("scout", r"news scout|scout"), ("followup", r"follow-?ups? tracker|follow-?up agent"), ("prep", r"meeting prep"), ("deadlines", r"deadline watcher"),
+           ("github", r"github watcher"), ("linkedin", r"linkedin agent"), ("social", r"social media agent|social agent"), ("librarian", r"librarian"), ("coach", r"coach"),
+           ("keymaster", r"keymaster|key master"), ("twin", r"twin"), ("inspector", r"inspector"), ("mentor", r"mentor"), ("chief", r"chief of staff|chief")]
+HANDBOOK = [  # how the office works, for questions such as "how do I ...". {remote} is this Mac's private Tailscale address
+    ("Correct an agent", "Open the agent's desk and tap the button under the item: Not spam or Mark as spam on the Mail Sorter, Not important or This is important on the Inbox Analyst, Not for me on the News Scout. Each correction counts three times as much as a starter example, and the team runs again right away."),
+    ("Grade items for the Inspector", "Open the Inspector's desk and find Help me grade. Tap Right or Wrong on each real item. These answers only test the models and never train them. Once a model has 8 graded items, its exam uses your own mail instead of starter examples."),
+    ("Answer the Coach", "The Coach's desk lists emails and stories the models were unsure about. Tap the right answer and the model learns from it."),
+    ("Run the team", "Say run in any chat, or press Run the team now on the Chief's desk. The team also runs by itself every day at 7:30, and whenever new mail is delivered."),
+    ("Open the office on your phone", "Switch Tailscale on in the phone app, then open {remote}. Only your own signed-in devices can open it, and your Mac must be on and awake. It is also a door on the Moonbase launcher pinned in Claude."),
+    ("Open the office on your Mac", "Open http://127.0.0.1:8787, or use the Moonbase launcher pinned in your Claude sidebar. The public page at crlsyajie.github.io shows every report as Private."),
+    ("Chat with your agents", "Click Ask your agents at the bottom of the map, or press the / key, and pick an agent at the top. Every desk also has a Talk to box. Ask the Chief when you are not sure who to ask."),
+    ("See the run log", "Press L, or click Run log in the header. It shows every run: what each agent was given, what it decided and why, how long it took, where it failed, and your overall score day by day."),
+    ("Phone notifications", "The office sends counts-only notifications to the ntfy app on your phone: the briefing, and agents performing badly. Nothing from your mail is ever sent. The setup is on the Chief's desk."),
+    ("Daily schedule", "At about 6:10 your twin asks two questions. At about 7:17 fresh mail is delivered to the team. At 7:30 the whole team runs. The GitHub Watcher checks for pushes every 10 minutes."),
+    ("Privacy", "Your mail, calendars and reports stay on your Mac. The language model runs on your Mac through Ollama, so nothing goes to a cloud model, and the public page never shows your reports."),
+    ("Give an agent a key", "Open the Keymaster's desk and copy the command shown for the key. Paste it in Terminal: it asks for the key there and puts it straight into your Mac's Keychain, so it never passes through chat."),
+    ("Floors and rooms", "Floor 1: the Chief's office, the personal and work mail rooms, and the social studio. Floor 2: the open workspace, the vault, the training room, the study and the dev room. Floor 3: the meeting room and the observation deck. Switch floors with the buttons at the bottom left or the 1, 2 and 3 keys."),
+    ("Leave the office", "Press Esc, or click Leave office at the top, to go back to the whole base."),
+    ("The database and SQL", "The run log, daily scores and chats are kept in office.db, a SQLite database on your Mac. To practise SQL on it, run python3 office.py sql followed by a query in quotes, from the Moonbase folder."),
+    ("Pushing to GitHub", "After each Claude Code session, finished work is committed and pushed to GitHub for you. To be asked first instead, set auto_push to false in the office config."),
+    ("The daily quiz", "The Mentor asks two quiz questions a day on its desk. Questions you get wrong come back later for a second try."),
+    ("The language models", "llama3.2:3b writes reply drafts and chat sentences, and mxbai-embed-large powers search by meaning. Both run in Ollama on your Mac, and everything they write is checked before you see it."),
+]
+CHIEF_TESTS = [("give me a description of the agents", r"agents on three floors"), ("what agents do I have", r"agents on three floors"), ("what does the Coach do?", r"\btrain"),
+               ("who handles my LinkedIn?", r"LinkedIn Agent"), ("tell me about the Librarian", r"meaning"), ("how do I correct a wrong spam?", r"Not spam"),
+               ("how do I open the office on my phone", r"Tailscale"), ("where is the Inspector?", r"training room"), ("when does the team run?", r"7:30"),
+               ("how do I grade for the inspector", r"Right or Wrong"), ("what does the work inbox analyst do", r"Outlook"), ("how do I talk to my agents", r"Ask your agents"),
+               ("is my mail private?", r"stay on your Mac"), ("what time does my twin ask questions", r"6:10")]
 
 
 # ---------------------------------------------------------------- the database
@@ -2947,28 +3015,41 @@ class Office:
               ("writer", r"\b(drafts?|write)\b"), ("twin", r"\b(twin|about me|think)\b")]
 
     def chat(self, agent_id, text):
-        """Yajie talks to one agent. It answers from its own latest report (found with a from-scratch word-overlap search),
-        understands a few plain requests (status, counts, run, help), and the Chief passes a question to whoever owns it.
-        With the writing model available the answer is put into sentences; without it the agent answers in short lines."""
-        a = self.agents.get(agent_id)
-        if not a:
+        """Yajie talks to one agent: respond() works out the answer, and both messages are saved."""
+        if agent_id not in self.agents:
             raise ValueError("no such agent")
         log = self.chats.setdefault(agent_id, [])
         text = clean(text, 400)
         if not text:
             return {"history": log[-30:]}
+        msg = self.respond(agent_id, text)
+        log += [{"me": True, "text": text, "at": now().isoformat()}, dict(msg, me=False)]
+        del log[:-60]
+        self.db.add_chat(agent_id, log[-2:])
+        return {"reply": msg, "history": log[-30:]}
+
+    def respond(self, agent_id, text):
+        """One agent's answer, without saving anything. It answers from its own latest report (a from-scratch word-overlap
+        search) and understands a few plain requests (status, counts, run, help). The Chief also knows the office itself (who
+        does what, where they sit, how things work), and passes other questions to whoever owns the subject.
+        With the writing model available the answer is put into sentences; without it the agent answers in short lines."""
+        a = self.agents[agent_id]
         low = text.lower()
         rep, reply, found, by = a.report or {}, "", [], "rules"
         items = [(sec["title"], it) for sec in rep.get("sections", []) for it in sec.get("items", [])]
+        known = self.knows(text, low) if agent_id == "chief" else None
         if re.search(r"password|passcode", low) and agent_id != "keymaster":
             reply = "I don't handle passwords and I never ask for them. Keys go through the Keymaster, and you add them in Terminal, not in chat."
         elif re.match(r"^(hi|hello|hey|yo|good (morning|afternoon|evening))\b", low):
             reply = "Hi %s. I'm your %s. Right now: %s." % (self.cfg.get("owner", ""), a.name, rep.get("headline", "no report yet"))
-        elif re.search(r"\b(run|refresh|re-?check|update|go again|work now|start)\b", low):
+        elif (re.match(r"^\W*(please\s+)?(run|re-?run|refresh|re-?check|update|go again|work now|start)\b", low) or re.search(r"\b(run|start) the team\b", low)) \
+                and not re.match(r"^\W*(how|when|what|why|where|can|could|does|do|is|who)\b", low):
             reply = "On it. The whole team is running now; ask me again in half a minute." if self.run_async(fresh_news=agent_id == "scout") else "The team is already running. Give us a moment."
-        elif re.search(r"\b(help|what can you do|what do you do|who are you)\b", low):
-            reply = "I'm the %s. %s. Ask me things like: what's new, how many, why, or name something from my report. Say \"run\" to make the team work now." % (a.name, a.role)
-        elif agent_id == "librarian" and self.library.docs:
+        elif re.search(r"\b(help|what can you do|what do you do|who are you)\b", low) and not (agent_id == "chief" and known):
+            reply = "I'm the %s. %s. Ask me what's new, how many, or about anything in my report. Say \"run\" to make the team work now." % (a.name + (" (" + a.wing + ")" if a.wing != "shared" else ""), self.about(agent_id))
+        elif known:
+            reply, found, by = known
+        elif agent_id == "librarian" and self.library_ready():
             L, doc = self.library, lambda d: {"title": d["title"], "meta": "%s · %s" % (KIND_WORDS.get(d["kind"], (d["kind"],))[0], d["meta"]), "body": "", "why": ""}
             e = L.about(text) if re.search(r"\b(everything|about|connected|related|linked|who|with|map|from)\b", low) else None
             if e:
@@ -3009,9 +3090,7 @@ class Office:
             if agent_id == "chief":                    # the manager hands the question to whoever owns the subject
                 owner = next((aid for aid, pat in self.TOPICS if re.search(pat, low)), None)
                 if owner and owner in self.agents:
-                    sub = self.chat(owner, text)["reply"]
-                    self.chats[owner] = self.chats[owner][:-2]          # that was the Chief asking, not you
-                    self.db.drop_last(owner, 2)
+                    sub = self.respond(owner, text)                      # the Chief asks; nothing lands in that agent's chat
                     reply, by = "I asked the %s. They say: %s" % (self.agents[owner].name + (" (" + self.agents[owner].wing + ")" if self.agents[owner].wing != "shared" else ""), sub["text"]), sub["by"]
                     found = sub.get("items", [])
             if not reply:
@@ -3052,11 +3131,7 @@ class Office:
                 out = self.phrase(a.name, a.role, "\n".join("- %s (%s) %s %s" % (f["title"], f["meta"], f["body"][:200], f["why"]) for f in found), text)
                 if out:
                     reply, by = (reply.rstrip(":.") + ". " + out) if reply.startswith(("That is not", "Everything connected")) or ("They say: Everything connected" in reply) else (reply.split("They say:")[0] + "They say: " + out) if reply.startswith("I asked") else out, self.writer.model
-        msg = {"text": reply, "items": found, "by": by, "at": now().isoformat()}
-        log += [{"me": True, "text": text, "at": now().isoformat()}, dict(msg, me=False)]
-        del log[:-60]
-        self.db.add_chat(agent_id, log[-2:])
-        return {"reply": msg, "history": log[-30:]}
+        return {"text": reply, "items": found, "by": by, "at": now().isoformat()}
 
     def decide(self, kind, src, model=None):
         """The decision an agent makes about one item, from its text alone: True means spam / important / relevant."""
@@ -3065,6 +3140,110 @@ class Office:
             return news_score(model, [w.lower() for w in self.cfg.get("interests", [])] + self.twin_interests(), src["s"], src["b"])[0] >= RULES[kind][2]
         extra = ["__vip"] * 4 if kind == "important" and any(v and v.lower() in src["f"] for v in self.cfg.get("vip_senders", [])) else []
         return bool(extra) or model.prob(features(src["s"], src["b"], src["f"], extra), RULES[kind][0]) >= RULES[kind][2]
+
+    def library_ready(self):
+        """The Librarian's index, built from the stored mail if the bridge restarted since the last run (the meaning vectors are cached on disk)."""
+        if not self.library.docs:
+            try:
+                ctx = {"history": {}, "events": {}, "news": [it for sec in (self.agents["scout"].report or {}).get("sections", []) for it in sec.get("items", [])]}
+                for w in WINGS:
+                    ctx["history"][w], ctx["events"][w] = self.load(w)
+                self.library.docs = self.library.gather(ctx)
+                self.library.index()
+                self.library.link()
+            except Exception:
+                pass
+        return bool(self.library.docs)
+
+    def about(self, aid):
+        """What one desk does, in plain words."""
+        a, base = self.agents[aid], aid.split("_")[0]
+        mail, cal = ("Gmail", "Google calendar") if a.wing == "personal" else ("Outlook", "Outlook calendar") if a.wing == "work" else ("mail", "calendar")
+        return ABOUT.get(base, a.role).format(mail=mail, cal=cal)
+
+    def card(self, aid, both=False):
+        """One desk described: what it does, where it sits, and what it is doing now. both: the personal and work desks together."""
+        a, base = self.agents[aid], aid.split("_")[0]
+        floor, room = PLACE.get(aid, (2, "open workspace"))
+        if both and a.wing in WINGS:
+            twins = [self.agents[base + "_" + w] for w in WINGS]
+            now_ = "; ".join("%s: %s" % (w, (t.report or {}).get("headline", "no report yet")) for w, t in zip(WINGS, twins))
+            text = ABOUT[base].format(mail="Gmail or Outlook", cal="Google or Outlook calendar")
+            return "There are two %ss, one for your personal Gmail and one for your work Outlook, in the personal and work mail rooms on floor 1. %s. Right now, %s." % (a.name, text, now_)
+        head = (a.report or {}).get("headline", "no report yet") if a.status != "error" else "it hit a problem"
+        return "The %s%s: %s. It sits on floor %d in the %s. Right now: %s." % (a.name, " (" + a.wing + ")" if a.wing in WINGS else "", self.about(aid), floor, room, head)
+
+    def named(self, low):
+        """The desks a question mentions by name, with the right wing when it says work, Outlook, personal or Gmail."""
+        wing = "work" if re.search(r"\b(work|outlook|office mail)\b", low) else "personal" if re.search(r"\b(personal|gmail|google)\b", low) else ""
+        out = []
+        for base, pat in ALIASES:
+            if re.search(r"\b(%s)\b" % pat, low):
+                aid = base if base in self.agents else base + "_" + (wing or "personal")
+                if aid in self.agents and aid not in out:
+                    out.append(aid)
+        return out, wing
+
+    def handbook(self, text, k=3):
+        """The handbook entries closest to a question: meaning (the search model) plus shared words. Returns (score, title, text) best first."""
+        remote = str(self.cfg.get("remote_host") or "").strip(".")
+        rows = [(t, x.replace("{remote}", "https://" + remote if remote else "the private address Claude set up for you")) for t, x in HANDBOOK]
+        bag = lambda t: set(w.rstrip("s") for w in WORD.findall(t.lower()) if w not in STOP)
+        want = bag(text) - {"how", "what", "where", "when", "can", "could", "way", "should", "do", "does", "get", "make"}
+        words = [len(want & bag(t)) * 2 + len(want & bag(x)) for t, x in rows]
+        close = [0.0] * len(rows)
+        L = self.library
+        if self.writer.reachable(L.model):
+            try:
+                hb = self.__dict__.setdefault("_hb", {})
+                if hb.get("key") != (L.model, len(rows)):
+                    hb.update(key=(L.model, len(rows)), vecs=L.embed([t + ". " + x for t, x in rows]))
+                q = L.embed([text], query=True)[0]
+                close = [sum(a * b for a, b in zip(q, v)) for v in hb["vecs"]]
+            except Exception:
+                close = [0.0] * len(rows)
+        scored = sorted(((close[i] + .06 * words[i], rows[i][0], rows[i][1], words[i], close[i]) for i in range(len(rows))), key=lambda r: -r[0])
+        return [(s_, t, x) for s_, t, x, w, c in scored if w >= 2 or c >= .62][:k]
+
+    def knows(self, text, low):
+        """What the Chief can answer from knowledge of the office itself. Returns (reply, items, by), or None to pass the question on."""
+        named, wing = self.named(low)
+        topic = next((aid for aid, pat in self.TOPICS if re.search(pat, low)), None)
+        others = [x for x in named if x != "chief"]
+        about_q = re.search(r"\b(what (does|do|is|are)|what'?s|who (is|are)|who'?s|tell me (more )?about|describe|description|explain|introduce|how does|role|job|purpose|where (is|does|do|are|sits?))\b", low)
+        team_q = re.search(r"\b(agents|agent list|team|everyone|everybody|staff|desks|each agent|every agent|all (the |my |of the )?agents?)\b", low) and \
+            re.search(r"\b(describe|description|list|what|which|who|overview|tell|explain|introduce|have|names?|each|every|all)\b", low)
+        howto = re.search(r"^\W*(how|where|when|what time|can i|could i|is there a way|what should i)\b|\bhow (do|can|to|should|does) (i|you)\b|\bhow to\b", low)
+        who_q = re.search(r"\bwho (handles|does|deals with|takes care of|looks after|is (in charge of|responsible for)|can help( me)? with|knows about|tracks|watches|checks|reads|finds)\b|"
+                          r"\bwhich (agent|desk|one) (handles|does|deals with|takes care of|looks after|tracks|watches|checks|reads|finds|is (in charge of|responsible for))\b", low)
+        if team_q and not others and topic is None:
+            ids = ["chief"] + [i for i in ORDER if i != "chief"]
+            per_floor = {}
+            for i in ids:
+                per_floor.setdefault(PLACE.get(i, (2, ""))[0], []).append(self.agents[i].name + (" (" + self.agents[i].wing + ")" if self.agents[i].wing in WINGS else ""))
+            reply = ("You have %d agents on three floors. Floor 1: %s. Floor 2: %s. Floor 3 is the meeting room and observation deck, where they gather between jobs. Each one is below, with what it does and what it is doing now."
+                     % (len(ids), ", ".join(per_floor.get(1, [])), ", ".join(per_floor.get(2, []))))
+            items = [{"title": self.agents[i].name + (" · " + self.agents[i].wing if self.agents[i].wing in WINGS else ""),
+                      "meta": "Floor %d · %s · %s" % (PLACE.get(i, (2, ""))[0], PLACE.get(i, (2, ""))[1], (self.agents[i].report or {}).get("headline", "no report yet")),
+                      "body": self.about(i) + ".", "why": ""} for i in ids]
+            return reply, items, "office"
+        if who_q and (topic or others):
+            aid = others[0] if others else topic
+            return "The %s handles that. %s" % (self.agents[aid].name + (" (" + self.agents[aid].wing + ")" if self.agents[aid].wing in WINGS else ""), self.card(aid).split(": ", 1)[1]), [], "office"
+        if named and about_q:
+            return " ".join(self.card(aid, both=not wing) for aid in named[:2]), [], "office"
+        if howto or re.search(r"\b(private|privacy|safe|secure|leaks?|who can see)\b", low) or \
+                (not named and topic is None and re.search(r"\b(office|moonbase|phone|notifications?|schedule|floors?|database|quiz|run log|launcher)\b", low)):
+            hits = self.handbook(text)
+            if re.search(r"\b(private|privacy|safe|secure|leaks?|who can see)\b", low):
+                hits = [h for h in hits if h[1] == "Privacy"] or [(1, "Privacy", dict(HANDBOOK)["Privacy"])]
+            if hits:
+                return hits[0][2], [{"title": t, "meta": "From the office handbook", "body": x, "why": ""} for _, t, x in hits[1:2]], "office"
+        if others:                                                   # a question for a named desk: ask it
+            aid = others[0]
+            sub = self.respond(aid, text)
+            return "I asked the %s. They say: %s" % (self.agents[aid].name + (" (" + self.agents[aid].wing + ")" if self.agents[aid].wing in WINGS else ""), sub["text"]), sub.get("items", []), sub["by"]
+        return None
 
     def phrase(self, name, role, notes, question):
         """The language model says, in a sentence or two, what the notes show. Its answer is used only if it passes the guards:
@@ -3076,7 +3255,7 @@ class Office:
         except Exception:
             return ""
         out = out.strip().strip('"')
-        if (not out or len(out) > 340 or "\n" in out or " · " in out or re.match(r"\W*none\b", out.lower())
+        if (not out or len(out.split()) < 4 or len(out) > 340 or "\n" in out or " · " in out or re.match(r"\W*none\b", out.lower())
                 or re.search(r"\bno (relevant|mention|information)|not (mentioned|found|specified|provided)|do(es)? not (answer|mention|say|contain|show)|unknown|unclear|cannot (answer|determine)", out.lower())
                 or not grounded(out, notes + " " + question + " " + name)):
             return ""
