@@ -21,6 +21,7 @@ import math
 import os
 import re
 import secrets
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -1888,7 +1889,7 @@ SKILLS = [  # id, name, words job posts use for it, how to tell what Moonbase sh
     ("structured", "Structured output and tool use", r"structured output|function call|tool (use|calling)|json schema|\bmcp\b", lambda o: (2, "the Reply Writer asks the model for JSON and checks it before use") if o.writer.online else (0, "needs the language model"), "Give one agent a tool the model can call, such as looking up your calendar."),
     ("rag", "Embeddings and RAG", r"\brag\b|retrieval|embedding|semantic search|vector", lambda o: (2, "the Librarian searches by meaning with %s" % o.library.model) if o.library.engine == "meaning" else (1, "the Librarian searches by words; meaning search needs the embedding model"), "Let the chat answer from the passages the Librarian retrieves, and score those answers."),
     ("graph", "Knowledge graphs and GraphRAG", r"knowledge graph|graph ?rag|neo4j|ontology", lambda o: (2, "the language model has read %d items and named what is in them, each name checked against the text; %d entries are linked" % (max(0, len(o.library.read) - 1), len(o.library.ents))) if len(o.library.read) > 20 else (1, "the Librarian's map links %d people, projects and topics, so far built by rules" % len(o.library.ents)), "Add the relationships between entries (who works with whom, on what), not just that they appear together."),
-    ("observe", "Tracing and observability", r"observab|tracing|monitor|logging|langsmith|langfuse|telemetry", lambda o: (2, "the run log records what each agent was given, decided and how long it took (%d runs kept)" % len(o.runs)) if len(o.runs) >= 3 else (1, "the run log exists but holds only %d run%s" % (len(o.runs), "" if len(o.runs) == 1 else "s")), "Chart how long each agent takes from run to run, and flag the ones getting slower."),
+    ("observe", "Tracing and observability", r"observab|tracing|monitor|logging|langsmith|langfuse|telemetry", lambda o: (2, "the run log records what each agent was given, decided and how long it took, and flags agents getting slower (%d runs kept)" % o.db.count_runs()) if o.db.count_runs() >= 3 else (1, "the run log exists but holds only %d run%s" % (o.db.count_runs(), "" if o.db.count_runs() == 1 else "s")), "Chart the run log in a dashboard: time per agent, model calls and failures over a month."),
     ("ml", "Classic machine learning", r"scikit|pytorch|tensorflow|classif|naive bayes|regression|model training|train(ing)? models|deep learning|data scien", lambda o: (2, "three Naive Bayes models written from scratch, trained on %d of your corrections" % sum(m.corrections for m in o.models.m.values())) if sum(m.corrections for m in o.models.m.values()) >= 10 else (1, "three Naive Bayes models written from scratch, but trained on only %d of your corrections" % sum(m.corrections for m in o.models.m.values())), "Correct the agents when they are wrong: each correction is training data."),
     ("api", "APIs and integrations", r"\bapi(s)?\b|rest\b|integration|webhook|connector", lambda o: (2, "a local web API, GitHub's API, news feeds and the mail connectors"), "Write the API down as a short reference page."),
     ("safety", "AI safety, privacy and guardrails", r"guardrail|safety|privacy|prompt injection|red.?team|responsible ai|security", lambda o: (2, "mail never leaves the Mac, keys stay in the Keychain, and the Inspector tests the writer against a planted instruction"), "Add two more attack emails to the Reply Writer's exam."),
@@ -1896,7 +1897,7 @@ SKILLS = [  # id, name, words job posts use for it, how to tell what Moonbase sh
     ("deploy", "Deployment and cloud", r"deploy|\baws\b|azure|\bgcp\b|cloud|serverless|kubernetes", lambda o: (1, "the public page is on GitHub Pages and the live feed runs on Cloudflare; nothing runs in a container or on a cloud server"), "Put a demo copy of the office (made-up mail) on a free cloud service."),
     ("vectordb", "Vector databases", r"vector (db|database|store)|pinecone|chroma|weaviate|faiss|pgvector|qdrant", lambda o: (0, "embeddings are kept in a plain file"), "Move the Librarian's vectors into SQLite with a vector extension, or Chroma."),
     ("ci", "Docker and automated tests (CI/CD)", r"docker|container|ci/?cd|github actions|pipeline|unit test", lambda o: (0, "the Inspector's tests run inside the office, not on GitHub"), "Run the Inspector's fixed tests on every push with GitHub Actions."),
-    ("data", "SQL and data handling", r"\bsql\b|database|postgres|data pipeline|etl|pandas", lambda o: (0, "everything is stored in JSON files"), "Move the reports and the run log into SQLite and query them."),
+    ("data", "SQL and data handling", r"\bsql\b|database|postgres|data pipeline|etl|pandas", lambda o: (2, "the run log, daily scores and chats live in a SQLite database (%d runs so far), and trends such as agents getting slower come from SQL queries" % o.db.count_runs()), "Write your own queries: python3 office.py sql \"SELECT ...\" on the office database."),
     ("finetune", "Fine-tuning", r"fine.?tun|lora|peft|training llm", lambda o: (0, "no language model has been fine-tuned"), "Later: fine-tune a small model on your own reply style. Do the items above first."),
 ]
 QUIZ = [  # id, skill, question, options, right answer, why
@@ -2303,8 +2304,8 @@ class Inspector(Agent):
         route_bad = [q for q, want in ROUTE_TESTS if next((aid for aid, pat in O.TOPICS if re.search(pat, q.lower())), None) != want]
         self.say("Checking every desk")
         today = now().date().isoformat()
-        days = O.scores.setdefault("days", [])
-        before = next((d for d in reversed(days) if d["day"] != today), None)
+        before = O.db.day_before(today)
+        pace = {p["agent"]: p for p in O.db.trends()["slower"]}
         cards, scores = [], {}
         for aid, a in A.items():
             if aid == self.id:
@@ -2348,6 +2349,8 @@ class Inspector(Agent):
                 checks.append((grade_of(pct) if route_bad else "ok", "sent %d of %d test questions to the right agent%s" % (len(ROUTE_TESTS) - len(route_bad), len(ROUTE_TESTS), (". Got wrong: " + "; ".join("“%s”" % t for t in route_bad[:3])) if route_bad else "")))
             if aid == "coach" and any(it.get("tone") == "warn" for sec in (a.report or {}).get("sections", []) for it in sec.get("items", []) if str(it.get("id", "")).startswith("card:")):
                 checks.append(("watch", "a model still gets lessons wrong after drilling"))
+            if aid in pace:
+                checks.append(("watch", "getting slower: %.1fs a run lately, %.1fs before" % (pace[aid]["recent"], pace[aid]["earlier"])))
             if aid == "writer" and not O.writer.online:
                 checks.append(("watch", "writing from templates: the language model is not running"))
             if aid == "librarian" and sexam:
@@ -2376,7 +2379,7 @@ class Inspector(Agent):
                                       agent=aid, pct=pct, grade=grade, tone="warn" if grade != "pass" else "")))
         failing, watching = [c for g, c in cards if g == "fail"], [c for g, c in cards if g == "watch"]
         overall = round(sum(scores.values()) / len(scores)) if scores else 0
-        days[:] = [d for d in days if d["day"] != today][-120:] + [{"day": today, "overall": overall, "agents": scores}]
+        O.db.save_day(today, overall, scores)
         write_json(os.path.join(DATA, "scores.json"), O.scores)
         # the answer sheet grows two questions per model a run: real items the agents just judged, picked without favouring easy or hard ones
         ask = []
@@ -2501,6 +2504,193 @@ class Chief(Agent):
         }
 
 
+# ---------------------------------------------------------------- the database
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS runs (            -- one row per run of the whole team
+  id TEXT PRIMARY KEY, at TEXT NOT NULL, took REAL, errors INTEGER, calls INTEGER, brain TEXT, search TEXT,
+  deep TEXT                                  -- what the background phase did afterwards, as JSON
+);
+CREATE TABLE IF NOT EXISTS steps (           -- one row per agent per run: the run log
+  run_id TEXT NOT NULL, seq INTEGER, agent TEXT NOT NULL, name TEXT, wing TEXT, start REAL, took REAL,
+  status TEXT, error TEXT, given TEXT, calls INTEGER, model_secs REAL, headline TEXT, stats TEXT,
+  PRIMARY KEY (run_id, agent)
+);
+CREATE TABLE IF NOT EXISTS decisions (       -- what each agent listed in its report, and why
+  run_id TEXT NOT NULL, agent TEXT NOT NULL, seq INTEGER, section TEXT, title TEXT, why TEXT, score REAL
+);
+CREATE TABLE IF NOT EXISTS scores (          -- the Inspector's scorecard, one row per agent per day ('__overall__' is the average)
+  day TEXT NOT NULL, agent TEXT NOT NULL, pct INTEGER, PRIMARY KEY (day, agent)
+);
+CREATE TABLE IF NOT EXISTS chats (           -- every message between Yajie and an agent
+  id INTEGER PRIMARY KEY AUTOINCREMENT, agent TEXT NOT NULL, at TEXT, me INTEGER, text TEXT, items TEXT, by TEXT
+);
+CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
+CREATE INDEX IF NOT EXISTS runs_at ON runs(at);
+CREATE INDEX IF NOT EXISTS steps_agent ON steps(agent);
+CREATE INDEX IF NOT EXISTS decisions_run ON decisions(run_id, agent);
+CREATE INDEX IF NOT EXISTS chats_agent ON chats(agent, id);
+"""
+
+
+class Store:
+    """The office's database: one SQLite file on this Mac (office.db). SQLite is part of Python, so nothing is installed.
+    It holds what grows over time and gets asked questions: every run with each agent's step and decisions (the run log),
+    one scorecard a day, and every chat message. Single documents (settings, models, the latest reports) stay JSON files.
+    Questions such as "which agent got slower?" are answered with SQL in trends()."""
+    KEEP_RUNS, KEEP_DAYS, KEEP_CHATS = 400, 400, 1000
+
+    def __init__(self, path):
+        self.path, self.lock = path, threading.Lock()
+        self.con = sqlite3.connect(path, check_same_thread=False, timeout=10)
+        self.con.row_factory = sqlite3.Row
+        with self.lock:
+            self.con.execute("PRAGMA journal_mode=WAL")      # readers never wait for a writer
+            self.con.executescript(SCHEMA)
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
+
+    def q(self, sql, args=()):
+        with self.lock:
+            return [dict(r) for r in self.con.execute(sql, args).fetchall()]
+
+    # ---- the run log
+    def save_run(self, t):
+        rid = t["id"]
+        with self.lock, self.con:
+            c = self.con
+            c.execute("INSERT OR REPLACE INTO runs (id, at, took, errors, calls, brain, search, deep) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                      (rid, t["at"], t.get("took", 0), t.get("errors", 0), t.get("calls", 0), t.get("brain", ""), t.get("search", ""), json.dumps(t["deep"]) if t.get("deep") else None))
+            c.execute("DELETE FROM steps WHERE run_id = ?", (rid,))
+            c.execute("DELETE FROM decisions WHERE run_id = ?", (rid,))
+            for i, a in enumerate(t.get("agents", [])):
+                c.execute("INSERT INTO steps (run_id, seq, agent, name, wing, start, took, status, error, given, calls, model_secs, headline, stats) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                          (rid, i, a["id"], a.get("name", ""), a.get("wing", ""), a.get("start", 0), a.get("took", 0), a.get("status", ""), a.get("error", ""),
+                           a.get("given", ""), a.get("calls", 0), a.get("model_secs", 0), a.get("headline", ""), json.dumps(a.get("stats", []))))
+                c.executemany("INSERT INTO decisions (run_id, agent, seq, section, title, why, score) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                              [(rid, a["id"], j, d.get("v", ""), d.get("t", ""), d.get("why", ""), d.get("score") if isinstance(d.get("score"), (int, float)) else None)
+                               for j, d in enumerate(a.get("decisions", []))])
+            old = [r[0] for r in c.execute("SELECT id FROM runs ORDER BY at DESC LIMIT -1 OFFSET ?", (self.KEEP_RUNS,))]
+            for table in ("decisions", "steps"):
+                c.executemany("DELETE FROM %s WHERE run_id = ?" % table, [(x,) for x in old])
+            c.executemany("DELETE FROM runs WHERE id = ?", [(x,) for x in old])
+
+    def set_deep(self, run_id, deep):
+        with self.lock, self.con:
+            self.con.execute("UPDATE runs SET deep = ? WHERE id = ?", (json.dumps(deep), run_id))
+
+    def count_runs(self):
+        return self.q("SELECT COUNT(*) AS n FROM runs")[0]["n"]
+
+    def runs(self, limit=20):
+        return self.q("""SELECT r.id, r.at, r.took, r.errors, r.calls, COUNT(s.agent) AS agents
+                         FROM runs r LEFT JOIN steps s ON s.run_id = r.id GROUP BY r.id ORDER BY r.at DESC LIMIT ?""", (limit,))
+
+    def run(self, run_id=""):
+        rows = self.q("SELECT * FROM runs WHERE id = ?", (run_id,)) if run_id else []
+        rows = rows or self.q("SELECT * FROM runs ORDER BY at DESC LIMIT 1")
+        if not rows:
+            return None
+        r = rows[0]
+        r["deep"] = json.loads(r["deep"]) if r.get("deep") else None
+        said = {}
+        for d in self.q("SELECT agent, section, title, why, score FROM decisions WHERE run_id = ? ORDER BY agent, seq", (r["id"],)):
+            said.setdefault(d["agent"], []).append({"t": d["title"], "v": d["section"], "why": d["why"], "score": d["score"]})
+        r["agents"] = [{"id": a["agent"], "name": a["name"], "wing": a["wing"], "start": a["start"], "took": a["took"], "status": a["status"], "error": a["error"],
+                        "given": a["given"], "calls": a["calls"], "model_secs": a["model_secs"], "headline": a["headline"], "stats": json.loads(a["stats"] or "[]"),
+                        "decisions": said.get(a["agent"], [])} for a in self.q("SELECT * FROM steps WHERE run_id = ? ORDER BY seq", (r["id"],))]
+        return r
+
+    # ---- the daily scorecard
+    def save_day(self, day, overall, agents):
+        with self.lock, self.con:
+            self.con.execute("DELETE FROM scores WHERE day = ?", (day,))
+            self.con.executemany("INSERT INTO scores (day, agent, pct) VALUES (?, ?, ?)", [(day, "__overall__", overall)] + [(day, k, v) for k, v in agents.items()])
+            self.con.execute("DELETE FROM scores WHERE day NOT IN (SELECT DISTINCT day FROM scores ORDER BY day DESC LIMIT ?)", (self.KEEP_DAYS,))
+
+    def day_before(self, day):
+        last = self.q("SELECT MAX(day) AS d FROM scores WHERE day < ?", (day,))[0]["d"]
+        if not last:
+            return None
+        rows = self.q("SELECT agent, pct FROM scores WHERE day = ?", (last,))
+        return {"day": last, "overall": next((r["pct"] for r in rows if r["agent"] == "__overall__"), 0), "agents": {r["agent"]: r["pct"] for r in rows if r["agent"] != "__overall__"}}
+
+    # ---- chats
+    def chat_logs(self, n=60):
+        logs = {}
+        for r in self.q("""SELECT agent, at, me, text, items, by FROM (
+                             SELECT *, ROW_NUMBER() OVER (PARTITION BY agent ORDER BY id DESC) AS newest FROM chats) WHERE newest <= ? ORDER BY id""", (n,)):
+            m = {"me": bool(r["me"]), "text": r["text"], "at": r["at"]}
+            if not r["me"]:
+                m.update(items=json.loads(r["items"] or "[]"), by=r["by"])
+            logs.setdefault(r["agent"], []).append(m)
+        return logs
+
+    def add_chat(self, agent, msgs):
+        with self.lock, self.con:
+            self.con.executemany("INSERT INTO chats (agent, at, me, text, items, by) VALUES (?, ?, ?, ?, ?, ?)",
+                                 [(agent, m.get("at", ""), int(bool(m.get("me"))), m.get("text", ""), json.dumps(m.get("items", [])), m.get("by", "")) for m in msgs])
+            self.con.execute("DELETE FROM chats WHERE agent = ? AND id NOT IN (SELECT id FROM chats WHERE agent = ? ORDER BY id DESC LIMIT ?)", (agent, agent, self.KEEP_CHATS))
+
+    def drop_last(self, agent, n):
+        with self.lock, self.con:
+            self.con.execute("DELETE FROM chats WHERE id IN (SELECT id FROM chats WHERE agent = ? ORDER BY id DESC LIMIT ?)", (agent, n))
+
+    # ---- questions answered with SQL
+    def trends(self):
+        """Who got slower (the last 5 runs against the 25 before them), the overall score day by day, score drops this week, and failures this month."""
+        since, week = (now() - timedelta(days=30)).isoformat(), (now() - timedelta(days=7)).date().isoformat()
+        pace = self.q("""
+            WITH ranked AS (SELECT id, ROW_NUMBER() OVER (ORDER BY at DESC) AS n FROM runs)
+            SELECT s.agent, MAX(s.name) AS name, MAX(s.wing) AS wing,
+                   AVG(CASE WHEN k.n <= 5 THEN s.took END) AS recent,
+                   AVG(CASE WHEN k.n > 5 THEN s.took END) AS earlier,
+                   COUNT(CASE WHEN k.n <= 5 THEN 1 END) AS recent_runs,
+                   COUNT(CASE WHEN k.n > 5 THEN 1 END) AS earlier_runs
+            FROM steps s JOIN ranked k ON k.id = s.run_id
+            WHERE s.status = 'done' AND k.n <= 30
+            GROUP BY s.agent""")
+        slower = [p for p in pace if p["recent_runs"] >= 3 and p["earlier_runs"] >= 3 and p["recent"] > p["earlier"] * 1.5 and p["recent"] - p["earlier"] > .3]
+        slower.sort(key=lambda p: p["earlier"] - p["recent"])
+        slowest = sorted((p for p in pace if p["recent"] is not None), key=lambda p: -p["recent"])[:3]
+        history = list(reversed(self.q("SELECT day, pct FROM scores WHERE agent = '__overall__' ORDER BY day DESC LIMIT 30")))
+        drops = self.q("""
+            WITH week AS (SELECT day, agent, pct FROM scores WHERE agent != '__overall__' AND day >= ?),
+                 ends AS (SELECT agent, MIN(day) AS first_day, MAX(day) AS last_day FROM week GROUP BY agent)
+            SELECT e.agent, f.pct AS was, l.pct AS now, e.first_day
+            FROM ends e JOIN week f ON f.agent = e.agent AND f.day = e.first_day JOIN week l ON l.agent = e.agent AND l.day = e.last_day
+            WHERE l.pct <= f.pct - 5 ORDER BY l.pct - f.pct""", (week,))
+        failures = self.q("""SELECT s.agent, MAX(s.name) AS name, MAX(s.wing) AS wing, COUNT(*) AS times, MAX(r.at) AS last
+                             FROM steps s JOIN runs r ON r.id = s.run_id WHERE s.status = 'error' AND r.at >= ?
+                             GROUP BY s.agent ORDER BY times DESC""", (since,))
+        totals = self.q("""SELECT COUNT(*) AS runs, COALESCE(SUM(calls), 0) + COALESCE(SUM(json_extract(deep, '$.calls')), 0) AS calls,
+                                  AVG(took) AS avg_took, MIN(at) AS since FROM runs""")[0]
+        return {"slower": slower, "slowest": slowest, "history": history, "drops": drops, "failures": failures, "totals": totals}
+
+    # ---- moving the old JSON files in, once
+    def migrate(self):
+        if self.q("SELECT v FROM meta WHERE k = 'imported'"):
+            return
+        for t in read_json(os.path.join(DATA, "runs.json"), []) or []:
+            try:
+                self.save_run(t)
+            except Exception:
+                pass
+        scores = read_json(os.path.join(DATA, "scores.json"), {}) or {}
+        for d in scores.pop("days", []) or []:
+            self.save_day(d["day"], d.get("overall", 0), d.get("agents", {}))
+        for agent, log in (read_json(os.path.join(DATA, "chats.json"), {}) or {}).items():
+            self.add_chat(agent, log)
+        with self.lock, self.con:
+            self.con.execute("INSERT OR REPLACE INTO meta (k, v) VALUES ('imported', ?)", (now().isoformat(),))
+        write_json(os.path.join(DATA, "scores.json"), scores)        # it keeps only the exam results now
+        for name in ("runs.json", "chats.json"):                    # kept as a backup, no longer read
+            p = os.path.join(DATA, name)
+            if os.path.exists(p):
+                os.replace(p, p + ".imported")
+
+
 # ---------------------------------------------------------------- the office
 ORDER = ["sorter_personal", "sorter_work", "calendar_personal", "calendar_work", "scout", "github", "analyst_personal", "analyst_work",
          "writer", "followup", "prep", "deadlines", "linkedin", "social", "librarian", "coach", "keymaster", "twin", "inspector", "mentor", "chief"]
@@ -2530,12 +2720,14 @@ class Office:
         for kind in SEED:
             self.lessons.setdefault(kind, {})
         self.tests = read_json(os.path.join(DATA, "tests.json"), {}) or {}         # the answer sheet: real items Yajie graded, used only for testing
-        self.runs = read_json(os.path.join(DATA, "runs.json"), []) or []           # the run log: what each agent was given, decided and how long it took
+        self.db = Store(os.path.join(DATA, "office.db"))                          # the database: run log, daily scores and chats
+        self.db.migrate()
+        self.last_trace = None
         self.scores = read_json(os.path.join(DATA, "scores.json"), {}) or {}       # one scorecard a day, so a drop can be seen
         for kind in SEED:
             self.tests.setdefault(kind, {})
         self.twin = read_json(os.path.join(DATA, "twin.json"), {}) or {}           # everything Yajie has told the twin
-        self.chats = read_json(os.path.join(DATA, "chats.json"), {}) or {}        # what Yajie and each agent have said
+        self.chats = self.db.chat_logs(60)                                         # the latest of what Yajie and each agent have said
         self.github_checked = 0
         self.waiting = read_json(os.path.join(DATA, "pushable.json"), {}) or {}    # projects with work GitHub does not have yet
         self.notified = read_json(os.path.join(DATA, "notified.json"), {}) or {}   # what was last sent to the phone, per kind
@@ -2748,7 +2940,7 @@ class Office:
 
     # ---- talking to an agent
     TOPICS = [("librarian", r"\b(everything|anything|all) (about|on|related|connected|to do with)\b|\b(find|search|look up|look for|connected to|related to)\b"),
-              ("mentor", r"\b(skills?|career|quiz|study|ai engineer|roadmap|learn next|should i (learn|build))\b"), ("inspector", r"\b(score ?cards?|scores?|perform(ing|ance|s)?|grades?|doing (badly|well|ok)|how good|accura\w+|inspector)\b"), ("sorter_personal", r"\b(spam|junk)\b"), ("analyst_work", r"\b(work|outlook|office) (mail|email|inbox)|\bwork emails?\b"), ("analyst_personal", r"\b(emails?|mail|inbox|gmail|reply|replies)\b"),
+              ("mentor", r"\b(skills?|career|quiz|study|ai engineer|roadmap|learn next|should i (learn|build))\b"), ("inspector", r"\b(slow(er|est)?|faster|speed|trends?|over time|getting worse|score ?cards?|scores?|perform(ing|ance|s)?|grades?|doing (badly|well|ok)|how good|accura\w+|inspector)\b"), ("sorter_personal", r"\b(spam|junk)\b"), ("analyst_work", r"\b(work|outlook|office) (mail|email|inbox)|\bwork emails?\b"), ("analyst_personal", r"\b(emails?|mail|inbox|gmail|reply|replies)\b"),
               ("calendar_work", r"\b(meetings?|calendar|schedule|agenda|free time|busy)\b"), ("scout", r"\b(news|stories|story|articles?)\b"), ("linkedin", r"\b(linkedin|jobs?|connect|invitations?)\b"),
               ("social", r"\b(instagram|facebook|tiktok|youtube|social|posts?|pinterest)\b"), ("github", r"\b(github|push|pushes|pushed|commits?|repos?)\b"), ("deadlines", r"\b(deadlines?|due)\b"),
               ("followup", r"\b(follow.?ups?|waiting|chase|overdue)\b"), ("prep", r"\b(prep|prepare)\b"), ("coach", r"\b(train|training|models?|accuracy|learn)\b"), ("keymaster", r"\b(keys?|tokens?|passwords?|vault|secrets?)\b"),
@@ -2790,6 +2982,24 @@ class Office:
                 hits = L.search(text, 5)
                 reply = ("Closest matches by meaning:" if L.engine == "meaning" else "Closest matches by words:") if hits else "I found nothing close to that in your mail, calendar, news or code."
                 found = [doc(d) for _, d in hits]
+        elif agent_id == "inspector" and re.search(r"\b(slow(er|est)?|faster|speed|trends?|over time|history|getting worse|dropp(ed|ing)|fail(ed|ing|ures?)?)\b", low):
+            when = lambda day: (lambda w: w.lower() if w in ("Today", "Yesterday") else "on " + w)(day_label(parse_dt(day)))
+            T, label = self.db.trends(), lambda p: p["name"] + (" (" + p["wing"] + ")" if p.get("wing") not in ("shared", "", None) else "")
+            parts = []
+            if T["slower"]:
+                parts.append("Getting slower: " + ", ".join("%s (%.1fs → %.1fs a run)" % (label(p), p["earlier"], p["recent"]) for p in T["slower"]) + ".")
+            elif T["totals"]["runs"] >= 8:
+                parts.append("No agent is getting slower: I compared the last 5 runs with the %d before them." % min(25, T["totals"]["runs"] - 5))
+            else:
+                parts.append("I need at least 8 runs to spot an agent getting slower; I have %d." % T["totals"]["runs"])
+            if T["slowest"]:
+                parts.append("Slowest lately: " + ", ".join("%s %.1fs" % (label(p), p["recent"]) for p in T["slowest"]) + ".")
+            if T["history"]:
+                h = T["history"]
+                parts.append("Overall score %d%% %s" % (h[-1]["pct"], when(h[-1]["day"])) + ((", %d%% %s." % (h[0]["pct"], when(h[0]["day"]))) if len(h) > 1 else "."))
+            parts.append(("Failures in the last 30 days: " + ", ".join("%s %d time%s" % (label(f), f["times"], "" if f["times"] == 1 else "s") for f in T["failures"]) + ".") if T["failures"] else "No failures in the last 30 days.")
+            reply, by = " ".join(parts), "sql"
+            found = [{"title": "%s · %s" % (d["agent"], "%d%% → %d%%" % (d["was"], d["now"])), "meta": "score dropped this week", "body": "", "why": ""} for d in T["drops"][:4]]
         elif agent_id == "twin":
             r = self.ask(text)
             reply = r.get("answer") or r.get("note") or "Here is what you told me."
@@ -2801,6 +3011,7 @@ class Office:
                 if owner and owner in self.agents:
                     sub = self.chat(owner, text)["reply"]
                     self.chats[owner] = self.chats[owner][:-2]          # that was the Chief asking, not you
+                    self.db.drop_last(owner, 2)
                     reply, by = "I asked the %s. They say: %s" % (self.agents[owner].name + (" (" + self.agents[owner].wing + ")" if self.agents[owner].wing != "shared" else ""), sub["text"]), sub["by"]
                     found = sub.get("items", [])
             if not reply:
@@ -2844,7 +3055,7 @@ class Office:
         msg = {"text": reply, "items": found, "by": by, "at": now().isoformat()}
         log += [{"me": True, "text": text, "at": now().isoformat()}, dict(msg, me=False)]
         del log[:-60]
-        write_json(os.path.join(DATA, "chats.json"), self.chats)
+        self.db.add_chat(agent_id, log[-2:])
         return {"reply": msg, "history": log[-30:]}
 
     def decide(self, kind, src, model=None):
@@ -2913,8 +3124,8 @@ class Office:
             self._save_reports()
             trace.update(took=round(time.time() - t0, 2), errors=sum(1 for x in trace["agents"] if x["status"] == "error"), calls=sum(x["calls"] for x in trace["agents"]),
                          brain=self.writer.model if self.writer.online else "templates", search=self.library.engine)
-            self.runs = (self.runs + [trace])[-20:]
-            write_json(os.path.join(DATA, "runs.json"), self.runs)
+            self.db.save_run(trace)
+            self.last_trace = trace["id"]
             threading.Thread(target=self.deep, daemon=True).start()
             return True
         finally:
@@ -2947,8 +3158,7 @@ class Office:
 
     def trace(self, run_id=""):
         """The run log: a list of recent runs, and one of them in full (the newest unless asked)."""
-        full = next((r for r in self.runs if r["id"] == run_id), self.runs[-1] if self.runs else None)
-        return {"runs": [{"id": r["id"], "at": r["at"], "took": r.get("took", 0), "errors": r.get("errors", 0), "agents": len(r["agents"]), "calls": r.get("calls", 0)} for r in reversed(self.runs)], "run": full}
+        return {"runs": self.db.runs(20), "run": self.db.run(run_id), "trends": self.db.trends()}
 
     def deep(self):
         """The slow language-model work, done after a run so the run itself stays quick: writing the real reply drafts, sitting
@@ -3032,9 +3242,8 @@ class Office:
             for a in A.values():
                 idle(a) if a.task and a.id in ("writer", "inspector", "librarian") and not self.running else None
             self.background = ""
-            if self.runs and (did or self.writer.calls > calls):
-                self.runs[-1]["deep"] = {"took": round(time.time() - t0, 1), "calls": self.writer.calls - calls, "did": did}
-                write_json(os.path.join(DATA, "runs.json"), self.runs)
+            if self.last_trace and (did or self.writer.calls > calls):
+                self.db.set_deep(self.last_trace, {"took": round(time.time() - t0, 1), "calls": self.writer.calls - calls, "did": did})
             self.deep_lock.release()
 
     def _save_reports(self):
@@ -3137,6 +3346,16 @@ if __name__ == "__main__":
         data = read_json(sys.argv[4])
         n = office.ingest(sys.argv[2], sys.argv[3], data.get("items", data) if isinstance(data, dict) else data)
         print("stored %d %s items for %s" % (n, sys.argv[3], sys.argv[2]))
+    elif cmd == "sql" and len(sys.argv) == 3:            # read-only: practise SQL on the office database
+        ro = sqlite3.connect("file:%s?mode=ro" % os.path.join(DATA, "office.db"), uri=True)
+        cur = ro.execute(sys.argv[2])
+        cols = [d[0] for d in cur.description or []]
+        rows = cur.fetchmany(200)
+        width = [max([len(c)] + [len(str(r[i])[:60]) for r in rows]) for i, c in enumerate(cols)]
+        print("  ".join(c.ljust(w) for c, w in zip(cols, width)))
+        for r in rows:
+            print("  ".join(str(v)[:60].ljust(w) for v, w in zip(r, width)))
+        print("(%d row%s)" % (len(rows), "" if len(rows) == 1 else "s"))
     elif cmd == "status":
         print(json.dumps({"data": DATA, "writer": office.writer.note, "models": office.models.summary(), "last_run": office.last_run}, indent=2))
     else:
