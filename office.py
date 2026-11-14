@@ -46,6 +46,8 @@ DEFAULT_CONFIG = {
     # Key slots: the only secrets an agent may ask the Keymaster for, and which agent may ask. Values live in the macOS Keychain.
     "keys": {"github_token": {"for": ["github"], "what": "A read-only GitHub token, so the GitHub Watcher can also see pushes to private repos. Optional."}},
     "embedder": "mxbai-embed-large",      # the embedding model for search by meaning, through Ollama
+    "remote_host": "",                    # this Mac's private Tailscale name (something.ts.net); empty = the office only answers on this Mac
+    "remote_users": [],                   # Tailscale sign-ins allowed in from other devices; empty = any device on your own Tailscale account
     "vip_senders": [],                    # addresses or domains that are always important
     "interests": ["agent", "agents", "claude", "anthropic", "automation", "workflow", "mcp", "llm", "open source",
                   "coding", "video generation", "image generation", "music generation", "prompt", "fine-tuning",

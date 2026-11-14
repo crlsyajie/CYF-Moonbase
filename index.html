@@ -632,8 +632,8 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 // Defaults to the local bridge (python3 bridge.py), which Claude Code hooks feed. Override with ?feed=<url>.
 // Opened from your Mac's bridge: use its local stream. Anywhere else (GitHub Pages): use the Cloudflare hub. Override with ?feed=<url>.
 const HUB_WS = 'wss://moonbase.moonbase-hub.workers.dev/ws';
-const LOCAL = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
-const FEED_URL = new URLSearchParams(location.search).get('feed') || (LOCAL ? 'http://127.0.0.1:8787/events' : HUB_WS);
+const LOCAL = /^(127\.0\.0\.1|localhost)$/.test(location.hostname) || /\.ts\.net$/.test(location.hostname);   // this Mac, or this Mac reached over your private Tailscale network
+const FEED_URL = new URLSearchParams(location.search).get('feed') || (LOCAL ? location.origin + '/events' : HUB_WS);
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = id => document.getElementById(id);

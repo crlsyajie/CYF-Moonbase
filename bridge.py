@@ -212,12 +212,21 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(204); self.cors(); self.end_headers()
 
     def office_ok(self):
-        """Office data is for this Mac's own Moonbase page only: no other website (Origin) and no other host name may read or change it."""
-        host = (self.headers.get("Host") or "").rsplit(":", 1)[0]
+        """Office data is for this Mac's own Moonbase page only: no other website (Origin) and no other host name may read or change it.
+        One more door can be opened in the office config: "remote_host", the private Tailscale name of this Mac. Tailscale only lets
+        devices signed in to Yajie's own account reach it, and passes on who is asking; with "remote_users" set, only those sign-ins get in."""
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0].lower()
         origin = self.headers.get("Origin")
         site = self.headers.get("Sec-Fetch-Site")
-        return (host in ("127.0.0.1", "localhost") and (not origin or origin in ("http://127.0.0.1:%d" % PORT, "http://localhost:%d" % PORT))
-                and site in (None, "same-origin", "none"))
+        if site not in (None, "same-origin", "none"):
+            return False
+        if host in ("127.0.0.1", "localhost"):
+            return not origin or origin in ("http://127.0.0.1:%d" % PORT, "http://localhost:%d" % PORT)
+        remote = str(OFFICE.cfg.get("remote_host") or "").lower().strip(".")
+        if not remote or not remote.endswith(".ts.net") or host != remote or (origin and origin != "https://" + remote):
+            return False
+        users = [str(u).lower() for u in OFFICE.cfg.get("remote_users") or []]
+        return not users or (self.headers.get("Tailscale-User-Login") or "").lower() in users
 
     def send_json(self, code, value):
         body = json.dumps(value).encode()
