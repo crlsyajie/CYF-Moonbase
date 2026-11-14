@@ -483,10 +483,31 @@ body { font-size: 13px; -webkit-font-smoothing: antialiased; letter-spacing: -.0
 .oi .t { font-weight: 600; } .oi summary { color: var(--accent); font-weight: 600; }
 .acts button, .acts a { border-radius: 6px; background: var(--surface-2); font-weight: 500; } .acts button:hover, .acts a:hover { background: var(--surface-3); }
 .banner { border-radius: 10px; }
+.meter { height: 5px; border-radius: 3px; background: var(--surface-3); overflow: hidden; margin: 3px 0 2px; } .meter i { display: block; height: 100%; border-radius: 3px; background: var(--ok); } .meter.watch i { background: var(--warn); } .meter.fail i { background: #ff7b7b; }
 .msg { border-radius: 12px; } .msg.me { background: #f2f3f5; color: #0c0d11; border-color: #f2f3f5; } .msg.them { background: var(--surface-2); }
 .cit { background: rgba(0, 0, 0, .22); border: 1px solid var(--line); }
 .askbox input, .askbox textarea { background: rgba(0, 0, 0, .25); border-radius: var(--r-sm); }
 button:focus-visible, .st-link:focus-visible, .overview:focus-visible, #blList button:focus-visible, .roster button:focus-visible, .obtn:focus-visible, .acts button:focus-visible, .acts a:focus-visible, .floors button:focus-visible, .askbox input:focus-visible, .askbox textarea:focus-visible, .dock select:focus-visible, .dock input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* ---- Run log: one run of the team laid out step by step. Left: every agent on a timeline; right: what the chosen one was given and decided. ---- */
+.runlog { position: absolute; z-index: 12; left: 50%; top: 72px; transform: translateX(-50%); width: min(1000px, calc(100% - 32px)); height: min(700px, calc(100% - 96px)); display: flex; flex-direction: column; background: rgba(14, 16, 22, .97); }
+.rl-head { display: flex; align-items: center; gap: 14px; padding: 14px 14px 12px 18px; border-bottom: 1px solid var(--line); flex: none; }
+.rl-head > div { display: grid; gap: 1px; flex: 1; min-width: 0; } .rl-head b { font-size: 15px; font-weight: 600; letter-spacing: -.015em; } .rl-head span { color: var(--muted); font-size: 12px; }
+.rl-pick { display: flex; align-items: center; gap: 8px; } .rl-pick select { font: 500 12.5px var(--font-ui); color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 6px 8px; max-width: 220px; } .rl-pick option { background: #14161d; }
+.rl-head button { width: 30px; height: 30px; border: 0; border-radius: 7px; background: none; color: var(--muted); cursor: pointer; display: grid; place-items: center; flex: none; } .rl-head button:hover { background: var(--surface-3); color: var(--ink); } .rl-head svg { width: 16px; height: 16px; }
+.rl-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 18px; border-bottom: 1px solid var(--line); flex: none; }
+.rl-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
+.rl-list { list-style: none; margin: 0; padding: 8px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-right: 1px solid var(--line); display: grid; gap: 2px; align-content: start; }
+.rl-list button { width: 100%; display: grid; grid-template-columns: 8px minmax(0, 150px) minmax(40px, 1fr) 46px; gap: 10px; align-items: center; text-align: left; font: inherit; color: var(--ink); background: none; border: 0; border-radius: var(--r-sm); padding: 7px 10px; cursor: pointer; }
+.rl-list button:hover, .rl-list button[aria-current="true"] { background: var(--surface-3); }
+.rl-list i { width: 8px; height: 8px; border-radius: 50%; } .rl-list .n { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .rl-list .n small { color: var(--muted); font-weight: 400; }
+.rl-list .tl { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2); } .rl-list .tl u { position: absolute; top: 0; bottom: 0; min-width: 3px; border-radius: 3px; background: var(--accent); } .rl-list .bad .tl u { background: #ff7b7b; }
+.rl-list .s { color: var(--muted); font-size: 11.5px; text-align: right; font-variant-numeric: tabular-nums; }
+.rl-detail { padding: 16px 18px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; display: grid; gap: 12px; align-content: start; }
+.rl-detail h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.015em; } .rl-detail dl { margin: 0; display: grid; gap: 10px; }
+.rl-detail dt { color: var(--muted); font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 2px; } .rl-detail dd { margin: 0; line-height: 1.5; overflow-wrap: anywhere; }
+.rl-dec { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; } .rl-dec li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); min-width: 0; }
+.rl-dec .v { color: var(--muted); font-size: 11px; display: flex; justify-content: space-between; gap: 8px; } .rl-dec .t { font-weight: 500; overflow-wrap: anywhere; } .rl-dec .y { color: var(--muted); font-size: 11.5px; overflow-wrap: anywhere; }
+@media (max-width: 860px) { .runlog { position: fixed; top: 12px; height: calc(100dvh - 24px); } .rl-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(120px, 40%) minmax(0, 1fr); } .rl-list { border-right: 0; border-bottom: 1px solid var(--line); } .rl-pick span { display: none; } .rl-list button { grid-template-columns: 8px minmax(0, 1fr) 60px 46px; } }
 /* ---- Chat with the agents from the main screen: a launcher bottom right of the map, the conversation opens above it ---- */
 .dock { grid-column: 1; grid-row: 4; justify-self: end; align-self: end; position: relative; pointer-events: auto; z-index: 8; }
 .dock-btn { display: flex; align-items: center; gap: 9px; font: 600 13px var(--font-ui); color: #0c0d11; background: #f2f3f5; border: 0; border-radius: 999px; padding: 11px 16px 11px 14px; cursor: pointer; box-shadow: 0 10px 28px rgba(0, 0, 0, .45); white-space: nowrap; transition: background .15s, transform .15s; }
@@ -535,6 +556,7 @@ button:focus-visible, .st-link:focus-visible, .overview:focus-visible, #blList b
       <span class="viewers" id="viewers" hidden title="People looking at Moonbase right now"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span id="viewersN"></span></span>
       <button class="panels-btn" id="listBtn" aria-expanded="false" aria-controls="buildings" title="List of buildings (B)">Buildings</button>
       <button class="panels-btn" id="namesBtn" aria-pressed="false" title="Show or hide building names (N)">Hide names</button>
+      <button class="panels-btn" id="runsBtn" hidden aria-haspopup="dialog" title="What each agent was given, decided and how long it took (L)">Run log</button>
       <button class="panels-btn" id="panelsBtn" aria-pressed="false">Hide panels</button>
       <div class="me"><span class="avatar">CY</span><span><b>Yajie</b><small id="meStatus">Base commander · on duty</small></span></div>
     </header>
@@ -569,6 +591,12 @@ button:focus-visible, .st-link:focus-visible, .overview:focus-visible, #blList b
       <div class="tabs"><b>Cargo log</b><span id="logCount"></span></div>
       <ul class="log" id="log"></ul>
       <p class="hint">Click GitHub, Claude Code, the Chat Tower, Creative Media or F1 on the map to send a test crate from there. Click the Agent Office to walk in.</p>
+    </section>
+    <section class="runlog card" id="runlog" hidden role="dialog" aria-label="Run log">
+      <header class="rl-head"><div><b>Run log</b><span id="rlSub"></span></div><label class="rl-pick"><span>Run</span><select id="rlRun" aria-label="Choose a run"></select></label>
+        <button id="rlClose" aria-label="Close run log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
+      <div class="rl-chips" id="rlChips"></div>
+      <div class="rl-body"><ol class="rl-list" id="rlList" aria-label="Agents in the order they ran"></ol><div class="rl-detail" id="rlDetail" aria-live="polite"></div></div>
     </section>
     <section class="dock" id="dock" hidden aria-label="Chat with your agents">
       <div class="dock-panel card" id="dockPanel" hidden role="dialog" aria-label="Chat with your agents">
@@ -1702,7 +1730,7 @@ if (renderer) {
   figure('pup', p => { GLB.pup = p; figure('astronaut', (m, clips) => { GLB.astronaut = m; GLB.clips = clips; for (const g of GLB.waiting.splice(0)) dressAstronaut(g); }); });
 }
 
-// ---------- Agent Office: a building you can walk into. Eighteen agents work on three floors on mail, calendars, news, social and code. ----------
+// ---------- Agent Office: a building you can walk into. Twenty-one agents work on three floors on mail, calendars, news, social and code. ----------
 // Their reports are private. They come from the local bridge (office.py) and only when this page is opened on Yajie's own Mac;
 // anywhere else the office is drawn, but no report is ever loaded.
 const AGENTS = [ // id, name, role, wing, colour, floor, desk x, desk z, room
@@ -1722,6 +1750,9 @@ const AGENTS = [ // id, name, role, wing, colour, floor, desk x, desk z, room
   ['coach', 'Coach', 'Keeps training the other agents', 'shared', 0xf97316, 2, -6.4, 2.3, 'training'],
   ['twin', "Yajie's Twin", 'Asks you questions and learns to think like you', 'shared', 0x3461f5, 2, 5, 2.3, 'study'],
   ['github', 'GitHub Watcher', 'Checks your GitHub for new pushes', 'shared', 0x8b949e, 2, 13.6, 2.3, 'dev'],
+  ['inspector', 'Inspector', 'Scores every agent and reports the ones doing badly', 'shared', 0x14b8a6, 2, -2.2, 2.3, 'training'],
+  ['librarian', 'Librarian', 'Finds anything across mail, calendar, news and code, and maps what is connected', 'shared', 0x8b5cf6, 2, 6.8, -12.6, 'open'],
+  ['mentor', 'Mentor', 'Tracks your path to AI engineer and quizzes you every day', 'shared', 0xf43f5e, 2, 11.4, -12.6, 'open'],
   ['linkedin', 'LinkedIn Agent', 'Tracks your LinkedIn: invitations, messages, matching jobs and post ideas', 'shared', 0x0a66c2, 1, 11.6, 3.4, 'media'],
   ['social', 'Social Media Agent', 'Watches your social accounts and drafts posts from your real work', 'shared', 0xe1306c, 1, 16.2, 3.4, 'media'],
 ].map(([id, name, role, wing, color, floor, x, z, room]) => ({ id, name, role, wing, color, floor, x, z, room, css: '#' + color.toString(16).padStart(6, '0') }));
@@ -1742,12 +1773,12 @@ const ROOMS = {
 };
 const LIFT = [[14.5, -1.5], [14.5, -7.2]], FLOOR_NAME = { 1: 'Front office', 2: 'Workshop', 3: 'Meeting floor' };
 // Office life: who walks over to whom (the real hand-offs in the pipeline), and where they take a break.
-const PARTNERS = { linkedin: ['social', 'writer'], social: ['linkedin', 'scout'], sorter_personal: ['analyst_personal'], sorter_work: ['analyst_work'], analyst_personal: ['writer', 'calendar_personal'], analyst_work: ['writer', 'followup'], calendar_personal: ['prep'], calendar_work: ['prep'],
+const PARTNERS = { inspector: ['coach', 'chief'], librarian: ['scout', 'chief'], mentor: ['twin', 'linkedin'], linkedin: ['social', 'writer'], social: ['linkedin', 'scout'], sorter_personal: ['analyst_personal'], sorter_work: ['analyst_work'], analyst_personal: ['writer', 'calendar_personal'], analyst_work: ['writer', 'followup'], calendar_personal: ['prep'], calendar_work: ['prep'],
   writer: ['analyst_personal', 'twin'], scout: ['twin', 'coach'], followup: ['analyst_work', 'deadlines'], prep: ['calendar_work', 'chief'], deadlines: ['chief', 'followup'], keymaster: ['github'], coach: ['sorter_personal', 'analyst_work', 'scout'], twin: ['writer', 'scout', 'chief'], github: ['coach', 'keymaster'] };
 const BREAKS = [['lounge', -4.4, 6, 'Coffee time'], ['lounge', -1, 10.6, 'Five minutes on the sofa'], ['lounge', 2, 4.2, 'Stretching my legs'], ['open', 4.2, -7, 'Quick stand-up at the table'],
   ['meeting', -9, -6.8, 'Team sync in the meeting room'], ['meeting', -6.2, -6.8, 'Going over the plan'], ['meeting', -3.4, -6.8, 'Sharing my numbers'], ['meeting', -.8, -6.8, 'Listening in on the sync'], ['deck', -3, 7, 'Looking at Earth for a minute'], ['deck', 6, 6, 'Fresh air on the deck']];
 const REPLIES = ['Got it.', 'Thanks, on it.', 'Noted.', 'Nice work.', 'Leave it with me.', 'Good to know.'], SMALL = [['Busy day?', 'Always.'], ['Coffee later?', 'Count me in.'], ['How is your queue?', 'Under control.'], ['Seen the Chief?', 'Doing the rounds.']];
-const NO_MAIL = new Set(['scout', 'github', 'keymaster', 'twin', 'coach']); // desks that do not depend on the mailboxes
+const NO_MAIL = new Set(['scout', 'github', 'keymaster', 'twin', 'coach', 'inspector', 'mentor']); // desks that do not depend on the mailboxes
 const OFF = { chats: {}, scene: new THREE.Scene(), cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 800), desks: {}, state: null, sel: 'chief', floor: 1, private: !LOCAL, err: '', built: false, moving: false, n: 0, twinReply: null };
 let inside = false;
 
@@ -2149,7 +2180,7 @@ function renderAgent(force) {
         if (!sec.items.length && !sec.empty) continue;
         body += `<div class="sec">${esc(sec.title)} <span>${sec.items.length || ''}</span></div>`;
         body += sec.items.length ? `<ul class="olist">${sec.items.map(it => `<li class="oi${it.tone === 'warn' ? ' warn' : ''}">
-          <div class="t">${esc(it.title)}</div>${it.meta ? `<div class="w">${esc(it.meta)}</div>` : ''}${it.body ? `<p>${esc(it.body)}</p>` : ''}${it.why ? `<div class="why">${esc(it.why)}</div>` : ''}
+          <div class="t">${esc(it.title)}</div>${it.meta ? `<div class="w">${esc(it.meta)}</div>` : ''}${it.pct != null ? `<div class="meter ${esc(it.grade || '')}" role="img" aria-label="${Number(it.pct)} percent"><i style="width:${Math.max(2, Math.min(100, Number(it.pct)))}%"></i></div>` : ''}${it.body ? `<p>${esc(it.body)}</p>` : ''}${it.why ? `<div class="why">${esc(it.why)}</div>` : ''}
           ${it.ask ? (it.ask.options.length ? `<div class="acts">${it.ask.options.map((o, i) => `<button data-answer="${esc(it.ask.qid)}|${i}">${esc(o)}</button>`).join('')}</div>` : `<form class="askbox col" data-open="${esc(it.ask.qid)}"><textarea name="a" rows="2" maxlength="1200" placeholder="Your answer" aria-label="Your answer"></textarea><button class="obtn st-link">Save answer</button></form>`) : ''}
           ${it.code ? `<details><summary>How to add this key</summary><p>Paste this in Terminal. It asks for the key there and puts it in your macOS Keychain, so it never passes through this page or through Claude.</p><pre>${esc(it.code)}</pre><div class="acts"><button data-copy>Copy command</button></div></details>` : ''}
           ${it.draft ? `<details><summary>Suggested reply${it.draft_by === 'template' ? ' (template)' : ''}</summary><pre>${esc(it.draft)}</pre><div class="acts"><button data-copy>Copy reply</button></div></details>` : ''}
@@ -2176,7 +2207,7 @@ $('station').addEventListener('click', e => {
   if (b.dataset.office === 'notify-test') { b.disabled = true; b.textContent = 'Sent, check your phone'; return officeSend('/office/notify_test', {}); }
   if (b.dataset.office === 'run') return officeSend('/office/run', { fresh_news: OFF.sel === 'scout' });
   if (b.dataset.agent) return selectAgent(b.dataset.agent);
-  if (b.dataset.fb) { const [kind, id, label] = b.dataset.fb.split('|'); b.disabled = true; b.textContent = 'Learning…'; return officeSend('/office/feedback', { kind, id, label }); }
+  if (b.dataset.fb) { const [kind, id, label] = b.dataset.fb.split('|'); b.disabled = true; b.textContent = kind.startsWith('test:') ? 'Saved' : 'Learning…'; return officeSend('/office/feedback', { kind, id, label }); }
   if (b.dataset.answer) { const [qid, i] = b.dataset.answer.split('|'); b.disabled = true; return officeSend('/office/answer', { qid, value: +i }); }
   if ('copy' in b.dataset) { const pre = b.closest('details').querySelector('pre'); navigator.clipboard?.writeText(pre.textContent).then(() => { b.textContent = 'Copied'; }, () => {}); }
 });
@@ -2369,7 +2400,7 @@ function renderStation() {
     </div>
     <div class="sec">Recent crates <span>${rel.length ? rel.length + ' total' : ''}</span></div>
     <ul class="mini">${rel.slice(0, 4).map(e => `<li><span class="box">${ICON.box}</span><span><div class="t">${esc(e.title || '(no message)')}</div><div class="w">${esc(TYPE_LABEL[e.type] || e.type)} · ${esc(e.repo || '')}${e.local ? ' · test' : ''}</div></span><span class="w">${esc(ago(e.at))}</span></li>`).join('') || '<li style="display:block" class="muted">No crates through here yet.</li>'}</ul>`}
-    ${sel === 'office' ? `<button class="st-link obtn" data-office="enter">Go inside</button><p class="muted" style="margin:0;font-size:11.5px;line-height:1.5">Eighteen agents work in here on three floors. Floor 1: the Chief of Staff, the personal and work mail rooms and the social studio (LinkedIn and social media). Floor 3: the meeting room and an observation deck, where the team gathers between jobs. Floor 2: reply writer, news scout, follow-ups, meeting prep, deadlines, the Coach, the GitHub Watcher, the Keymaster and my twin.</p>` : ''}${sessList}${acts}`);
+    ${sel === 'office' ? `<button class="st-link obtn" data-office="enter">Go inside</button><p class="muted" style="margin:0;font-size:11.5px;line-height:1.5">Twenty-one agents work in here on three floors. Floor 1: the Chief of Staff, the personal and work mail rooms and the social studio (LinkedIn and social media). Floor 3: the meeting room and an observation deck, where the team gathers between jobs. Floor 2: reply writer, news scout, follow-ups, meeting prep, deadlines, the Librarian, the Mentor, the Coach, the Inspector who scores them all, the GitHub Watcher, the Keymaster and my twin.</p>` : ''}${sessList}${acts}`);
 }
 function renderTracking() {
   const r = tracked, ev = r ? r.ev : events[0];
@@ -2578,7 +2609,7 @@ if (FEED_URL.startsWith('ws')) {
 setInterval(renderClaude, 30e3);
 // ---- Chat dock on the main screen: pick any agent and talk without walking into the office. Same conversations as the desk panels.
 var DOCK = { open: false, agent: 'chief', busy: false };
-const DOCK_TRY = { chief: ["What's new?", 'What deadlines do I have?', 'What meetings do I have?', 'Run the team'], github: ['What did I push today?', 'Anything waiting to be pushed?'], twin: ['What do you know about me?'], scout: ["What's the AI news?"], linkedin: ['Any jobs for me?'], deadlines: ['What is due soon?'] };
+const DOCK_TRY = { chief: ["What's new?", 'What deadlines do I have?', 'What meetings do I have?', 'Run the team'], github: ['What did I push today?', 'Anything waiting to be pushed?'], inspector: ['Who is performing badly?', 'How many?', 'How is the spam model doing?'], librarian: ['Anything about my bank?', 'Everything connected to Moonbase', 'Did I order food?'], mentor: ['What should I build next?', 'How many?'], twin: ['What do you know about me?'], scout: ["What's the AI news?"], linkedin: ['Any jobs for me?'], deadlines: ['What is due soon?'] };
 const msgHTML = m => `<div class="msg ${m.me ? 'me' : 'them'}">${m.pending ? '<span class="w">Thinking…</span>' : esc(m.text)}${(m.items || []).map(it => `<div class="cit"><b>${esc(it.title)}</b>${it.meta ? `<span>${esc(it.meta)}</span>` : ''}${it.body ? `<span>${esc(it.body)}</span>` : ''}${it.why ? `<span>${esc(it.why)}</span>` : ''}</div>`).join('')}</div>`;
 function renderDock() {
   if (!DOCK || !DOCK.open) return;
@@ -2610,6 +2641,42 @@ if (!OFF.private) {
   $('dockLog').onclick = e => { const b = e.target.closest('[data-say]'); if (b) dockSay(b.dataset.say); };
   $('dockPanel').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); openDock(false); } });
   addEventListener('keydown', e => { if (e.key === '/' && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) { e.preventDefault(); openDock(true); } });
+}
+// ---- Run log: what each agent was given, what it decided, why, how long it took and where it failed.
+var RL = { open: false, data: null, sel: null };
+const secs = t => t >= 10 ? Math.round(t) + 's' : t >= .1 ? t.toFixed(1) + 's' : '<0.1s';
+const runWhen = at => { const d = new Date(at); return isNaN(d) ? '' : d.toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); };
+async function loadRuns(id) {
+  try { const r = await (await fetch('/office/trace', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id || '' }) })).json();
+    if (r.ok) { RL.data = r; const ag = r.run ? r.run.agents : []; if (!ag.find(a => a.id === RL.sel)) RL.sel = ag.length ? (ag.find(a => a.status === 'error') || ag.slice().sort((a, b) => b.took - a.took)[0]).id : null; } else RL.data = { runs: [], run: null, err: r.error }; }
+  catch (e) { RL.data = { runs: [], run: null, err: 'The Moonbase bridge is not reachable.' }; }
+  renderRuns();
+}
+function renderRuns() {
+  const D = RL.data, run = D && D.run;
+  $('rlRun').innerHTML = D ? D.runs.map(r => `<option value="${esc(r.id)}">${esc(runWhen(r.at))}${r.errors ? ' · ' + r.errors + ' failed' : ''}</option>`).join('') : '';
+  if (run) $('rlRun').value = run.id;
+  $('rlSub').textContent = !D ? 'Loading…' : D.err ? D.err : run ? `${runWhen(run.at)} · ${run.agents.length} agents in ${secs(run.took || 0)}` : 'No runs recorded yet. Run the team once and it will appear here.';
+  $('rlChips').innerHTML = run ? [`<span class="pill ${run.errors ? 'red' : ''}">${run.errors ? run.errors + ' failed' : 'No failures'}</span>`, `<span class="pill blue">${run.calls || 0} language model call${run.calls === 1 ? '' : 's'}</span>`,
+    `<span class="pill grey">Writing: ${esc(run.brain || 'templates')}</span>`, `<span class="pill grey">Search: ${run.search === 'meaning' ? 'by meaning' : 'by words'}</span>`].join('') : '';
+  const total = run ? Math.max(run.took || 1, .1) : 1;
+  $('rlList').innerHTML = run ? run.agents.map(a => `<li class="${a.status === 'error' ? 'bad' : ''}"><button data-run-agent="${esc(a.id)}" aria-current="${a.id === RL.sel}"><i style="background:${(AGENTS.find(x => x.id === a.id) || {}).css || '#888'}"></i><span class="n">${esc(a.name)}${a.wing !== 'shared' ? ` <small>${esc(a.wing)}</small>` : ''}</span><span class="tl" title="Started ${secs(a.start)} in, took ${secs(a.took)}"><u style="left:${Math.min(99, a.start / total * 100).toFixed(2)}%;width:${Math.max(.6, a.took / total * 100).toFixed(2)}%"></u></span><span class="s">${a.status === 'error' ? 'failed' : secs(a.took)}</span></button></li>`).join('') : '';
+  const a = run && run.agents.find(x => x.id === RL.sel);
+  $('rlDetail').innerHTML = !a ? '' : `<h3>${esc(a.name)}${a.wing !== 'shared' ? ' · ' + esc(a.wing) : ''}</h3><dl>
+    <div><dt>Was given</dt><dd>${esc(a.given || 'Nothing recorded')}</dd></div>
+    <div><dt>${a.status === 'error' ? 'Failed with' : 'Result'}</dt><dd>${a.status === 'error' ? `<span class="pill red">Failed</span> ${esc(a.error)}` : esc(a.headline || 'Done') + (a.stats && a.stats.length ? `<br><span class="muted">${a.stats.map(([k, v]) => esc(k) + ': ' + esc(v)).join(' · ')}</span>` : '')}</dd></div>
+    <div><dt>Time</dt><dd>${secs(a.took)}, started ${secs(a.start)} into the run${a.calls ? ` · ${a.calls} language model call${a.calls === 1 ? '' : 's'} took ${secs(a.model_secs || 0)} of it` : ' · no language model used'}</dd></div>
+    <div><dt>Decisions${a.decisions && a.decisions.length ? ' (' + a.decisions.length + (a.decisions.length >= 30 ? '+' : '') + ')' : ''}</dt><dd>${a.decisions && a.decisions.length ? `<ol class="rl-dec">${a.decisions.map(d => `<li><span class="v"><span>${esc(d.v)}</span>${d.score != null ? `<span>${Math.round(d.score * 100)}% sure</span>` : ''}</span><span class="t">${esc(d.t)}</span>${d.why ? `<span class="y">Why: ${esc(d.why)}</span>` : ''}</li>`).join('')}</ol>` : '<span class="muted">This agent listed nothing in this run.</span>'}</dd></div></dl>`;
+}
+function openRuns(on) { RL.open = on; $('runlog').hidden = !on; if (on) { RL.data = null; renderRuns(); loadRuns(''); $('rlClose').focus(); } else $('runsBtn').focus(); }
+if (!OFF.private) {
+  $('runsBtn').hidden = false;
+  $('runsBtn').onclick = () => openRuns(!RL.open);
+  $('rlClose').onclick = () => openRuns(false);
+  $('rlRun').onchange = e => loadRuns(e.target.value);
+  $('rlList').onclick = e => { const b = e.target.closest('[data-run-agent]'); if (b) { RL.sel = b.dataset.runAgent; renderRuns(); $('rlDetail').scrollTop = 0; } };
+  $('runlog').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); openRuns(false); } });
+  addEventListener('keydown', e => { if ((e.key === 'l' || e.key === 'L') && !e.metaKey && !e.ctrlKey && !e.altKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) openRuns(!RL.open); });
 }
 </script>
 </body>
