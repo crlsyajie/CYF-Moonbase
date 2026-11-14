@@ -1492,7 +1492,7 @@ class Library:
                 d = parse_dt(m["date"])
                 who = m["from_name"] or m["from"].split("@")[0]
                 local = re.sub(r"[^a-z]", "", m["from"].split("@")[0].lower())
-                # a sender is a person when the name looks like one and part of it is in the address (rohan.s@...), not for hr@, news@ or no-reply@
+                # a sender is a person when the name looks like one and part of it is in the address (maria.l@...), not for hr@, news@ or no-reply@
                 human = bool(not auto.search(m["from"]) and re.match(r"^[A-Za-z][\w'.-]+( [A-Za-z][\w'.-]+){1,3}$", who) and not self.ORG_WORDS.search(who)
                              and not re.search(r" (from|via|in|at|of|for) ", who) and any(len(p) > 2 and p.lower() in local for p in re.findall(r"[A-Za-z]+", who))
                              and not any(len(p) > 3 and p.lower() in m["from"].split("@")[-1] for p in re.findall(r"[A-Za-z]+", who)))     # microsoft@microsoft.com is a company
