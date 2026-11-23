@@ -47,8 +47,6 @@ DEFAULT_CONFIG = {
     # Key slots: the only secrets an agent may ask the Keymaster for, and which agent may ask. Values live in the macOS Keychain.
     "keys": {"github_token": {"for": ["github"], "what": "A read-only GitHub token, so the GitHub Watcher can also see pushes to private repos. Optional."}},
     "embedder": "mxbai-embed-large",      # the embedding model for search by meaning, through Ollama
-    "remote_host": "",                    # this Mac's private Tailscale name (something.ts.net); empty = the office only answers on this Mac
-    "remote_users": [],                   # Tailscale sign-ins allowed in from other devices; empty = any device on your own Tailscale account
     "vip_senders": [],                    # addresses or domains that are always important
     "interests": ["agent", "agents", "claude", "anthropic", "automation", "workflow", "mcp", "llm", "open source",
                   "coding", "video generation", "image generation", "music generation", "prompt", "fine-tuning",
@@ -2545,13 +2543,12 @@ ALIASES = [("sorter", r"mail sorters?|sorters?|spam filter"), ("analyst", r"inbo
            ("scout", r"news scout|scout"), ("followup", r"follow-?ups? tracker|follow-?up agent"), ("prep", r"meeting prep"), ("deadlines", r"deadline watcher"),
            ("github", r"github watcher"), ("linkedin", r"linkedin agent"), ("social", r"social media agent|social agent"), ("librarian", r"librarian"), ("coach", r"coach"),
            ("keymaster", r"keymaster|key master"), ("twin", r"twin"), ("inspector", r"inspector"), ("mentor", r"mentor"), ("chief", r"chief of staff|chief")]
-HANDBOOK = [  # how the office works, for questions such as "how do I ...". {remote} is this Mac's private Tailscale address
+HANDBOOK = [  # how the office works, for questions such as "how do I ..."
     ("Correct an agent", "Open the agent's desk and tap the button under the item: Not spam or Mark as spam on the Mail Sorter, Not important or This is important on the Inbox Analyst, Not for me on the News Scout. Each correction counts three times as much as a starter example, and the team runs again right away."),
     ("Grade items for the Inspector", "Open the Inspector's desk and find Help me grade. Tap Right or Wrong on each real item. These answers only test the models and never train them. Once a model has 8 graded items, its exam uses your own mail instead of starter examples."),
     ("Answer the Coach", "The Coach's desk lists emails and stories the models were unsure about. Tap the right answer and the model learns from it."),
     ("Run the team", "Say run in any chat, or press Run the team now on the Chief's desk. The team also runs by itself every day at 7:30, and whenever new mail is delivered."),
-    ("Open the office on your phone", "Switch Tailscale on in the phone app, then open {remote}. Only your own signed-in devices can open it, and your Mac must be on and awake. It is also a door on the Moonbase launcher pinned in Claude."),
-    ("Open the office on your Mac", "Open http://127.0.0.1:8787, or use the Moonbase launcher pinned in your Claude sidebar. The public page at crlsyajie.github.io shows every report as Private."),
+    ("Open the office on your Mac", "Open http://127.0.0.1:8787 on your Mac, or use the Moonbase launcher pinned in your Claude sidebar. The office only opens on your Mac; the public page at crlsyajie.github.io works anywhere but shows every report as Private."),
     ("Chat with your agents", "Click Ask your agents at the bottom of the map, or press the / key, and pick an agent at the top. Every desk also has a Talk to box. Ask the Chief when you are not sure who to ask."),
     ("See the run log", "Press L, or click Run log in the header. It shows every run: what each agent was given, what it decided and why, how long it took, where it failed, and your overall score day by day."),
     ("Phone notifications", "The office sends counts-only notifications to the ntfy app on your phone: the briefing, and agents performing badly. Nothing from your mail is ever sent. The setup is on the Chief's desk."),
@@ -2567,7 +2564,7 @@ HANDBOOK = [  # how the office works, for questions such as "how do I ...". {rem
 ]
 CHIEF_TESTS = [("give me a description of the agents", r"agents on three floors"), ("what agents do I have", r"agents on three floors"), ("what does the Coach do?", r"\btrain"),
                ("who handles my LinkedIn?", r"LinkedIn Agent"), ("tell me about the Librarian", r"meaning"), ("how do I correct a wrong spam?", r"Not spam"),
-               ("how do I open the office on my phone", r"Tailscale"), ("where is the Inspector?", r"training room"), ("when does the team run?", r"7:30"),
+               ("how do I open the office", r"127\.0\.0\.1"), ("where is the Inspector?", r"training room"), ("when does the team run?", r"7:30"),
                ("how do I grade for the inspector", r"Right or Wrong"), ("what does the work inbox analyst do", r"Outlook"), ("how do I talk to my agents", r"Ask your agents"),
                ("is my mail private?", r"stay on your Mac"), ("what time does my twin ask questions", r"6:10")]
 
@@ -3186,8 +3183,7 @@ class Office:
 
     def handbook(self, text, k=3):
         """The handbook entries closest to a question: meaning (the search model) plus shared words. Returns (score, title, text) best first."""
-        remote = str(self.cfg.get("remote_host") or "").strip(".")
-        rows = [(t, x.replace("{remote}", "https://" + remote if remote else "the private address Claude set up for you")) for t, x in HANDBOOK]
+        rows = list(HANDBOOK)
         bag = lambda t: set(w.rstrip("s") for w in WORD.findall(t.lower()) if w not in STOP)
         want = bag(text) - {"how", "what", "where", "when", "can", "could", "way", "should", "do", "does", "get", "make"}
         words = [len(want & bag(t)) * 2 + len(want & bag(x)) for t, x in rows]
